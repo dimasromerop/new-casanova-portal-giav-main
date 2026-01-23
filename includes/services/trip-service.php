@@ -1888,6 +1888,7 @@ class Casanova_Trip_Service {
       'is_paid' => $is_paid,
       'mulligans_used' => $mulligans_used,
       'payment_options' => $payment_options,
+      'payment_methods' => is_array($ctx['payment_methods'] ?? null) ? $ctx['payment_methods'] : null,
       'can_pay' => (bool) ($ctx['can_pay'] ?? false),
       'pay_url' => $ctx['pay_url'] ?? null,
       'actions' => [

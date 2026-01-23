@@ -1231,6 +1231,26 @@ function TripHeader({ trip, payments, map, weather, itineraryUrl }) {
 }
 function PaymentActions({ expediente, payments, mock }) {
   const [state, setState] = useState({ loading: null, error: null });
+
+  // Métodos disponibles (backend manda; fallback a ambos si no viene informado)
+  const methods = Array.isArray(payments?.payment_methods)
+    ? payments.payment_methods
+    : [
+        { id: "card", enabled: true, label: tt("Tarjeta") },
+        { id: "bank_transfer", enabled: true, label: tt("Transferencia bancaria") },
+      ];
+
+  const firstEnabledMethod = (methods.find((m) => m && m.enabled) || methods[0] || { id: "card" }).id;
+  const [payMethod, setPayMethod] = useState(firstEnabledMethod);
+
+  // Si cambian los métodos (refresh tras volver de Inespay), reajustamos.
+  useEffect(() => {
+    const enabledIds = methods.filter((m) => m && m.enabled).map((m) => m.id);
+    if (!enabledIds.includes(payMethod)) {
+      setPayMethod(firstEnabledMethod || "card");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payments?.payment_methods]);
   const totalAmount = typeof payments?.total === "number" ? payments.total : Number.NaN;
   const paidAmount = typeof payments?.paid === "number" ? payments.paid : Number.NaN;
   const pendingCandidate = typeof payments?.pending === "number" ? payments.pending : Number.NaN;
@@ -1253,7 +1273,7 @@ function PaymentActions({ expediente, payments, mock }) {
   const balanceAmount =
     typeof options?.pending_amount === "number" ? options.pending_amount : balance.amount;
 
-  const startIntent = async (type) => {
+  const startIntent = async (type, method) => {
     setState({ loading: type, error: null });
     try {
       const qs = mock ? "?mock=1" : "";
@@ -1262,6 +1282,7 @@ function PaymentActions({ expediente, payments, mock }) {
         body: {
           expediente_id: Number(expediente),
           type,
+          method,
         },
       });
       if (payload?.ok && payload?.redirect_url) {
@@ -1283,13 +1304,32 @@ function PaymentActions({ expediente, payments, mock }) {
 
   return (
     <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="cp-pay-methods" role="tablist" aria-label={tt("Método de pago")}>
+        {methods.filter((m) => m && m.enabled).map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            className={`cp-pay-method ${payMethod === m.id ? "is-active" : ""}`}
+            onClick={() => setPayMethod(m.id)}
+          >
+            {m.label || (m.id === "card" ? tt("Tarjeta") : tt("Transferencia bancaria"))}
+          </button>
+        ))}
+      </div>
+
+      {payMethod === "bank_transfer" ? (
+        <div className="cp-meta">
+          {tt("La transferencia se confirma cuando el banco la procesa. Puede tardar unas horas o hasta 1-2 días laborables.")}
+        </div>
+      ) : null}
+
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
         {depositAllowed ? (
           <button
             className="cp-btn primary"
             style={{ whiteSpace: "nowrap" }}
             disabled={state.loading !== null}
-            onClick={() => startIntent("deposit")}
+            onClick={() => startIntent("deposit", payMethod)}
           >
             {state.loading === "deposit"
               ? tt("Redirigiendo…")
@@ -1302,7 +1342,7 @@ function PaymentActions({ expediente, payments, mock }) {
             className="cp-btn primary"
             style={{ whiteSpace: "nowrap" }}
             disabled={state.loading !== null}
-            onClick={() => startIntent("balance")}
+            onClick={() => startIntent("balance", payMethod)}
           >
             {state.loading === "balance"
               ? tt("Redirigiendo…")

@@ -107,6 +107,28 @@ class Casanova_Payments_Service {
       $payer_default = __('Cliente', 'casanova-portal');
     }
 
+
+
+    // Métodos de pago disponibles en el portal (backend manda; frontend solo renderiza).
+    $inespay_enabled = false;
+    if (class_exists('Casanova_Inespay_Service')) {
+      $k = defined('CASANOVA_INESPAY_API_KEY') ? (string)CASANOVA_INESPAY_API_KEY : '';
+      $t = defined('CASANOVA_INESPAY_API_TOKEN') ? (string)CASANOVA_INESPAY_API_TOKEN : '';
+      $inespay_enabled = ($k !== '' && $t !== '');
+    }
+
+    $payment_methods = [
+      [
+        'id' => 'card',
+        'enabled' => true,
+        'label' => __('Tarjeta', 'casanova-portal'),
+      ],
+      [
+        'id' => 'bank_transfer',
+        'enabled' => (bool) $inespay_enabled,
+        'label' => __('Transferencia bancaria', 'casanova-portal'),
+      ],
+    ];
     return [
       'user_id' => $user_id,
       'idCliente' => $idCliente,
@@ -123,6 +145,7 @@ class Casanova_Payments_Service {
       'expediente_pagado' => $is_paid,
       'mulligans_used' => casanova_mulligans_used_for_expediente($idExpediente, $idCliente),
       'payment_options' => $payment_options,
+      'payment_methods' => $payment_methods,
       'actions' => [
         'deposit' => [
           'allowed' => (bool) $payment_options['can_pay_deposit'],
