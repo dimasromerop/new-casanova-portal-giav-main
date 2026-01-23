@@ -46,6 +46,8 @@ class Casanova_Inespay_Service {
         'Content-Type' => 'application/json',
         'API-KEY' => $cfg['api_key'],
         'API-TOKEN' => $cfg['api_token'],
+        'X-Api-Key' => $cfg['api_key'],
+        'Authorization' => $cfg['api_token'],
       ],
       'body' => wp_json_encode($body),
     ];

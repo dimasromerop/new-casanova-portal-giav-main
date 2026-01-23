@@ -212,11 +212,15 @@ class Casanova_Payments_Controller {
     $req = [
       'amount' => (int)round($amount * 100),
       'description' => ($mode === 'deposit' ? 'Depósito' : 'Pago') . ' Casanova Golf (' . (int)$expediente_id . ')',
-      'reference' => $reference,
+            'subject' => ($mode === 'deposit' ? 'Depósito' : 'Pago') . ' Casanova Golf (' . (int)$expediente_id . ')',
+'reference' => $reference,
       'notifUrl' => $notif_url,
       'successLinkRedirect' => $success_link,
       'abortLinkRedirect' => $abort_link,
-      'customData' => wp_json_encode([
+            'urlNotif' => $notif_url,
+      'urlOk' => $success_link,
+      'urlError' => $abort_link,
+'customData' => wp_json_encode([
         'token' => (string)$intent->token,
         'intent_id' => (int)$intent->id,
         'expediente_id' => (int)$expediente_id,
@@ -233,10 +237,12 @@ class Casanova_Payments_Controller {
           'inespay_init' => [
             'ok' => false,
             'error' => $res->get_error_message(),
+            'error_data' => $res->get_error_data(),
             'time' => current_time('mysql'),
           ],
         ]),
       ]);
+      error_log('[CASANOVA][INESPAY] init failed: ' . $res->get_error_message() . ' ' . wp_json_encode($res->get_error_data()));
       return self::error_response(
         esc_html__('No se pudo iniciar el pago por transferencia.', 'casanova-portal'),
         'inespay_init_failed',
