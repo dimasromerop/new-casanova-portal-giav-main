@@ -201,6 +201,7 @@ class Casanova_Payments_Controller {
       ],
     ]);
     if (is_wp_error($intent)) {
+      error_log('[Casanova Payments] intent_create_failed: ' . $intent->get_error_message());
       return self::error_response(
         esc_html__('No se pudo crear el intento de pago.', 'casanova-portal'),
         'intent_create_failed',
