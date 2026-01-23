@@ -18,6 +18,12 @@ class Casanova_Health_Controller {
       'permission_callback' => [self::class, 'permissions_check'],
     ]);
   }
+    register_rest_route('casanova/v1', '/health/inespay', [
+      'methods'             => WP_REST_Server::READABLE,
+      'callback'            => [self::class, 'handle_inespay'],
+      'permission_callback' => [self::class, 'permissions_check'],
+    ]);
+
 
   public static function permissions_check(): bool {
     return current_user_can('manage_options');

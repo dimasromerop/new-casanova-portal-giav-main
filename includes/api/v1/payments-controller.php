@@ -50,6 +50,13 @@ class Casanova_Payments_Controller {
 
   public static function handle(WP_REST_Request $request) {
     casanova_portal_clear_rest_output();
+    casanova_portal_log('payments.intent.enter', [
+      'user_id' => get_current_user_id(),
+      'ip' => isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '',
+      'expediente_id' => (int) $request->get_param('expediente_id'),
+      'type' => (string) $request->get_param('type'),
+      'method' => (string) $request->get_param('method'),
+    ]);
     $mock = (int) $request->get_param('mock') === 1 && current_user_can('manage_options');
     if ($mock) {
       $mock_url = esc_url_raw(add_query_arg(['payment' => 'intent-mock'], home_url('/portal')));
@@ -242,6 +249,10 @@ class Casanova_Payments_Controller {
           ],
         ]),
       ]);
+      casanova_portal_log('payments.intent.inespay.wp_error', [
+        'message' => $res->get_error_message(),
+        'data' => $res->get_error_data(),
+      ]);
       error_log('[CASANOVA][INESPAY] init failed: ' . $res->get_error_message() . ' ' . wp_json_encode($res->get_error_data()));
       return self::error_response(
         esc_html__('No se pudo iniciar el pago por transferencia.', 'casanova-portal'),
@@ -256,6 +267,11 @@ class Casanova_Payments_Controller {
     }
 
     $redirect_url = Casanova_Inespay_Service::extract_redirect_url($res);
+    casanova_portal_log('payments.intent.inespay.response', [
+      'has_singlePayinId' => !empty($res['singlePayinId']),
+      'redirect_url' => $redirect_url,
+    ]);
+
     if ($redirect_url === '') {
       casanova_payment_intent_update((int)$intent->id, [
         'status' => 'failed',

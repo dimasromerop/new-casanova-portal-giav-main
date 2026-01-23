@@ -41,7 +41,8 @@ class Casanova_Inespay_Service {
     $url = $cfg['base_url'] . '/' . ltrim($path, '/');
 
     $args = [
-      'timeout' => 25,
+      'timeout' => 15,
+      'user-agent' => 'CasanovaPortalGIAV/0.28.6 (+WordPress)',
       'headers' => [
         'Content-Type' => 'application/json',
         'API-KEY' => $cfg['api_key'],
@@ -52,11 +53,33 @@ class Casanova_Inespay_Service {
       'body' => wp_json_encode($body),
     ];
 
+    casanova_portal_log('inespay.post.request', [
+      'url' => $url,
+      'timeout' => $args['timeout'] ?? null,
+    ]);
+    $t0 = microtime(true);
     $res = wp_remote_post($url, $args);
-    if (is_wp_error($res)) return $res;
+    $ms = (int) round((microtime(true) - $t0) * 1000);
+
+    if (is_wp_error($res)) {
+      casanova_portal_log('inespay.post.wp_error', [
+        'url' => $url,
+        'ms' => $ms,
+        'message' => $res->get_error_message(),
+        'data' => $res->get_error_data(),
+      ]);
+      return $res;
+    }
 
     $code = (int) wp_remote_retrieve_response_code($res);
     $raw  = (string) wp_remote_retrieve_body($res);
+
+    casanova_portal_log('inespay.post.response', [
+      'url' => $url,
+      'ms' => $ms,
+      'code' => $code,
+      'body_prefix' => substr($raw, 0, 400),
+    ]);
 
     $data = json_decode($raw, true);
     if (!is_array($data)) $data = null;

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: New Casanova Portal - GIAV
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
- * Version: 0.28.5
+ * Version: 0.28.6
  * Author: Casanova Golf
  * Text Domain: casanova-portal
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
 // DB / plugin upgrade (runs on normal updates too, not only on activation)
 // -----------------------------------------------------------------------------
 function casanova_portal_giav_current_version(): string {
-  return '0.28.4';
+  return '0.28.6';
 }
 
 function casanova_portal_giav_maybe_upgrade(): void {
@@ -38,6 +38,7 @@ define('CASANOVA_GIAV_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // JS i18n strings (WPML)
 require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-i18n.php';
+require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-logger.php';
 
 if (!function_exists('casanova_portal_clear_rest_output')) {
   function casanova_portal_clear_rest_output(): void {
