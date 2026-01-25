@@ -175,15 +175,20 @@ class Casanova_Payments_Controller {
     $u = get_user_by('id', $user_id);
     if ($u && !empty($u->display_name)) $payer_name = (string)$u->display_name;
 
-    $portal_base = function_exists('casanova_portal_base_url') ? (string)casanova_portal_base_url() : home_url('/portal-app/');
+    $portal_base = function_exists('casanova_portal_base_url') ? (string) casanova_portal_base_url() : home_url('/portal-app/');
+    // IMPORTANT: redirect back into the SPA, directly to the Payments tab of the trip.
     $success_link = add_query_arg([
-      'expediente' => (int)$expediente_id,
+      'view' => 'trip',
+      'tab' => 'payments',
+      'expediente' => (int) $expediente_id,
       'pay_status' => 'checking',
       'payment' => 'success',
       'method' => 'bank_transfer',
     ], $portal_base);
     $abort_link = add_query_arg([
-      'expediente' => (int)$expediente_id,
+      'view' => 'trip',
+      'tab' => 'payments',
+      'expediente' => (int) $expediente_id,
       'pay_status' => 'ko',
       'payment' => 'failed',
       'method' => 'bank_transfer',

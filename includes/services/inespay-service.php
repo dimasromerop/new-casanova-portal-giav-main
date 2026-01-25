@@ -42,7 +42,7 @@ class Casanova_Inespay_Service {
 
     $args = [
       'timeout' => 15,
-      'user-agent' => 'CasanovaPortalGIAV/0.28.6 (+WordPress)',
+      'user-agent' => 'CasanovaPortalGIAV/0.28.7 (+WordPress)',
       'headers' => [
         'Content-Type' => 'application/json',
         'API-KEY' => $cfg['api_key'],

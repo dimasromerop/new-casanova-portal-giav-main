@@ -88,6 +88,7 @@ function readParams() {
     mock: p.get("mock") === "1",
     payStatus: p.get("pay_status") || "",
     payment: p.get("payment") || "",
+    method: p.get("method") || "",
     refresh: p.get("refresh") === "1",
   };
 }
@@ -2682,7 +2683,16 @@ function App() {
   }
 
   useEffect(() => {
-    if (route.payment === "success") {
+    const payment = String(route.payment || "").toLowerCase();
+    const method = String(route.method || "").toLowerCase();
+    const payStatus = String(route.payStatus || "").toLowerCase();
+
+    if (payment === "success") {
+      // Informative toast for bank transfers (async confirmation).
+      if (method === "bank_transfer" && (payStatus === "checking" || payStatus === "")) {
+        notify(tt("Transferencia iniciada. En cuanto el banco la confirme actualizaremos tus pagos."), "info");
+      }
+
       // Evitar que se quede "plantificado" si el usuario recarga o navega.
       const dismissed = window.sessionStorage ? window.sessionStorage.getItem(paymentDismissKey) === "1" : false;
       if (!dismissed) {
@@ -2699,14 +2709,24 @@ function App() {
 
       setParam("payment", "");
       setParam("pay_status", "");
+      setParam("method", "");
     }
+
+    if (payment === "failed") {
+      notify(tt("La transferencia no se completó. Si el banco la confirma más tarde, lo verás reflejado aquí."), "warn");
+      setParam("payment", "");
+      setParam("pay_status", "");
+      setParam("method", "");
+    }
+
     return () => {
       if (bannerTimerRef.current) {
         window.clearTimeout(bannerTimerRef.current);
         bannerTimerRef.current = null;
       }
     };
-  }, [route.payment]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.payment, route.method, route.payStatus]);
 
   function dismissPaymentBanner() {
     setShowPaymentBanner(false);
