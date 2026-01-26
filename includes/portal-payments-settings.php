@@ -172,7 +172,7 @@ function casanova_payments_render_settings_page(): void {
   if (!current_user_can('manage_options')) return;
 
   $tab = isset($_GET['tab']) ? sanitize_key((string)$_GET['tab']) : 'payments';
-  if (!in_array($tab, ['payments','portal','menu','help'], true)) $tab = 'payments';
+  if (!in_array($tab, ['payments','portal','menu','giav','help'], true)) $tab = 'payments';
 
   echo '<div class="wrap">';
   echo '<h1>Casanova Portal</h1>';
@@ -182,11 +182,13 @@ function casanova_payments_render_settings_page(): void {
   $t_por = add_query_arg(['tab' => 'portal'], $base);
   $t_men = add_query_arg(['tab' => 'menu'], $base);
   $t_hlp = add_query_arg(['tab' => 'help'], $base);
+  $t_giav = add_query_arg(['tab' => 'giav'], $base);
 
   echo '<nav class="nav-tab-wrapper" aria-label="Secciones">';
   echo '<a href="' . esc_url($t_pay) . '" class="nav-tab ' . ($tab==='payments'?'nav-tab-active':'') . '">Pagos</a>';
   echo '<a href="' . esc_url($t_por) . '" class="nav-tab ' . ($tab==='portal'?'nav-tab-active':'') . '">Portal</a>';
   echo '<a href="' . esc_url($t_men) . '" class="nav-tab ' . ($tab==='menu'?'nav-tab-active':'') . '">Menú</a>';
+  echo '<a href="' . esc_url($t_giav) . '" class="nav-tab ' . ($tab==='giav'?'nav-tab-active':'') . '">GIAV</a>';
   echo '<a href="' . esc_url($t_hlp) . '" class="nav-tab ' . ($tab==='help'?'nav-tab-active':'') . '">Ayuda</a>';
   echo '</nav>';
 
@@ -438,6 +440,122 @@ function casanova_payments_render_settings_page(): void {
 
     submit_button('Guardar menú');
     echo '</form>';
+
+  } elseif ($tab === 'giav') {
+    // Admin-only: render catalogs directly (no REST auth/nonce needed).
+    $section = isset($_GET['section']) ? sanitize_key((string) $_GET['section']) : 'payment-methods';
+    $q = isset($_GET['q']) ? sanitize_text_field((string) $_GET['q']) : '';
+    $include_disabled = isset($_GET['include_disabled']) ? (bool) $_GET['include_disabled'] : true;
+    $include_hidden = isset($_GET['include_hidden']) ? (bool) $_GET['include_hidden'] : true;
+
+    echo '<div style="margin-top:14px;">';
+    echo '<p class="description">Herramientas internas para sacar IDs desde GIAV (formas de pago y custom fields) sin pelearse con la autenticación del REST.</p>';
+
+    $base_giav = add_query_arg(['tab' => 'giav'], $base);
+    $link_pay = add_query_arg(['section' => 'payment-methods'], $base_giav);
+    $link_exp = add_query_arg(['section' => 'custom-expediente'], $base_giav);
+    $link_res = add_query_arg(['section' => 'custom-reserva'], $base_giav);
+
+    echo '<p>';
+    echo '<a class="button ' . ($section==='payment-methods'?'button-primary':'') . '" href="' . esc_url($link_pay) . '">Formas de pago</a> ';
+    echo '<a class="button ' . ($section==='custom-expediente'?'button-primary':'') . '" href="' . esc_url($link_exp) . '">Custom fields (Expediente)</a> ';
+    echo '<a class="button ' . ($section==='custom-reserva'?'button-primary':'') . '" href="' . esc_url($link_res) . '">Custom fields (Servicios/Reserva)</a>';
+    echo '</p>';
+
+    echo '<form method="get" style="margin:12px 0;">';
+    echo '<input type="hidden" name="page" value="casanova-payments" />';
+    echo '<input type="hidden" name="tab" value="giav" />';
+    echo '<input type="hidden" name="section" value="' . esc_attr($section) . '" />';
+    echo '<input type="search" name="q" value="' . esc_attr($q) . '" placeholder="Filtrar por nombre/código…" style="min-width:320px;" /> ';
+    echo '<label style="margin-left:10px;"><input type="checkbox" name="include_disabled" value="1" ' . checked($include_disabled, true, false) . ' /> incluir deshabilitados</label> ';
+    echo '<label style="margin-left:10px;"><input type="checkbox" name="include_hidden" value="1" ' . checked($include_hidden, true, false) . ' /> incluir ocultos</label> ';
+    submit_button('Filtrar', 'secondary', '', false);
+    echo '</form>';
+
+    $err = null;
+    $rows = [];
+
+    if ($section === 'payment-methods') {
+      $items = function_exists('casanova_giav_forma_pago_search_all') ? casanova_giav_forma_pago_search_all($include_disabled) : new WP_Error('missing', 'No está disponible casanova_giav_forma_pago_search_all().');
+      if (is_wp_error($items)) {
+        $err = $items->get_error_message();
+      } else {
+        foreach ($items as $it) {
+          $row = [
+            'Id' => isset($it->Id) ? (int) $it->Id : 0,
+            'Nombre' => isset($it->Nombre) ? (string) $it->Nombre : '',
+            'Codigo' => isset($it->Codigo) ? (string) $it->Codigo : '',
+            'Categoria' => isset($it->Categoria) ? (string) $it->Categoria : '',
+            'Tipo' => isset($it->Tipo) ? (string) $it->Tipo : '',
+            'Deshabilitado' => isset($it->Deshabilitado) ? ((bool)$it->Deshabilitado ? 'Sí' : 'No') : 'No',
+          ];
+          if ($q !== '') {
+            $hay = strtolower($row['Nombre'] . ' ' . $row['Codigo'] . ' ' . $row['Categoria'] . ' ' . $row['Tipo']);
+            if (strpos($hay, strtolower($q)) === false) continue;
+          }
+          $rows[] = $row;
+        }
+      }
+    } else {
+      $target = ($section === 'custom-expediente') ? 'Expediente' : 'Reserva';
+      $items = function_exists('casanova_giav_customdata_search_by_target') ? casanova_giav_customdata_search_by_target($target, $include_hidden) : new WP_Error('missing', 'No está disponible casanova_giav_customdata_search_by_target().');
+      if (is_wp_error($items)) {
+        $err = $items->get_error_message();
+      } else {
+        foreach ($items as $it) {
+          $row = [
+            'Id' => isset($it->Id) ? (int) $it->Id : 0,
+            'Name' => isset($it->Name) ? (string) $it->Name : '',
+            'TargetClass' => isset($it->TargetClass) ? (string) $it->TargetClass : $target,
+            'Type' => isset($it->Type) ? (string) $it->Type : '',
+            'Hidden' => isset($it->Hidden) ? ((bool)$it->Hidden ? 'Sí' : 'No') : 'No',
+            'Required' => isset($it->Required) ? ((bool)$it->Required ? 'Sí' : 'No') : 'No',
+          ];
+          if ($q !== '') {
+            $hay = strtolower($row['Name']);
+            if (strpos($hay, strtolower($q)) === false) continue;
+          }
+          $rows[] = $row;
+        }
+      }
+    }
+
+    if ($err) {
+      echo '<div class="notice notice-error"><p><strong>GIAV:</strong> ' . esc_html($err) . '</p></div>';
+    } else {
+      echo '<p class="description">Resultados: <strong>' . esc_html((string) count($rows)) . '</strong></p>';
+      echo '<table class="widefat striped">';
+      if ($section === 'payment-methods') {
+        echo '<thead><tr><th style="width:80px;">Id</th><th>Nombre</th><th>Código</th><th>Categoría</th><th>Tipo</th><th>Deshabilitado</th></tr></thead><tbody>';
+        foreach ($rows as $r) {
+          echo '<tr>';
+          echo '<td><code>' . esc_html((string)$r['Id']) . '</code></td>';
+          echo '<td>' . esc_html($r['Nombre']) . '</td>';
+          echo '<td>' . esc_html($r['Codigo']) . '</td>';
+          echo '<td>' . esc_html($r['Categoria']) . '</td>';
+          echo '<td>' . esc_html($r['Tipo']) . '</td>';
+          echo '<td>' . esc_html($r['Deshabilitado']) . '</td>';
+          echo '</tr>';
+        }
+        echo '</tbody>';
+      } else {
+        echo '<thead><tr><th style="width:80px;">Id</th><th>Name</th><th>TargetClass</th><th>Type</th><th>Hidden</th><th>Required</th></tr></thead><tbody>';
+        foreach ($rows as $r) {
+          echo '<tr>';
+          echo '<td><code>' . esc_html((string)$r['Id']) . '</code></td>';
+          echo '<td>' . esc_html($r['Name']) . '</td>';
+          echo '<td>' . esc_html($r['TargetClass']) . '</td>';
+          echo '<td>' . esc_html($r['Type']) . '</td>';
+          echo '<td>' . esc_html($r['Hidden']) . '</td>';
+          echo '<td>' . esc_html($r['Required']) . '</td>';
+          echo '</tr>';
+        }
+        echo '</tbody>';
+      }
+      echo '</table>';
+    }
+
+    echo '</div>';
 
   } elseif ($tab === 'help') {
     echo '<h2>Ayuda rápida</h2>';
