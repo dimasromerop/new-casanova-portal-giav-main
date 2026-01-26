@@ -535,7 +535,14 @@ function casanova_payments_render_settings_page(): void {
     $rows = [];
 
     if ($section === 'payment-methods') {
-      $items = function_exists('casanova_giav_forma_pago_search_all') ? casanova_giav_forma_pago_search_all($include_disabled) : new WP_Error('missing', 'No está disponible casanova_giav_forma_pago_search_all().');
+      // Fetch all pages (GIAV pageSize max 100) so admins don't miss items.
+      if (function_exists('casanova_giav_forma_pago_search_all_pages')) {
+        $items = casanova_giav_forma_pago_search_all_pages($include_disabled, 10);
+      } elseif (function_exists('casanova_giav_forma_pago_search_all')) {
+        $items = casanova_giav_forma_pago_search_all($include_disabled);
+      } else {
+        $items = new WP_Error('missing', 'No está disponible casanova_giav_forma_pago_search_all().');
+      }
       if (is_wp_error($items)) {
         $err = $items->get_error_message();
       } else {
@@ -557,7 +564,14 @@ function casanova_payments_render_settings_page(): void {
       }
     } else {
       $target = ($section === 'custom-expediente') ? 'Expediente' : 'Reserva';
-      $items = function_exists('casanova_giav_customdata_search_by_target') ? casanova_giav_customdata_search_by_target($target, $include_hidden) : new WP_Error('missing', 'No está disponible casanova_giav_customdata_search_by_target().');
+      // Fetch all pages (GIAV pageSize max 100) so admins don't miss definitions.
+      if (function_exists('casanova_giav_customdata_search_all_pages')) {
+        $items = casanova_giav_customdata_search_all_pages($target, $include_hidden, 10);
+      } elseif (function_exists('casanova_giav_customdata_search_by_target')) {
+        $items = casanova_giav_customdata_search_by_target($target, $include_hidden);
+      } else {
+        $items = new WP_Error('missing', 'No está disponible casanova_giav_customdata_search_by_target().');
+      }
       if (is_wp_error($items)) {
         $err = $items->get_error_message();
       } else {

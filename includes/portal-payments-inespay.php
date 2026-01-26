@@ -312,8 +312,11 @@ add_action('template_redirect', function () {
     'intent_id' => $intent_id,
   ], $portal_base);
 
-  $target = is_user_logged_in() ? $portal_url : wp_login_url($portal_url);
-
-  wp_safe_redirect($target);
+  // IMPORTANT: never bounce through wp-login.php here.
+  // The portal itself enforces access (portal-access-gate.php). If we redirect to wp-login
+  // from a third-party return (often a POST), some environments can temporarily evaluate
+  // the session as not logged-in and show the annoying "ya has iniciado sesión" screen.
+  // Always go straight back into the portal; if login is needed, the portal gate will handle it.
+  wp_safe_redirect($portal_url);
   exit;
 });
