@@ -2,7 +2,7 @@
 /**
  * Plugin Name: New Casanova Portal - GIAV
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
- * Version: 0.28.12
+ * Version: 0.28.13
  * Author: Casanova Golf
  * Text Domain: casanova-portal
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
 // DB / plugin upgrade (runs on normal updates too, not only on activation)
 // -----------------------------------------------------------------------------
 function casanova_portal_giav_current_version(): string {
-  return '0.28.12';
+  return '0.28.13';
 }
 
 // -----------------------------------------------------------------------------
@@ -29,6 +29,15 @@ if (!function_exists('casanova_inespay_register_return_rewrite')) {
 
 add_action('init', function () {
   casanova_inespay_register_return_rewrite();
+
+  // Flush rewrite rules only AFTER WP_Rewrite is available (init).
+  // This avoids fatal errors in early contexts like wp-cron where $wp_rewrite is not set yet.
+  if (get_option('casanova_portal_giav_needs_rewrite_flush') === '1') {
+    delete_option('casanova_portal_giav_needs_rewrite_flush');
+    if (function_exists('flush_rewrite_rules')) {
+      flush_rewrite_rules(false);
+    }
+  }
 });
 
 add_filter('query_vars', function (array $vars): array {
@@ -47,13 +56,9 @@ function casanova_portal_giav_maybe_upgrade(): void {
     casanova_payments_install();
   }
 
-  // Ensure rewrite rule exists for the clean Inespay return URL.
-  if (function_exists('casanova_inespay_register_return_rewrite')) {
-    casanova_inespay_register_return_rewrite();
-  }
-  if (function_exists('flush_rewrite_rules')) {
-    flush_rewrite_rules();
-  }
+  // Mark that we need a rewrite flush, but do it on 'init' only.
+  // (Calling add_rewrite_rule/flush_rewrite_rules too early can fatal in some contexts.)
+  update_option('casanova_portal_giav_needs_rewrite_flush', '1', false);
 
   update_option('casanova_portal_giav_version', $current, true);
 }
