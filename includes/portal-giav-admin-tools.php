@@ -86,7 +86,10 @@ if (!function_exists('casanova_giav_customdata_search_by_target')) {
     if (is_wp_error($result)) return $result;
 
     $container = $result->CustomData_SEARCHResult ?? $result;
-    return casanova_giav_normalize_list($container, 'WsCustomData');
+    // IMPORTANT: In this WSDL the item name is <CustomData>, not <WsCustomData>.
+    // Using the wrong list key makes SoapClient return the container object instead of the items,
+    // which then looks like "Id = 0" placeholders in admin tools.
+    return casanova_giav_normalize_list($container, 'CustomData');
   }
 }
 
