@@ -2,7 +2,7 @@
 /**
  * Plugin Name: New Casanova Portal - GIAV
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
- * Version: 0.28.10
+ * Version: 0.28.11
  * Author: Casanova Golf
  * Text Domain: casanova-portal
  * Domain Path: /languages
@@ -14,8 +14,27 @@ if (!defined('ABSPATH')) exit;
 // DB / plugin upgrade (runs on normal updates too, not only on activation)
 // -----------------------------------------------------------------------------
 function casanova_portal_giav_current_version(): string {
-  return '0.28.10';
+  return '0.28.11';
 }
+
+// -----------------------------------------------------------------------------
+// Inespay clean return route (NO /wp-json)
+// -----------------------------------------------------------------------------
+if (!function_exists('casanova_inespay_register_return_rewrite')) {
+  function casanova_inespay_register_return_rewrite(): void {
+    // A clean URL for third-party redirects is more resilient than /wp-json/* in production.
+    add_rewrite_rule('^inespay/return/?$', 'index.php?casanova_inespay_return=1', 'top');
+  }
+}
+
+add_action('init', function () {
+  casanova_inespay_register_return_rewrite();
+});
+
+add_filter('query_vars', function (array $vars): array {
+  $vars[] = 'casanova_inespay_return';
+  return $vars;
+});
 
 function casanova_portal_giav_maybe_upgrade(): void {
   $stored = (string) get_option('casanova_portal_giav_version', '');
@@ -26,6 +45,14 @@ function casanova_portal_giav_maybe_upgrade(): void {
   // Ensure DB schema is up to date (dbDelta is safe to re-run).
   if (function_exists('casanova_payments_install')) {
     casanova_payments_install();
+  }
+
+  // Ensure rewrite rule exists for the clean Inespay return URL.
+  if (function_exists('casanova_inespay_register_return_rewrite')) {
+    casanova_inespay_register_return_rewrite();
+  }
+  if (function_exists('flush_rewrite_rules')) {
+    flush_rewrite_rules();
   }
 
   update_option('casanova_portal_giav_version', $current, true);
@@ -184,6 +211,16 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-db.php';
 
 // 2) HOOK de activación (tabla)
 register_activation_hook(__FILE__, 'casanova_payments_install');
+
+// Activación: reglas de rewrite (return limpio de Inespay)
+register_activation_hook(__FILE__, function () {
+  if (function_exists('casanova_inespay_register_return_rewrite')) {
+    casanova_inespay_register_return_rewrite();
+  }
+  if (function_exists('flush_rewrite_rules')) {
+    flush_rewrite_rules();
+  }
+});
 
 // Activación: programa de fidelización (cron)
 register_activation_hook(__FILE__, function () {

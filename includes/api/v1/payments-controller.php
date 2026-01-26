@@ -209,18 +209,20 @@ class Casanova_Payments_Controller {
     }
 
     // Build return URLs AFTER intent exists.
-    // We return to a lightweight REST "bridge" that will then redirect to the SPA.
+    // IMPORTANT: Use a clean, non-REST return URL for third-party redirects.
+    // Some production stacks cache or harden /wp-json/* in ways that can produce
+    // rest_no_route intermittently. A plain WP route is more resilient.
     $success_link = add_query_arg([
       'status' => 'success',
       'expediente' => (int) $expediente_id,
       'intent_id' => (int) $intent->id,
-    ], home_url('/wp-json/casanova/v1/inespay/return'));
+    ], home_url('/inespay/return/'));
 
     $abort_link = add_query_arg([
       'status' => 'failed',
       'expediente' => (int) $expediente_id,
       'intent_id' => (int) $intent->id,
-    ], home_url('/wp-json/casanova/v1/inespay/return'));
+    ], home_url('/inespay/return/'));
 
     $req = [
       'amount' => (int)round($amount * 100),

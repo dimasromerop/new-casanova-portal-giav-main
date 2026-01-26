@@ -270,34 +270,50 @@ add_action('rest_api_init', function () {
   // annoying "ya has iniciado sesión" screen.
   register_rest_route('casanova/v1', '/inespay/return', [
     'methods'  => 'GET',
+    // Backward compatible REST bridge: redirect to the clean return URL.
     'callback' => function (WP_REST_Request $request) {
-      $status = sanitize_key((string) $request->get_param('status'));
-      $status = ($status === 'success') ? 'success' : 'failed';
+      $qs = [];
+      foreach (['status', 'expediente', 'intent_id'] as $k) {
+        if (null !== $request->get_param($k)) {
+          $qs[$k] = $request->get_param($k);
+        }
+      }
 
-      $expediente_id = absint($request->get_param('expediente'));
-      $intent_id = absint($request->get_param('intent_id'));
-
-      $portal_base = function_exists('casanova_portal_base_url')
-        ? (string) casanova_portal_base_url()
-        : home_url('/portal-app/');
-
-      $portal_url = add_query_arg([
-        'view' => 'trip',
-        'tab' => 'payments',
-        'expediente' => $expediente_id,
-        'pay_status' => ($status === 'success' ? 'checking' : 'ko'),
-        'payment' => ($status === 'success' ? 'success' : 'failed'),
-        'method' => 'bank_transfer',
-        'intent_id' => $intent_id,
-      ], $portal_base);
-
-      // If no session, send the user through WP login.
-      $target = is_user_logged_in() ? $portal_url : wp_login_url($portal_url);
-
+      $clean = add_query_arg($qs, home_url('/inespay/return/'));
       $resp = new WP_REST_Response(null, 302);
-      $resp->header('Location', $target);
+      $resp->header('Location', $clean);
       return $resp;
     },
     'permission_callback' => '__return_true',
   ]);
+});
+
+// Clean return handler (NO /wp-json). This avoids stacks that cache/harden REST.
+add_action('template_redirect', function () {
+  if (empty(get_query_var('casanova_inespay_return'))) return;
+
+  $status = isset($_GET['status']) ? sanitize_key((string) $_GET['status']) : 'failed';
+  $status = ($status === 'success') ? 'success' : 'failed';
+
+  $expediente_id = isset($_GET['expediente']) ? absint($_GET['expediente']) : 0;
+  $intent_id = isset($_GET['intent_id']) ? absint($_GET['intent_id']) : 0;
+
+  $portal_base = function_exists('casanova_portal_base_url')
+    ? (string) casanova_portal_base_url()
+    : home_url('/portal-app/');
+
+  $portal_url = add_query_arg([
+    'view' => 'trip',
+    'tab' => 'payments',
+    'expediente' => $expediente_id,
+    'pay_status' => ($status === 'success' ? 'checking' : 'ko'),
+    'payment' => ($status === 'success' ? 'success' : 'failed'),
+    'method' => 'bank_transfer',
+    'intent_id' => $intent_id,
+  ], $portal_base);
+
+  $target = is_user_logged_in() ? $portal_url : wp_login_url($portal_url);
+
+  wp_safe_redirect($target);
+  exit;
 });
