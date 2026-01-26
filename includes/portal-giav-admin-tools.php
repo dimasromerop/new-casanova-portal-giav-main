@@ -12,7 +12,9 @@ if (!function_exists('casanova_giav_forma_pago_search_all')) {
   /**
    * Returns all GIAV payment methods (FormasPago) as raw WsFormaPago items.
    */
-  function casanova_giav_forma_pago_search_all(bool $include_disabled = true, int $pageSize = 500, int $pageIndex = 0) {
+  function casanova_giav_forma_pago_search_all(bool $include_disabled = true, int $pageSize = 100, int $pageIndex = 0) {
+    // GIAV constraint: pageSize max 100.
+    $pageSize = max(1, min(100, (int) $pageSize));
     // Many parameters are "required" in SOAP even if nillable. Send a full, permissive payload.
     $params = [
       'idOficina' => null,
@@ -38,17 +40,45 @@ if (!function_exists('casanova_giav_forma_pago_search_all')) {
   }
 }
 
+if (!function_exists('casanova_giav_forma_pago_search_all_pages')) {
+  /**
+   * Convenience: fetch all pages of FormaPago_SEARCH (GIAV pageSize max 100).
+   */
+  function casanova_giav_forma_pago_search_all_pages(bool $include_disabled = true, int $maxPages = 10) {
+    $maxPages = max(1, min(50, (int) $maxPages));
+    $all = [];
+    for ($i = 0; $i < $maxPages; $i++) {
+      $items = casanova_giav_forma_pago_search_all($include_disabled, 100, $i);
+      if (is_wp_error($items)) return $items;
+      foreach ($items as $it) $all[] = $it;
+      if (count($items) < 100) break;
+    }
+    return $all;
+  }
+}
+
 if (!function_exists('casanova_giav_customdata_search_by_target')) {
   /**
    * Returns GIAV CustomData definitions for a given target class.
    */
-  function casanova_giav_customdata_search_by_target(string $targetClass, bool $include_hidden = true, int $pageSize = 500, int $pageIndex = 0) {
+  function casanova_giav_customdata_search_by_target(string $targetClass, bool $include_hidden = true, int $pageSize = 100, int $pageIndex = 0) {
+    // GIAV constraint: pageSize max 100.
+    $pageSize = max(1, min(100, (int) $pageSize));
+
+    // WSDL expects ArrayOfCrmTargetClass, not a string.
+    // SoapClient typically represents arrays as: ['CrmTargetClass' => ['Expediente']]
+    $targetClassArr = [ 'CrmTargetClass' => [ (string) $targetClass ] ];
+
     $params = [
-      'targetClass' => $targetClass,
+      'idsCustomData' => null,
+      'types' => null,
+      'name' => null,
+      'targetClass' => $targetClassArr,
       'hidden' => $include_hidden ? 'NoAplicar' : 'No',
       'required' => 'NoAplicar',
-      'type' => null,
-      'pageSize' => (int) $pageSize,
+      'modificationDateHourFrom' => null,
+      'modificationDateHourTo' => null,
+      'pageSize' => $pageSize,
       'pageIndex' => (int) $pageIndex,
     ];
 
@@ -57,6 +87,81 @@ if (!function_exists('casanova_giav_customdata_search_by_target')) {
 
     $container = $result->CustomData_SEARCHResult ?? $result;
     return casanova_giav_normalize_list($container, 'WsCustomData');
+  }
+}
+
+if (!function_exists('casanova_giav_customdata_search_all_pages')) {
+  /**
+   * Convenience: fetch up to N pages of CustomData definitions (GIAV pageSize max 100).
+   */
+  function casanova_giav_customdata_search_all_pages(string $targetClass, bool $include_hidden = true, int $maxPages = 10): array|
+    WP_Error {
+    $maxPages = max(1, (int) $maxPages);
+    $all = [];
+    for ($i = 0; $i < $maxPages; $i++) {
+      $items = casanova_giav_customdata_search_by_target($targetClass, $include_hidden, 100, $i);
+      if (is_wp_error($items)) return $items;
+      foreach ($items as $it) $all[] = $it;
+      if (count($items) < 100) break;
+    }
+    return $all;
+  }
+}
+
+if (!function_exists('casanova_giav_expediente_search_simple')) {
+  /**
+   * Simple Expediente search helper to help admins find GIAV IDs (Id) for deposit overrides.
+   *
+   * Search strategy:
+   * - If $q looks like a code (digits), filter by codigoDesde/codigoHasta.
+   * - Else filter by titulo.
+   */
+  function casanova_giav_expediente_search_simple(string $q, int $pageSize = 50, int $pageIndex = 0) {
+    $q = trim((string) $q);
+    $pageSize = max(1, min(100, (int) $pageSize));
+
+    $is_code = ($q !== '' && preg_match('/^\d+$/', $q));
+
+    $params = [
+      'idsExpediente' => null,
+      'codOficina' => null,
+      'idsOficina' => null,
+      'codigoDesde' => $is_code ? $q : null,
+      'codigoHasta' => $is_code ? $q : null,
+      'idsCliente' => null,
+      'idsPasajeros' => null,
+      'idsDepartamento' => null,
+      'idsAgenteComercial' => null,
+      'fechaCreacionDesde' => null,
+      'fechaCreacionHasta' => null,
+      'fechaHoraModificacionDesde' => null,
+      'fechaHoraModificacionHasta' => null,
+      'fechaCierreDesde' => null,
+      'fechaCierreHasta' => null,
+      // Required enum; leaving date filters null means "no filter" in practice.
+      'modoMultiFiltroFecha' => 'Salida',
+      'multiFiltroFechaDesde' => null,
+      'multiFiltroFechaHasta' => null,
+      'idsEntitiesStages' => null,
+      'idsUsuarioCreacion' => null,
+      'titulo' => (!$is_code && $q !== '') ? $q : null,
+      'idsCategories' => null,
+      'idsPresupuesto' => null,
+      // Required filters.
+      'facturacionPendiente' => 'NoAplicar',
+      'cobroPendiente' => 'NoAplicar',
+      'estadoCierre' => 'NoAplicar',
+      'tipoExpediente' => 'NoAplicar',
+      'recepcionCosteTotal' => 'NoAplicar',
+      'customDataValues' => null,
+      'pageSize' => $pageSize,
+      'pageIndex' => (int) $pageIndex,
+    ];
+
+    $result = casanova_giav_call('Expediente_SEARCH', $params);
+    if (is_wp_error($result)) return $result;
+    $container = $result->Expediente_SEARCHResult ?? $result;
+    return casanova_giav_normalize_list($container, 'WsExpediente');
   }
 }
 
@@ -72,7 +177,7 @@ add_action('rest_api_init', function () {
       $include_disabled = ($include_disabled === null) ? true : (bool) $include_disabled;
       $q = trim((string) $request->get_param('q'));
 
-      $items = casanova_giav_forma_pago_search_all($include_disabled);
+      $items = casanova_giav_forma_pago_search_all_pages($include_disabled);
       if (is_wp_error($items)) {
         return new WP_REST_Response([
           'ok' => false,
@@ -136,7 +241,8 @@ add_action('rest_api_init', function () {
       $include_hidden = $request->get_param('include_hidden');
       $include_hidden = ($include_hidden === null) ? true : (bool) $include_hidden;
 
-      $items = casanova_giav_customdata_search_by_target($targetClass, $include_hidden);
+      // Fetch pages defensively (GIAV max pageSize=100).
+      $items = casanova_giav_customdata_search_all_pages($targetClass, $include_hidden, 10);
       if (is_wp_error($items)) {
         return new WP_REST_Response([
           'ok' => false,

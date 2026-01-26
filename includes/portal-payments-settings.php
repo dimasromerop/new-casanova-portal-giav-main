@@ -221,6 +221,65 @@ function casanova_payments_render_settings_page(): void {
     submit_button();
     echo '</form>';
 
+    // Helper: find GIAV Expediente IDs for deposit overrides (GIAV uses Id, not Codigo).
+    $qexp = isset($_GET['giav_expediente_q']) ? sanitize_text_field((string) $_GET['giav_expediente_q']) : '';
+
+    echo '<hr />';
+    echo '<h2>Buscar Expediente en GIAV (para overrides)</h2>';
+    echo '<p class="description">GIAV distingue <strong>ID</strong> (numérico interno) y <strong>Código</strong>. El override de depósito usa el <strong>ID</strong> (ej.: <code>2553848=15</code>). Aquí puedes buscar por código (solo números) o por texto del título.</p>';
+
+    // Search form (GET) to avoid mixing with settings POST.
+    echo '<form method="get" action="">';
+    echo '<input type="hidden" name="page" value="casanova-payments" />';
+    echo '<input type="hidden" name="tab" value="payments" />';
+    echo '<p>';
+    echo '<label for="giav_expediente_q" class="screen-reader-text">Buscar expediente</label>';
+    echo '<input name="giav_expediente_q" id="giav_expediente_q" type="text" class="regular-text" placeholder="ID o código (números) o texto del título" value="' . esc_attr($qexp) . '" /> ';
+    submit_button('Buscar', 'secondary', 'submit', false);
+    echo '</p>';
+    echo '</form>';
+
+    if ($qexp !== '') {
+      if (!function_exists('casanova_giav_expediente_search_simple')) {
+        echo '<div class="notice notice-error"><p>No está disponible la herramienta GIAV (falta <code>casanova_giav_expediente_search_simple</code>).</p></div>';
+      } else {
+        $items = casanova_giav_expediente_search_simple($qexp, 50, 0);
+        if (is_wp_error($items)) {
+          echo '<div class="notice notice-error"><p>Error GIAV: ' . esc_html($items->get_error_message()) . '</p></div>';
+        } else {
+          if (empty($items)) {
+            echo '<div class="notice notice-warning"><p>No se encontraron expedientes para <code>' . esc_html($qexp) . '</code>.</p></div>';
+          } else {
+            echo '<table class="widefat striped" style="max-width: 1100px;">';
+            echo '<thead><tr>';
+            echo '<th>ID (GIAV)</th><th>Código</th><th>Título</th><th>Fechas</th><th>Destino</th>';
+            echo '</tr></thead><tbody>';
+            foreach ($items as $it) {
+              $id = isset($it->Id) ? (int) $it->Id : 0;
+              $codigo = isset($it->Codigo) ? (string) $it->Codigo : '';
+              $titulo = isset($it->Titulo) ? (string) $it->Titulo : '';
+              $dest = isset($it->Destino) ? (string) $it->Destino : '';
+              $fd = isset($it->FechaDesde) ? (string) $it->FechaDesde : '';
+              $fh = isset($it->FechaHasta) ? (string) $it->FechaHasta : '';
+              $fechas = '';
+              if ($fd || $fh) {
+                $fechas = esc_html(substr($fd, 0, 10) . ' → ' . substr($fh, 0, 10));
+              }
+              echo '<tr>';
+              echo '<td><code>' . (int) $id . '</code></td>';
+              echo '<td>' . esc_html($codigo) . '</td>';
+              echo '<td>' . esc_html($titulo) . '</td>';
+              echo '<td>' . $fechas . '</td>';
+              echo '<td>' . esc_html($dest) . '</td>';
+              echo '</tr>';
+            }
+            echo '</tbody></table>';
+            echo '<p class="description">Copia el <strong>ID (GIAV)</strong> para el override: <code>ID=porcentaje</code>.</p>';
+          }
+        }
+      }
+    }
+
   } elseif ($tab === 'portal') {
     // Legacy templates por vista (compatibilidad)
     $tpl_dashboard   = (int) get_option('casanova_portal_tpl_dashboard', 0);
