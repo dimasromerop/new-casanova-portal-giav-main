@@ -175,26 +175,12 @@ class Casanova_Payments_Controller {
     $u = get_user_by('id', $user_id);
     if ($u && !empty($u->display_name)) $payer_name = (string)$u->display_name;
 
-    $portal_base = function_exists('casanova_portal_base_url') ? (string) casanova_portal_base_url() : home_url('/portal-app/');
-    // IMPORTANT: redirect back into the SPA, directly to the Payments tab of the trip.
-    error_log('[INESPAY] portal_base=' . $portal_base);
-    $success_link = add_query_arg([
-      'view' => 'trip',
-      'tab' => 'payments',
-      'expediente' => (int) $expediente_id,
-      'pay_status' => 'checking',
-      'payment' => 'success',
-      'method' => 'bank_transfer',
-    ], $portal_base);
-    $abort_link = add_query_arg([
-      'view' => 'trip',
-      'tab' => 'payments',
-      'expediente' => (int) $expediente_id,
-      'pay_status' => 'ko',
-      'payment' => 'failed',
-      'method' => 'bank_transfer',
-    ], $portal_base);
-
+    // IMPORTANT:
+    // In production we MUST avoid returning directly to a protected portal URL because some setups
+    // force a redirect to /login/?redirect_to=..., even if the user is already logged-in.
+    // We instead return to a lightweight REST "bridge" that will then redirect to the SPA.
+    $success_link = '';
+    $abort_link = '';
     $notif_url = home_url('/wp-json/casanova/v1/inespay/notify');
 
     $intent = casanova_payment_intent_create([
@@ -221,6 +207,20 @@ class Casanova_Payments_Controller {
         500
       );
     }
+
+    // Build return URLs AFTER intent exists.
+    // We return to a lightweight REST "bridge" that will then redirect to the SPA.
+    $success_link = add_query_arg([
+      'status' => 'success',
+      'expediente' => (int) $expediente_id,
+      'intent_id' => (int) $intent->id,
+    ], home_url('/wp-json/casanova/v1/inespay/return'));
+
+    $abort_link = add_query_arg([
+      'status' => 'failed',
+      'expediente' => (int) $expediente_id,
+      'intent_id' => (int) $intent->id,
+    ], home_url('/wp-json/casanova/v1/inespay/return'));
 
     $req = [
       'amount' => (int)round($amount * 100),

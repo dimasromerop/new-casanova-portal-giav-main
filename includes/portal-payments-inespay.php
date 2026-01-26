@@ -263,4 +263,41 @@ add_action('rest_api_init', function () {
     'callback' => 'casanova_handle_inespay_notify',
     'permission_callback' => '__return_true',
   ]);
+
+  // Return bridge for customer redirects (success/abort).
+  // We must not return directly to the portal page because some environments enforce
+  // a /login/?redirect_to=... jump (even for already logged-in users), producing the
+  // annoying "ya has iniciado sesión" screen.
+  register_rest_route('casanova/v1', '/inespay/return', [
+    'methods'  => 'GET',
+    'callback' => function (WP_REST_Request $request) {
+      $status = sanitize_key((string) $request->get_param('status'));
+      $status = ($status === 'success') ? 'success' : 'failed';
+
+      $expediente_id = absint($request->get_param('expediente'));
+      $intent_id = absint($request->get_param('intent_id'));
+
+      $portal_base = function_exists('casanova_portal_base_url')
+        ? (string) casanova_portal_base_url()
+        : home_url('/portal-app/');
+
+      $portal_url = add_query_arg([
+        'view' => 'trip',
+        'tab' => 'payments',
+        'expediente' => $expediente_id,
+        'pay_status' => ($status === 'success' ? 'checking' : 'ko'),
+        'payment' => ($status === 'success' ? 'success' : 'failed'),
+        'method' => 'bank_transfer',
+        'intent_id' => $intent_id,
+      ], $portal_base);
+
+      // If no session, send the user through WP login.
+      $target = is_user_logged_in() ? $portal_url : wp_login_url($portal_url);
+
+      $resp = new WP_REST_Response(null, 302);
+      $resp->header('Location', $target);
+      return $resp;
+    },
+    'permission_callback' => '__return_true',
+  ]);
 });

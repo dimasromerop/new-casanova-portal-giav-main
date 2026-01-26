@@ -79,6 +79,13 @@ add_action('admin_init', function () {
     'default' => '',
   ]);
 
+  // GIAV - Forma de pago (Inespay)
+  register_setting('casanova_payments', 'casanova_giav_idformapago_inespay', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 0,
+  ]);
+
   // --- Portal (legacy templates por vista)
   register_setting('casanova_portal', 'casanova_portal_tpl_dashboard', ['type' => 'integer', 'sanitize_callback' => 'absint']);
   register_setting('casanova_portal', 'casanova_portal_tpl_expedientes', ['type' => 'integer', 'sanitize_callback' => 'absint']);
@@ -187,6 +194,7 @@ function casanova_payments_render_settings_page(): void {
     $p  = get_option('casanova_deposit_percent', 10);
     $m  = get_option('casanova_deposit_min_amount', 50);
     $ov = get_option('casanova_deposit_overrides', '');
+    $idfp_inespay = (int) get_option('casanova_giav_idformapago_inespay', 0);
     if (!is_string($ov)) $ov = '';
 
     echo '<form method="post" action="options.php">';
@@ -202,6 +210,10 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><th scope="row"><label for="casanova_deposit_overrides">Overrides por expediente</label></th>';
     echo '<td><textarea name="casanova_deposit_overrides" id="casanova_deposit_overrides" rows="8" cols="60" class="large-text code">' . esc_textarea($ov) . '</textarea>';
     echo '<p class="description">Opcional. Una línea por expediente: <code>2553848=15</code> (porcentaje).</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_giav_idformapago_inespay">GIAV: ID forma de pago (Inespay)</label></th>';
+    echo '<td><input name="casanova_giav_idformapago_inespay" id="casanova_giav_idformapago_inespay" type="number" min="0" step="1" value="' . esc_attr($idfp_inespay) . '" />';
+    echo '<p class="description">Obligatorio para que el webhook de Inespay registre el cobro en GIAV. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_INESPAY</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
 
     echo '</table>';
     submit_button();
