@@ -1076,3 +1076,14 @@
 .casanova-msgcard__body{margin-top:10px;line-height:1.35;}
 .casanova-msgcard__meta{margin-top:6px;font-size:12px;opacity:.75;}
 .casanova-msgcard__cta{margin-top:12px;}
+
+/* Footer (lightweight, premium spacing) */
+.cp-footer{margin-top:18px;border-top:1px solid var(--border);background:color-mix(in srgb,var(--bg) 70%, var(--surface));}
+.cp-footer-inner{max-width:1600px;width:100%;margin:0 auto;padding:14px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.cp-footer-brand{font-weight:850;letter-spacing:-.2px}
+.cp-footer-muted{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.3}
+.cp-footer-right{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.cp-footer-item{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+.cp-footer-label{font-weight:800;color:var(--text);opacity:.85}
+.cp-footer-link{color:var(--accent);font-weight:800;text-decoration:none}
+.cp-footer-link:hover{text-decoration:underline}

@@ -57,23 +57,38 @@ function casanova_portal_agency_profile(): array {
     return $fallback;
   }
 
-  $nombre = trim((string)($office->NombreComercial ?? $office->Denominacion ?? ''));
-  $dir = trim((string)($office->Direccion ?? ''));
-  $cp  = trim((string)($office->CodPostal ?? ''));
-  $pob = trim((string)($office->Poblacion ?? ''));
-  $prov= trim((string)($office->Provincia ?? ''));
-  $pais= trim((string)($office->Pais ?? ''));
+  // GIAV puede devolver propiedades en camelCase (según WSDL) o en PascalCase
+  // (según wrapper/normalización). Para evitar “oficina vacía”, hacemos lookup
+  // tolerante a ambas variantes.
+  $pick = static function(object $obj, array $candidates, string $default = ''): string {
+    foreach ($candidates as $k) {
+      if (isset($obj->{$k}) && $obj->{$k} !== null && $obj->{$k} !== '') {
+        $v = trim((string) $obj->{$k});
+        if ($v !== '') return $v;
+      }
+    }
+    return $default;
+  };
+
+  $nombre = $pick($office, ['NombreComercial','nombreComercial','Denominacion','denominacion'], '');
+  $dir    = $pick($office, ['Direccion','direccion'], '');
+  $cp     = $pick($office, ['CodPostal','codPostal'], '');
+  $pob    = $pick($office, ['Poblacion','poblacion'], '');
+  $prov   = $pick($office, ['Provincia','provincia'], '');
+  $pais   = $pick($office, ['Pais','pais'], '');
 
   $direccion_full = trim(implode(', ', array_filter([$dir, trim($cp . ' ' . $pob), $prov, $pais])));
 
   $profile = [
     'nombre'    => $nombre !== '' ? $nombre : $fallback['nombre'],
-    'email'     => trim((string)($office->Email ?? '')) ?: $fallback['email'],
-    'tel'       => trim((string)($office->Telefono ?? '')) ?: $fallback['tel'],
+    // Campos de contacto: en WSDL son `email` y `telefono` (minúsculas).
+    // Aun así, soportamos variantes por si el wrapper los capitaliza.
+    'email'     => $pick($office, ['Email','email','EMail','eMail','Mail','mail'], '') ?: $fallback['email'],
+    'tel'       => $pick($office, ['Telefono','telefono','Telefono1','telefono1','Tel','tel'], '') ?: $fallback['tel'],
     'web'       => $fallback['web'],
     'direccion' => $direccion_full !== '' ? $direccion_full : $fallback['direccion'],
-    'idOficina' => (int)($office->Id ?? $idOficina),
-    'codigo'    => (string)($office->Codigo ?? ''),
+    'idOficina' => (int)($office->Id ?? $office->id ?? $office->idOficina ?? $idOficina),
+    'codigo'    => (string)($office->Codigo ?? $office->codigo ?? ''),
   ];
 
   set_transient($cache_key, $profile, 12 * HOUR_IN_SECONDS);

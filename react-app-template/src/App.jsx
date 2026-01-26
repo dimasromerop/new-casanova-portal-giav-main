@@ -599,10 +599,7 @@ function Sidebar({ view, unread = 0 }) {
         })}
       </nav>
 
-      <div style={{ marginTop: "auto", padding: 10, color: "var(--muted)", fontSize: 12 }}>
-        {tt("Soporte")}
-        <div style={{ marginTop: 6 }}>{tt("Si necesitas algo, escríbenos desde Mensajes.")}</div>
-      </div>
+      <div style={{ marginTop: "auto" }} />
     </aside>
   );
 }
@@ -623,6 +620,46 @@ function Topbar({ title, chip, onRefresh, isRefreshing, profile, onGo, onLogout,
         </div>
       </div>
     </div>
+  );
+}
+
+function PortalFooter() {
+  const agency = window.CasanovaPortal?.agency || {};
+  const tel = String(agency.tel || "").trim();
+  const email = String(agency.email || "").trim();
+  const nombre = String(agency.nombre || "Casanova Golf").trim();
+  const direccion = String(agency.direccion || "").trim();
+  const web = String(agency.web || "").trim();
+
+  return (
+    <footer className="cp-footer">
+      <div className="cp-footer-inner">
+        <div className="cp-footer-left">
+          <div className="cp-footer-brand">{nombre}</div>
+          {direccion ? <div className="cp-footer-muted">{direccion}</div> : null}
+        </div>
+        <div className="cp-footer-right">
+          {tel ? (
+            <div className="cp-footer-item">
+              <span className="cp-footer-label">{tt("Tel.")}</span>
+              <a href={`tel:${tel.replace(/\s+/g, "")}`} className="cp-footer-link">{tel}</a>
+            </div>
+          ) : null}
+          {email ? (
+            <div className="cp-footer-item">
+              <span className="cp-footer-label">{tt("Email")}</span>
+              <a href={`mailto:${email}`} className="cp-footer-link">{email}</a>
+            </div>
+          ) : null}
+          {web ? (
+            <div className="cp-footer-item">
+              <span className="cp-footer-label">{tt("Web")}</span>
+              <a href={web} className="cp-footer-link" target="_blank" rel="noreferrer">{web.replace(/^https?:\/\//, "")}</a>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </footer>
   );
 }
 
@@ -1021,7 +1058,9 @@ function TripsList({ mock, onOpen, dashboard }) {
                     const currencyForTrip = payments?.currency || "EUR";
                     const totalLabel = hasPayments ? euro(totalAmount, currencyForTrip) : "-";
                     const paymentsLabelText = hasPayments
-                      ? (pendingAmount <= 0.01 ? tt("Pagado") : tt("Pendiente"))
+                      ? (pendingAmount <= 0.01
+                          ? tt("Pagado")
+                          : ttf("Pendiente: {amount}", { amount: euro(pendingAmount, currencyForTrip) }))
                       : tt("Sin datos");
                     const paymentsVariant = getPaymentVariant(
                       Number.isFinite(pendingAmount) ? pendingAmount : Number.NaN,
@@ -1051,7 +1090,7 @@ function TripsList({ mock, onOpen, dashboard }) {
                           <div className="cp-trip-payments-info">
                             <BadgeLabel label={paymentsLabelText} variant={paymentsVariant} />
                             {hasPayments && Number.isFinite(paidAmount) ? (
-                              <div className="cp-trip-paid-amount">{tt("Pagado:")} {euro(paidAmount)}</div>
+                              <div className="cp-trip-paid-amount">{tt("Pagado:")} {euro(paidAmount, currencyForTrip)}</div>
                             ) : null}
                           </div>
                         </td>
@@ -3014,6 +3053,8 @@ function App() {
             <div className="cp-notice">{tt("Vista en construcción.")}</div>
           </div>
         )}
+
+        <PortalFooter />
       </main>
     </div>
   );
