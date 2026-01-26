@@ -177,6 +177,7 @@ class Casanova_Payments_Controller {
 
     $portal_base = function_exists('casanova_portal_base_url') ? (string) casanova_portal_base_url() : home_url('/portal-app/');
     // IMPORTANT: redirect back into the SPA, directly to the Payments tab of the trip.
+    error_log('[INESPAY] portal_base=' . $portal_base);
     $success_link = add_query_arg([
       'view' => 'trip',
       'tab' => 'payments',
