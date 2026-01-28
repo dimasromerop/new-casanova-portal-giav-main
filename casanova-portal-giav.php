@@ -2,7 +2,7 @@
 /**
  * Plugin Name: New Casanova Portal - GIAV
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
- * Version: 0.28.19
+ * Version: 0.28.21
  * Author: Casanova Golf
  * Text Domain: casanova-portal
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
 // DB / plugin upgrade (runs on normal updates too, not only on activation)
 // -----------------------------------------------------------------------------
 function casanova_portal_giav_current_version(): string {
-  return '0.28.19';
+  return '0.28.21';
 }
 
 // -----------------------------------------------------------------------------
@@ -216,9 +216,11 @@ add_action('wp_enqueue_scripts', function () {
 
 // 1) INCLUDES MÍNIMOS para activación (solo DB)
 require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-db.php';
+require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-otp-db.php';
 
 // 2) HOOK de activación (tabla)
 register_activation_hook(__FILE__, 'casanova_payments_install');
+register_activation_hook(__FILE__, 'casanova_portal_otp_install');
 
 // Activación: reglas de rewrite (return limpio de Inespay)
 register_activation_hook(__FILE__, function () {
@@ -249,6 +251,9 @@ add_action('plugins_loaded', function () {
 
   // Optimizaciones (cache/log/base URL). Cargado primero para que el resto lo use.
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-optimizations.php';
+
+  // Security: OTP linking (email)
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-otp.php';
 
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/giav-core.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/giav-client-search.php';
@@ -285,6 +290,7 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/services/inbox-service.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/expedientes-controller.php';
 require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/inbox-controller.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/profile-controller.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/linking-controller.php';
 
   add_action('rest_api_init', ['Casanova_Dashboard_Controller', 'register_routes']);
   add_action('rest_api_init', ['Casanova_Messages_Controller', 'register_routes']);
@@ -293,10 +299,13 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/inbox-controller.php';
   add_action('rest_api_init', ['Casanova_Inbox_Controller', 'register_routes']);
   add_action('rest_api_init', ['Casanova_Payments_Controller', 'register_routes']);
   add_action('rest_api_init', ['Casanova_Profile_Controller', 'register_routes']);
-  add_action('rest_api_init', ['Casanova_Profile_Controller', 'register_routes']);
+  add_action('rest_api_init', ['Casanova_Linking_Controller', 'register_routes']);
 
   // React container shortcode
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-react-app.php';
+
+  // Account linking (2-step DNI + OTP) shortcode
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-link-account.php';
 
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-format.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-dashboard.php';

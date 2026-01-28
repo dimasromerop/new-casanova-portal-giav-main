@@ -125,6 +125,16 @@ add_action('bricks/form/custom_action', function($form) {
   $dni_raw = $fields['form-field-a1a1f7'] ?? '';
   $dni = preg_replace('/\s+/', '', strtoupper(sanitize_text_field($dni_raw)));
 
+  // Optional OTP field (add it in Bricks to enable secure linking)
+  $otp_raw = '';
+  foreach ($fields as $k => $v) {
+    if (is_string($k) && preg_match('/otp/i', $k)) {
+      $otp_raw = (string) $v;
+      break;
+    }
+  }
+  $otp = preg_replace('/\s+/', '', sanitize_text_field($otp_raw));
+
   if ($dni === '') {
     $form->set_result([
       'action'  => 'casanova_vincular',
@@ -136,6 +146,36 @@ add_action('bricks/form/custom_action', function($form) {
 
   $user_id = get_current_user_id();
   update_user_meta($user_id, 'casanova_dni', $dni);
+
+  // Step 2: verify OTP (if provided)
+  if ($otp !== '') {
+    if (!function_exists('casanova_portal_verify_linking_otp')) {
+      $form->set_result([
+        'action'  => 'casanova_vincular',
+        'type'    => 'error',
+        'message' => 'No se ha podido validar el código. Contacta con nosotros.',
+      ]);
+      return;
+    }
+
+    $vr = casanova_portal_verify_linking_otp($user_id, $dni, $otp);
+    if (is_wp_error($vr)) {
+      $form->set_result([
+        'action'  => 'casanova_vincular',
+        'type'    => 'error',
+        'message' => $vr->get_error_message(),
+      ]);
+      return;
+    }
+
+    $form->set_result([
+      'action'          => 'casanova_vincular',
+      'type'            => 'redirect',
+      'redirectTo'      => (function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/portal-app/')),
+      'redirectTimeout' => 0,
+    ]);
+    return;
+  }
 
   $resp = casanova_giav_cliente_search_por_dni($dni);
 
@@ -186,14 +226,35 @@ add_action('bricks/form/custom_action', function($form) {
     return;
   }
 
-  // Guardar idCliente REAL
-  update_user_meta($user_id, 'casanova_idcliente', $idCliente);
+  // Step 1: request OTP to the email stored in GIAV (proof of ownership)
+  if (!function_exists('casanova_portal_send_linking_otp')) {
+    $form->set_result([
+      'action'  => 'casanova_vincular',
+      'type'    => 'error',
+      'message' => 'No se ha podido iniciar la verificación. Contacta con nosotros.',
+    ]);
+    return;
+  }
+
+  $sr = casanova_portal_send_linking_otp($user_id, $dni, (int) $idCliente);
+  if (is_wp_error($sr)) {
+    $form->set_result([
+      'action'  => 'casanova_vincular',
+      'type'    => 'error',
+      'message' => $sr->get_error_message(),
+    ]);
+    return;
+  }
+
+  $masked = is_array($sr) ? ($sr['emailMasked'] ?? '') : '';
+  $msg = 'Te hemos enviado un código de verificación a tu email';
+  if ($masked) $msg .= ' (' . $masked . ')';
+  $msg .= '. Introdúcelo para completar la vinculación.';
 
   $form->set_result([
-    'action'          => 'casanova_vincular',
-    'type'            => 'redirect',
-    'redirectTo'      => $fields['referrer'] ?? (wp_get_referer() ?: (function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/area-usuario/'))),
-    'redirectTimeout' => 0,
+    'action'  => 'casanova_vincular',
+    'type'    => 'success',
+    'message' => $msg,
   ]);
 
 }, 10, 1);
