@@ -9,6 +9,7 @@
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 6px 24px rgba(0,0,0,0.04);
+  background: linear-gradient(64deg, #f8f4f161 1%, rgba(255, 255, 255, 0.87) 80%);
 }
 
 .casanova-link-account__title {
