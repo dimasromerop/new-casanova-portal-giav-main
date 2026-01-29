@@ -172,7 +172,7 @@ function casanova_payments_render_settings_page(): void {
   if (!current_user_can('manage_options')) return;
 
   $tab = isset($_GET['tab']) ? sanitize_key((string)$_GET['tab']) : 'payments';
-  if (!in_array($tab, ['payments','portal','menu','giav','help'], true)) $tab = 'payments';
+  if (!in_array($tab, ['payments','portal','menu','links','giav','help'], true)) $tab = 'payments';
 
   echo '<div class="wrap">';
   echo '<h1>Casanova Portal</h1>';
@@ -182,12 +182,14 @@ function casanova_payments_render_settings_page(): void {
   $t_por = add_query_arg(['tab' => 'portal'], $base);
   $t_men = add_query_arg(['tab' => 'menu'], $base);
   $t_hlp = add_query_arg(['tab' => 'help'], $base);
+  $t_lnk = add_query_arg(['tab' => 'links'], $base);
   $t_giav = add_query_arg(['tab' => 'giav'], $base);
 
   echo '<nav class="nav-tab-wrapper" aria-label="Secciones">';
   echo '<a href="' . esc_url($t_pay) . '" class="nav-tab ' . ($tab==='payments'?'nav-tab-active':'') . '">Pagos</a>';
   echo '<a href="' . esc_url($t_por) . '" class="nav-tab ' . ($tab==='portal'?'nav-tab-active':'') . '">Portal</a>';
   echo '<a href="' . esc_url($t_men) . '" class="nav-tab ' . ($tab==='menu'?'nav-tab-active':'') . '">Menú</a>';
+  echo '<a href="' . esc_url($t_lnk) . '" class="nav-tab ' . ($tab==='links'?'nav-tab-active':'') . '">Payment Links</a>';
   echo '<a href="' . esc_url($t_giav) . '" class="nav-tab ' . ($tab==='giav'?'nav-tab-active':'') . '">GIAV</a>';
   echo '<a href="' . esc_url($t_hlp) . '" class="nav-tab ' . ($tab==='help'?'nav-tab-active':'') . '">Ayuda</a>';
   echo '</nav>';
@@ -499,6 +501,120 @@ function casanova_payments_render_settings_page(): void {
 
     submit_button('Guardar menú');
     echo '</form>';
+
+  } elseif ($tab === 'links') {
+    $token = isset($_GET['token']) ? sanitize_text_field((string) $_GET['token']) : '';
+    $created = isset($_GET['link_created']) && $_GET['link_created'] === '1';
+    $error = isset($_GET['link_error']) ? sanitize_key((string) $_GET['link_error']) : '';
+
+    if ($created && $token !== '') {
+      $url = function_exists('casanova_payment_link_url') ? casanova_payment_link_url($token) : '';
+      echo '<div class="notice notice-success"><p><strong>Link creado.</strong> ' . esc_html($token) . '</p>';
+      if ($url) {
+        echo '<p><a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir enlace</a> | <code>' . esc_html($url) . '</code></p>';
+      }
+      echo '</div>';
+    } elseif ($error) {
+      $msg = 'No se pudo crear el link.';
+      if ($error === 'amount') $msg = 'Importe invalido.';
+      if ($error === 'expediente') $msg = 'Expediente invalido.';
+      if ($error === 'missing') $msg = 'Modulo de payment links no disponible.';
+      if ($error === 'create') $msg = 'Error al crear el link.';
+      echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
+    }
+
+    echo '<h2>Crear Payment Link</h2>';
+    echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+    wp_nonce_field('casanova_create_payment_link');
+    echo '<input type="hidden" name="action" value="casanova_create_payment_link" />';
+
+    echo '<table class="form-table" role="presentation">';
+    echo '<tr><th scope="row"><label for="id_expediente">ID Expediente (GIAV)</label></th>';
+    echo '<td><input name="id_expediente" id="id_expediente" type="number" min="1" step="1" required class="regular-text" /></td></tr>';
+
+    echo '<tr><th scope="row"><label for="scope">Scope</label></th>';
+    echo '<td><select name="scope" id="scope">';
+    echo '<option value="group_total">group_total (total pendiente)</option>';
+    echo '<option value="group_partial">group_partial</option>';
+    echo '<option value="passenger_share">passenger_share</option>';
+    echo '<option value="custom_amount">custom_amount</option>';
+    echo '</select></td></tr>';
+
+    echo '<tr><th scope="row"><label for="amount_authorized">Importe autorizado (EUR)</label></th>';
+    echo '<td><input name="amount_authorized" id="amount_authorized" type="text" class="regular-text" placeholder="Ej: 300.00" />';
+    echo '<p class="description">Obligatorio si scope no es <code>group_total</code>.</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="currency">Moneda</label></th>';
+    echo '<td><input name="currency" id="currency" type="text" value="EUR" class="small-text" /></td></tr>';
+
+    echo '<tr><th scope="row"><label for="expires_at">Caduca el (opcional)</label></th>';
+    echo '<td><input name="expires_at" id="expires_at" type="date" class="regular-text" />';
+    echo '<p class="description">Se aplica a fin de dia (23:59:59).</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="id_reserva_pq">ID Reserva PQ (opcional)</label></th>';
+    echo '<td><input name="id_reserva_pq" id="id_reserva_pq" type="number" min="0" step="1" class="regular-text" /></td></tr>';
+
+    echo '<tr><th scope="row"><label for="id_pasajero">ID Pasajero (opcional)</label></th>';
+    echo '<td><input name="id_pasajero" id="id_pasajero" type="number" min="0" step="1" class="regular-text" /></td></tr>';
+    echo '</table>';
+
+    submit_button('Crear link');
+    echo '</form>';
+
+    echo '<script>
+      (function(){
+        const scope = document.getElementById("scope");
+        const amount = document.getElementById("amount_authorized");
+        if (!scope || !amount) return;
+        function toggle(){
+          const v = scope.value;
+          const needs = (v !== "group_total");
+          amount.disabled = !needs;
+          amount.required = needs;
+          if (!needs) amount.value = "";
+        }
+        scope.addEventListener("change", toggle);
+        toggle();
+      })();
+    </script>';
+
+    echo '<hr />';
+    echo '<h2>Ultimos links</h2>';
+
+    if (function_exists('casanova_payment_links_table')) {
+      global $wpdb;
+      $table = casanova_payment_links_table();
+      $exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table));
+      if ($exists === $table) {
+        $rows = $wpdb->get_results("SELECT * FROM {$table} ORDER BY id DESC LIMIT 20");
+        if (!empty($rows)) {
+          echo '<table class="widefat striped">';
+          echo '<thead><tr><th>ID</th><th>Expediente</th><th>Scope</th><th>Importe</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
+          foreach ($rows as $r) {
+            $token = (string)($r->token ?? '');
+            $url = ($token && function_exists('casanova_payment_link_url')) ? casanova_payment_link_url($token) : '';
+            echo '<tr>';
+            echo '<td>' . esc_html((string)$r->id) . '</td>';
+            echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
+            echo '<td>' . esc_html((string)$r->scope) . '</td>';
+            echo '<td>' . esc_html(number_format((float)$r->amount_authorized, 2, ',', '.')) . ' ' . esc_html((string)$r->currency) . '</td>';
+            echo '<td>' . esc_html((string)$r->status) . '</td>';
+            echo '<td><code>' . esc_html($token) . '</code></td>';
+            echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir</a>' : '') . '</td>';
+            echo '<td>' . esc_html((string)($r->expires_at ?? '')) . '</td>';
+            echo '<td>' . esc_html((string)($r->created_at ?? '')) . '</td>';
+            echo '</tr>';
+          }
+          echo '</tbody></table>';
+        } else {
+          echo '<p class="description">No hay links creados.</p>';
+        }
+      } else {
+        echo '<p class="description">Tabla de payment links no disponible.</p>';
+      }
+    } else {
+      echo '<p class="description">Modulo de payment links no disponible.</p>';
+    }
 
   } elseif ($tab === 'giav') {
     // Admin-only: render catalogs directly (no REST auth/nonce needed).

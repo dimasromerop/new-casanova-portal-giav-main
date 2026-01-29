@@ -78,6 +78,20 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
     }
     $mode = strtolower(trim((string)($payload['mode'] ?? '')));
     $is_deposit = ($mode === 'deposit');
+    $payment_link = is_array($payload['payment_link'] ?? null) ? $payload['payment_link'] : [];
+    $payment_link_id = (int)($payment_link['id'] ?? 0);
+    $payment_link_token = (string)($payment_link['token'] ?? '');
+    $payment_link_scope = (string)($payment_link['scope'] ?? '');
+    $billing_dni = (string)($payload['billing_dni'] ?? ($payment_link['billing_dni'] ?? ''));
+    $billing_name = trim((string)($payload['billing_name'] ?? ''));
+
+    $notes['billing_dni'] = $billing_dni ?: null;
+    $notes['billing_name'] = $billing_name ?: null;
+    $notes['payment_link'] = [
+      'id' => $payment_link_id ?: null,
+      'token' => $payment_link_token ?: null,
+      'scope' => $payment_link_scope ?: null,
+    ];
 
     $payer_name = 'Portal';
     if (!empty($intent->user_id) && function_exists('get_user_by')) {
@@ -85,6 +99,8 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
       if ($u && !empty($u->display_name)) {
         $payer_name = (string)$u->display_name;
       }
+    } elseif ($billing_name !== '') {
+      $payer_name = $billing_name;
     }
 
     $concepto = $is_deposit
@@ -152,6 +168,9 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
       ];
       $result['inserted'] = true;
       $result['should_notify'] = true;
+      if ($payment_link_id > 0 && function_exists('casanova_payment_link_mark_paid')) {
+        casanova_payment_link_mark_paid($payment_link_id, $cobro_id, $billing_dni);
+      }
       return $result;
     }
 

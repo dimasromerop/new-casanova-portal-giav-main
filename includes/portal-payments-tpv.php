@@ -89,6 +89,34 @@ if (!function_exists('casanova_payload_merge')) {
   }
 }
 
+if (!function_exists('casanova_tpv_redirect_url_for_intent')) {
+  function casanova_tpv_redirect_url_for_intent($intent, bool $ok): string {
+    $payload = [];
+    $payload_raw = is_object($intent) ? (string)($intent->payload ?? '') : '';
+    if ($payload_raw !== '') {
+      $decoded = json_decode($payload_raw, true);
+      if (is_array($decoded)) $payload = $decoded;
+    }
+    $link = is_array($payload['payment_link'] ?? null) ? $payload['payment_link'] : [];
+    $link_token = (string)($link['token'] ?? '');
+
+    if ($link_token !== '' && function_exists('casanova_payment_link_url')) {
+      $url = casanova_payment_link_url($link_token);
+      return add_query_arg([
+        'pay_status' => $ok ? 'checking' : 'ko',
+        'payment' => $ok ? 'success' : 'failed',
+      ], $url);
+    }
+
+    $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/portal-app/');
+    return add_query_arg([
+      'expediente' => is_object($intent) ? (int)$intent->id_expediente : 0,
+      'pay_status' => $ok ? 'checking' : 'ko',
+      'payment' => $ok ? 'success' : 'failed',
+    ], $base);
+  }
+}
+
 if (!function_exists('casanova_payments_try_giav_cobro')) {
   function casanova_payments_try_giav_cobro($intent, array $params, int $ds_resp): array {
     $result = [
@@ -150,6 +178,20 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
     }
     $mode = strtolower(trim((string)($payload['mode'] ?? '')));
     $is_deposit = ($mode === 'deposit');
+    $payment_link = is_array($payload['payment_link'] ?? null) ? $payload['payment_link'] : [];
+    $payment_link_id = (int)($payment_link['id'] ?? 0);
+    $payment_link_token = (string)($payment_link['token'] ?? '');
+    $payment_link_scope = (string)($payment_link['scope'] ?? '');
+    $billing_dni = (string)($payload['billing_dni'] ?? ($payment_link['billing_dni'] ?? ''));
+    $billing_name = trim((string)($payload['billing_name'] ?? ''));
+
+    $notes['billing_dni'] = $billing_dni ?: null;
+    $notes['billing_name'] = $billing_name ?: null;
+    $notes['payment_link'] = [
+      'id' => $payment_link_id ?: null,
+      'token' => $payment_link_token ?: null,
+      'scope' => $payment_link_scope ?: null,
+    ];
 
     $payer_name = 'Portal';
     if (!empty($intent->user_id) && function_exists('get_user_by')) {
@@ -157,6 +199,8 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
       if ($u && !empty($u->display_name)) {
         $payer_name = (string)$u->display_name;
       }
+    } elseif ($billing_name !== '') {
+      $payer_name = $billing_name;
     }
 
     $concepto = $is_deposit
@@ -227,6 +271,9 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
       ];
       $result['inserted'] = true;
       $result['should_notify'] = true;
+      if ($payment_link_id > 0 && function_exists('casanova_payment_link_mark_paid')) {
+        casanova_payment_link_mark_paid($payment_link_id, $cobro_id, $billing_dni);
+      }
       return $result;
     }
 
@@ -299,11 +346,8 @@ if (!wp_next_scheduled('casanova_job_reconcile_payment', [(int)$intent->id])) {
 }
 
 
-      wp_safe_redirect(add_query_arg([
-        'expediente' => (int)$intent->id_expediente,
-        'pay_status' => 'checking',
-        'payment' => 'success',
-      ], (function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/portal-app/'))));
+      $ok = (($_REQUEST['result'] ?? '') === 'ok');
+      wp_safe_redirect(casanova_tpv_redirect_url_for_intent($intent, $ok));
       exit;
     }
   }
@@ -385,11 +429,7 @@ if (!wp_next_scheduled('casanova_job_reconcile_payment', [(int)$intent->id])) {
     wp_schedule_single_event(time() + 15, 'casanova_job_reconcile_payment', [(int)$intent->id]);
   }
 
-  wp_safe_redirect(add_query_arg([
-    'expediente' => (int)$intent->id_expediente,
-    'pay_status' => $ok ? 'checking' : 'ko',
-    'payment' => $ok ? 'success' : 'failed',
-  ], (function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/portal-app/'))));
+  wp_safe_redirect(casanova_tpv_redirect_url_for_intent($intent, $ok));
   exit;
 }
 
