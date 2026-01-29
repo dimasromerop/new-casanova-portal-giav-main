@@ -172,7 +172,7 @@ function casanova_payments_render_settings_page(): void {
   if (!current_user_can('manage_options')) return;
 
   $tab = isset($_GET['tab']) ? sanitize_key((string)$_GET['tab']) : 'payments';
-  if (!in_array($tab, ['payments','portal','menu','links','giav','help'], true)) $tab = 'payments';
+  if (!in_array($tab, ['payments','portal','menu','links','slots','giav','help'], true)) $tab = 'payments';
 
   echo '<div class="wrap">';
   echo '<h1>Casanova Portal</h1>';
@@ -183,6 +183,7 @@ function casanova_payments_render_settings_page(): void {
   $t_men = add_query_arg(['tab' => 'menu'], $base);
   $t_hlp = add_query_arg(['tab' => 'help'], $base);
   $t_lnk = add_query_arg(['tab' => 'links'], $base);
+  $t_slots = add_query_arg(['tab' => 'slots'], $base);
   $t_giav = add_query_arg(['tab' => 'giav'], $base);
 
   echo '<nav class="nav-tab-wrapper" aria-label="Secciones">';
@@ -190,6 +191,7 @@ function casanova_payments_render_settings_page(): void {
   echo '<a href="' . esc_url($t_por) . '" class="nav-tab ' . ($tab==='portal'?'nav-tab-active':'') . '">Portal</a>';
   echo '<a href="' . esc_url($t_men) . '" class="nav-tab ' . ($tab==='menu'?'nav-tab-active':'') . '">Menú</a>';
   echo '<a href="' . esc_url($t_lnk) . '" class="nav-tab ' . ($tab==='links'?'nav-tab-active':'') . '">Payment Links</a>';
+  echo '<a href="' . esc_url($t_slots) . '" class="nav-tab ' . ($tab==='slots'?'nav-tab-active':'') . '">Group Slots</a>';
   echo '<a href="' . esc_url($t_giav) . '" class="nav-tab ' . ($tab==='giav'?'nav-tab-active':'') . '">GIAV</a>';
   echo '<a href="' . esc_url($t_hlp) . '" class="nav-tab ' . ($tab==='help'?'nav-tab-active':'') . '">Ayuda</a>';
   echo '</nav>';
@@ -506,6 +508,9 @@ function casanova_payments_render_settings_page(): void {
     $token = isset($_GET['token']) ? sanitize_text_field((string) $_GET['token']) : '';
     $created = isset($_GET['link_created']) && $_GET['link_created'] === '1';
     $error = isset($_GET['link_error']) ? sanitize_key((string) $_GET['link_error']) : '';
+    $group_created = isset($_GET['group_created']) && $_GET['group_created'] === '1';
+    $group_token = isset($_GET['group_token']) ? sanitize_text_field((string) $_GET['group_token']) : '';
+    $group_error = isset($_GET['group_error']) ? sanitize_key((string) $_GET['group_error']) : '';
 
     if ($created && $token !== '') {
       $url = function_exists('casanova_payment_link_url') ? casanova_payment_link_url($token) : '';
@@ -520,6 +525,21 @@ function casanova_payments_render_settings_page(): void {
       if ($error === 'expediente') $msg = 'Expediente invalido.';
       if ($error === 'missing') $msg = 'Modulo de payment links no disponible.';
       if ($error === 'create') $msg = 'Error al crear el link.';
+      echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
+    }
+
+    if ($group_created && $group_token !== '') {
+      $url = function_exists('casanova_group_pay_url') ? casanova_group_pay_url($group_token) : '';
+      echo '<div class="notice notice-success"><p><strong>Token de grupo creado.</strong> ' . esc_html($group_token) . '</p>';
+      if ($url) {
+        echo '<p><a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir enlace</a> | <code>' . esc_html($url) . '</code></p>';
+      }
+      echo '</div>';
+    } elseif ($group_error) {
+      $msg = 'No se pudo crear el token de grupo.';
+      if ($group_error === 'expediente') $msg = 'Expediente invalido.';
+      if ($group_error === 'missing') $msg = 'Modulo de grupos no disponible.';
+      if ($group_error === 'create') $msg = 'Error al crear el token de grupo.';
       echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
     }
 
@@ -538,6 +558,7 @@ function casanova_payments_render_settings_page(): void {
     echo '<option value="group_partial">group_partial</option>';
     echo '<option value="passenger_share">passenger_share</option>';
     echo '<option value="custom_amount">custom_amount</option>';
+    echo '<option value="slot_base">slot_base (plazas base)</option>';
     echo '</select></td></tr>';
 
     echo '<tr><th scope="row"><label for="amount_authorized">Importe autorizado (EUR)</label></th>';
@@ -579,6 +600,25 @@ function casanova_payments_render_settings_page(): void {
     </script>';
 
     echo '<hr />';
+    echo '<h2>Crear token reusable de grupo</h2>';
+    echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+    wp_nonce_field('casanova_create_group_token');
+    echo '<input type="hidden" name="action" value="casanova_create_group_token" />';
+
+    echo '<table class="form-table" role="presentation">';
+    echo '<tr><th scope="row"><label for="group_id_expediente">ID Expediente (GIAV)</label></th>';
+    echo '<td><input name="group_id_expediente" id="group_id_expediente" type="number" min="1" step="1" required class="regular-text" /></td></tr>';
+
+    echo '<tr><th scope="row"><label for="group_id_reserva_pq">ID Reserva PQ (opcional)</label></th>';
+    echo '<td><input name="group_id_reserva_pq" id="group_id_reserva_pq" type="number" min="0" step="1" class="regular-text" /></td></tr>';
+
+    echo '<tr><th scope="row"><label for="group_expires_at">Caduca el (opcional)</label></th>';
+    echo '<td><input name="group_expires_at" id="group_expires_at" type="date" class="regular-text" /></td></tr>';
+    echo '</table>';
+    submit_button('Crear token de grupo');
+    echo '</form>';
+
+    echo '<hr />';
     echo '<h2>Ultimos links</h2>';
 
     if (function_exists('casanova_payment_links_table')) {
@@ -589,14 +629,25 @@ function casanova_payments_render_settings_page(): void {
         $rows = $wpdb->get_results("SELECT * FROM {$table} ORDER BY id DESC LIMIT 20");
         if (!empty($rows)) {
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th>ID</th><th>Expediente</th><th>Scope</th><th>Importe</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
+          echo '<thead><tr><th>ID</th><th>Expediente</th><th>Scope</th><th>Plazas</th><th>Importe</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
           foreach ($rows as $r) {
             $token = (string)($r->token ?? '');
             $url = ($token && function_exists('casanova_payment_link_url')) ? casanova_payment_link_url($token) : '';
+            $slots_count = '';
+            if ((string)($r->scope ?? '') === 'slot_base') {
+              $meta = [];
+              $raw = (string)($r->metadata ?? '');
+              if ($raw !== '') {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) $meta = $decoded;
+              }
+              $slots_count = isset($meta['slots_count']) ? (string)$meta['slots_count'] : '';
+            }
             echo '<tr>';
             echo '<td>' . esc_html((string)$r->id) . '</td>';
             echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
             echo '<td>' . esc_html((string)$r->scope) . '</td>';
+            echo '<td>' . esc_html($slots_count) . '</td>';
             echo '<td>' . esc_html(number_format((float)$r->amount_authorized, 2, ',', '.')) . ' ' . esc_html((string)$r->currency) . '</td>';
             echo '<td>' . esc_html((string)$r->status) . '</td>';
             echo '<td><code>' . esc_html($token) . '</code></td>';
@@ -614,6 +665,110 @@ function casanova_payments_render_settings_page(): void {
       }
     } else {
       echo '<p class="description">Modulo de payment links no disponible.</p>';
+    }
+
+    echo '<hr />';
+    echo '<h2>Tokens de grupo recientes</h2>';
+    if (function_exists('casanova_group_pay_tokens_table')) {
+      global $wpdb;
+      $gt = casanova_group_pay_tokens_table();
+      $exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $gt));
+      if ($exists === $gt) {
+        $rows = $wpdb->get_results("SELECT * FROM {$gt} ORDER BY id DESC LIMIT 20");
+        if (!empty($rows)) {
+          echo '<table class="widefat striped">';
+          echo '<thead><tr><th>ID</th><th>Expediente</th><th>PQ</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
+          foreach ($rows as $r) {
+            $token = (string)($r->token ?? '');
+            $url = ($token && function_exists('casanova_group_pay_url')) ? casanova_group_pay_url($token) : '';
+            echo '<tr>';
+            echo '<td>' . esc_html((string)$r->id) . '</td>';
+            echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
+            echo '<td>' . esc_html((string)($r->id_reserva_pq ?? '')) . '</td>';
+            echo '<td>' . esc_html((string)$r->status) . '</td>';
+            echo '<td><code>' . esc_html($token) . '</code></td>';
+            echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir</a>' : '') . '</td>';
+            echo '<td>' . esc_html((string)($r->expires_at ?? '')) . '</td>';
+            echo '<td>' . esc_html((string)($r->created_at ?? '')) . '</td>';
+            echo '</tr>';
+          }
+          echo '</tbody></table>';
+        } else {
+          echo '<p class="description">No hay tokens de grupo.</p>';
+        }
+      } else {
+        echo '<p class="description">Tabla de tokens de grupo no disponible.</p>';
+      }
+    } else {
+      echo '<p class="description">Modulo de grupos no disponible.</p>';
+    }
+
+  } elseif ($tab === 'slots') {
+    $idExpediente = isset($_GET['expediente_id']) ? absint($_GET['expediente_id']) : 0;
+    $idReservaPQ = isset($_GET['reserva_pq']) ? absint($_GET['reserva_pq']) : 0;
+
+    echo '<h2>Group Slots</h2>';
+    echo '<form method="get" style="margin:12px 0;">';
+    echo '<input type="hidden" name="page" value="casanova-payments" />';
+    echo '<input type="hidden" name="tab" value="slots" />';
+    echo '<input type="number" name="expediente_id" value="' . esc_attr((string)$idExpediente) . '" placeholder="ID Expediente" style="min-width:160px;" /> ';
+    echo '<input type="number" name="reserva_pq" value="' . esc_attr((string)$idReservaPQ) . '" placeholder="ID Reserva PQ (opcional)" style="min-width:180px;" /> ';
+    submit_button('Ver', 'secondary', '', false);
+    echo '</form>';
+
+    if ($idExpediente > 0 && function_exists('casanova_group_slots_table')) {
+      global $wpdb;
+      $table = casanova_group_slots_table();
+      $where = $idReservaPQ > 0
+        ? $wpdb->prepare("WHERE id_expediente=%d AND id_reserva_pq=%d", $idExpediente, $idReservaPQ)
+        : $wpdb->prepare("WHERE id_expediente=%d", $idExpediente);
+      $slots = $wpdb->get_results("SELECT * FROM {$table} {$where} ORDER BY slot_index ASC");
+
+      echo '<h3>Slots</h3>';
+      if (!empty($slots)) {
+        echo '<table class="widefat striped">';
+        echo '<thead><tr><th>ID</th><th>Slot</th><th>Base Due</th><th>Base Paid</th><th>Status</th><th>PQ</th></tr></thead><tbody>';
+        foreach ($slots as $s) {
+          echo '<tr>';
+          echo '<td>' . esc_html((string)$s->id) . '</td>';
+          echo '<td>' . esc_html((string)$s->slot_index) . '</td>';
+          echo '<td>' . esc_html(number_format((float)$s->base_due, 2, ',', '.')) . '</td>';
+          echo '<td>' . esc_html(number_format((float)$s->base_paid, 2, ',', '.')) . '</td>';
+          echo '<td>' . esc_html((string)$s->status) . '</td>';
+          echo '<td>' . esc_html((string)($s->id_reserva_pq ?? '')) . '</td>';
+          echo '</tr>';
+        }
+        echo '</tbody></table>';
+      } else {
+        echo '<p class="description">No hay slots para este expediente.</p>';
+      }
+
+      if (function_exists('casanova_charges_table')) {
+        $ct = casanova_charges_table();
+        $charges = $wpdb->get_results("SELECT * FROM {$ct} {$where} ORDER BY id DESC");
+        echo '<h3>Charges</h3>';
+        if (!empty($charges)) {
+          echo '<table class="widefat striped">';
+          echo '<thead><tr><th>ID</th><th>Titulo</th><th>Tipo</th><th>Due</th><th>Paid</th><th>Status</th><th>Slot</th><th>PQ</th></tr></thead><tbody>';
+          foreach ($charges as $c) {
+            echo '<tr>';
+            echo '<td>' . esc_html((string)$c->id) . '</td>';
+            echo '<td>' . esc_html((string)$c->title) . '</td>';
+            echo '<td>' . esc_html((string)($c->type ?? '')) . '</td>';
+            echo '<td>' . esc_html(number_format((float)$c->amount_due, 2, ',', '.')) . '</td>';
+            echo '<td>' . esc_html(number_format((float)$c->amount_paid, 2, ',', '.')) . '</td>';
+            echo '<td>' . esc_html((string)$c->status) . '</td>';
+            echo '<td>' . esc_html((string)($c->slot_id ?? '')) . '</td>';
+            echo '<td>' . esc_html((string)($c->id_reserva_pq ?? '')) . '</td>';
+            echo '</tr>';
+          }
+          echo '</tbody></table>';
+        } else {
+          echo '<p class="description">No hay charges para este expediente.</p>';
+        }
+      }
+    } else {
+      echo '<p class="description">Indica un ID de expediente para ver slots.</p>';
     }
 
   } elseif ($tab === 'giav') {

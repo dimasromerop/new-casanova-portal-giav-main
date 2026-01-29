@@ -2,7 +2,7 @@
 /**
  * Plugin Name: New Casanova Portal - GIAV
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
- * Version: 0.29.4
+ * Version: 0.30.4
  * Author: Casanova Golf
  * Text Domain: casanova-portal
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
 // DB / plugin upgrade (runs on normal updates too, not only on activation)
 // -----------------------------------------------------------------------------
 function casanova_portal_giav_current_version(): string {
-  return '0.29.4';
+  return '0.30.4';
 }
 
 // -----------------------------------------------------------------------------
@@ -230,6 +230,9 @@ register_activation_hook(__FILE__, function () {
   if (function_exists('casanova_payment_links_register_rewrite')) {
     casanova_payment_links_register_rewrite();
   }
+  if (function_exists('casanova_group_pay_register_rewrite')) {
+    casanova_group_pay_register_rewrite();
+  }
   if (function_exists('flush_rewrite_rules')) {
     flush_rewrite_rules();
   }
@@ -328,7 +331,10 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/inbox-controller.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-intents.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-redsys.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payment-links.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-group-slots.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-group-pay.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payment-links-admin.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-group-pay-admin.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-mail.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-mail-templates.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-mail-events.php';

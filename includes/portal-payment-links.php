@@ -71,6 +71,28 @@ function casanova_payment_link_get_by_token(string $token) {
   );
 }
 
+function casanova_payment_link_get(int $id) {
+  global $wpdb;
+  $table = casanova_payment_links_table();
+  $id = (int)$id;
+  if ($id <= 0) return null;
+
+  return $wpdb->get_row(
+    $wpdb->prepare("SELECT * FROM {$table} WHERE id=%d LIMIT 1", $id)
+  );
+}
+
+function casanova_payment_link_merge_metadata($old, array $add): string {
+  $oldArr = [];
+  if (is_array($old)) {
+    $oldArr = $old;
+  } elseif (is_string($old) && $old !== '') {
+    $tmp = json_decode($old, true);
+    if (is_array($tmp)) $oldArr = $tmp;
+  }
+  return wp_json_encode(array_replace_recursive($oldArr, $add));
+}
+
 function casanova_payment_link_update(int $id, array $fields): bool {
   global $wpdb;
   $table = casanova_payment_links_table();
@@ -170,10 +192,13 @@ add_action('template_redirect', function () {
   $token = (string) get_query_var('casanova_pay_token');
 
   if ($token === '') {
+    $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+    if ($uri !== '' && strpos($uri, '/pay/group/') !== false) {
+      return; // let group-pay handler take this route
+    }
     if (!empty($_GET['casanova_pay_token'])) {
       $token = (string) sanitize_text_field((string) $_GET['casanova_pay_token']);
     } else {
-      $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
       if ($uri !== '') {
         $path = wp_parse_url($uri, PHP_URL_PATH);
         if (is_string($path) && $path !== '') {
@@ -226,6 +251,27 @@ function casanova_handle_payment_link_request(string $token): void {
     casanova_render_payment_link_error(__('Enlace de pago caducado.', 'casanova-portal'));
     exit;
   }
+
+  $meta_prefill = [];
+  $meta_raw = (string)($link->metadata ?? '');
+  if ($meta_raw !== '') {
+    $decoded = json_decode($meta_raw, true);
+    if (is_array($decoded)) $meta_prefill = $decoded;
+  }
+  $prefill_name = '';
+  $prefill_lastname = '';
+  if (!empty($meta_prefill['billing_name'])) {
+    $parts = explode(' ', trim((string)$meta_prefill['billing_name']));
+    $prefill_name = (string) array_shift($parts);
+    $prefill_lastname = trim(implode(' ', $parts));
+  }
+  if (!empty($meta_prefill['billing_lastname'])) {
+    $prefill_lastname = (string) $meta_prefill['billing_lastname'];
+  }
+  $prefill_dni = !empty($meta_prefill['billing_dni']) ? (string)$meta_prefill['billing_dni'] : '';
+  $prefill_mode = !empty($meta_prefill['mode']) ? strtolower((string)$meta_prefill['mode']) : '';
+  $prefill_method = !empty($meta_prefill['preferred_method']) ? strtolower((string)$meta_prefill['preferred_method']) : '';
+  $auto_start = !empty($meta_prefill['auto_start']);
 
   $idExpediente = (int)($link->id_expediente ?? 0);
   if ($idExpediente <= 0) {
@@ -313,6 +359,24 @@ function casanova_handle_payment_link_request(string $token): void {
   if (class_exists('Casanova_Inespay_Service')) {
     $cfg = Casanova_Inespay_Service::config();
     $inespay_enabled = !is_wp_error($cfg);
+  }
+
+  if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && !empty($_GET['autostart']) && $auto_start && $prefill_name !== '' && $prefill_lastname !== '' && $prefill_dni !== '') {
+    $method = ($prefill_method === 'bank_transfer' && $inespay_enabled) ? 'bank_transfer' : 'card';
+    $mode = ($prefill_mode === 'deposit' && $deposit_effective) ? 'deposit' : 'full';
+    $nonce = wp_create_nonce('casanova_pay_link_' . (int)$link->id);
+
+    header('Content-Type: text/html; charset=' . get_bloginfo('charset'));
+    echo '<form id="casanova-auto" method="post" action="' . esc_url(casanova_payment_link_url((string)$link->token)) . '">';
+    echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
+    echo '<input type="hidden" name="billing_name" value="' . esc_attr($prefill_name) . '" />';
+    echo '<input type="hidden" name="billing_lastname" value="' . esc_attr($prefill_lastname) . '" />';
+    echo '<input type="hidden" name="billing_dni" value="' . esc_attr($prefill_dni) . '" />';
+    echo '<input type="hidden" name="mode" value="' . esc_attr($mode) . '" />';
+    echo '<input type="hidden" name="method" value="' . esc_attr($method) . '" />';
+    echo '</form>';
+    echo '<script>document.getElementById("casanova-auto").submit();</script>';
+    exit;
   }
 
   $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
@@ -691,21 +755,23 @@ function casanova_handle_payment_link_request(string $token): void {
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
 
   echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Nombre', 'casanova-portal') . '</label>';
-  echo '<input type="text" name="billing_name" required value="" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
+  echo '<input type="text" name="billing_name" required value="' . esc_attr($prefill_name) . '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
 
   echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Apellidos', 'casanova-portal') . '</label>';
-  echo '<input type="text" name="billing_lastname" required value="" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
+  echo '<input type="text" name="billing_lastname" required value="' . esc_attr($prefill_lastname) . '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
 
   echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('DNI / NIF (obligatorio)', 'casanova-portal') . '</label>';
-  echo '<input type="text" name="billing_dni" required value="" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
+  echo '<input type="text" name="billing_dni" required value="' . esc_attr($prefill_dni) . '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
 
   echo '<div style="margin:14px 0 6px;font-weight:600;">' . esc_html__('Metodo de pago', 'casanova-portal') . '</div>';
   if ($inespay_enabled) {
+    $card_checked = ($prefill_method === 'bank_transfer') ? '' : 'checked';
+    $bank_checked = ($prefill_method === 'bank_transfer') ? 'checked' : '';
     echo '<label style="display:block;margin:6px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-    echo '<input type="radio" name="method" value="card" checked style="margin-right:8px;" />' . esc_html__('Tarjeta (Redsys)', 'casanova-portal');
+    echo '<input type="radio" name="method" value="card" ' . $card_checked . ' style="margin-right:8px;" />' . esc_html__('Tarjeta (Redsys)', 'casanova-portal');
     echo '</label>';
     echo '<label style="display:block;margin:6px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-    echo '<input type="radio" name="method" value="bank_transfer" style="margin-right:8px;" />' . esc_html__('Transferencia bancaria (Inespay)', 'casanova-portal');
+    echo '<input type="radio" name="method" value="bank_transfer" ' . $bank_checked . ' style="margin-right:8px;" />' . esc_html__('Transferencia bancaria (Inespay)', 'casanova-portal');
     echo '</label>';
   } else {
     echo '<input type="hidden" name="method" value="card" />';

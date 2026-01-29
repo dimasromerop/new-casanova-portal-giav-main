@@ -274,6 +274,38 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
       if ($payment_link_id > 0 && function_exists('casanova_payment_link_mark_paid')) {
         casanova_payment_link_mark_paid($payment_link_id, $cobro_id, $billing_dni);
       }
+      if ($payment_link_id > 0 && $payment_link_scope === 'slot_base' && function_exists('casanova_payment_link_get')) {
+        $plink = casanova_payment_link_get($payment_link_id);
+        if ($plink) {
+          $meta = [];
+          $raw = (string)($plink->metadata ?? '');
+          if ($raw !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $meta = $decoded;
+          }
+          $already = isset($meta['slot_allocation']['cobro_id']) && (int)$meta['slot_allocation']['cobro_id'] === (int)$cobro_id;
+          if (!$already && function_exists('casanova_group_context_from_reservas') && function_exists('casanova_ensure_group_slots') && function_exists('casanova_allocate_payment_to_slots')) {
+            $id_reserva_pq = (int)($meta['id_reserva_pq'] ?? 0);
+            $ctx = casanova_group_context_from_reservas((int)$intent->id_expediente, (int)$intent->id_cliente, $id_reserva_pq ?: null);
+            if (!is_wp_error($ctx)) {
+              casanova_ensure_group_slots((int)$intent->id_expediente, (int)($ctx['id_reserva_pq'] ?? $id_reserva_pq), (int)($ctx['num_pax'] ?? 0), (float)($ctx['base_pending'] ?? 0));
+            }
+            $alloc = casanova_allocate_payment_to_slots((int)$intent->id_expediente, (float)$intent->amount, $id_reserva_pq);
+            if (function_exists('casanova_payment_link_update') && function_exists('casanova_payment_link_merge_metadata')) {
+              casanova_payment_link_update($payment_link_id, [
+                'metadata' => casanova_payment_link_merge_metadata($plink->metadata ?? null, [
+                  'slot_allocation' => [
+                    'cobro_id' => (int)$cobro_id,
+                    'amount' => (float)$intent->amount,
+                    'allocations' => $alloc,
+                    'allocated_at' => current_time('mysql'),
+                  ],
+                ]),
+              ]);
+            }
+          }
+        }
+      }
       return $result;
     }
 

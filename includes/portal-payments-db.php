@@ -11,12 +11,30 @@ function casanova_payment_links_table(): string {
   return $wpdb->prefix . 'casanova_payment_links';
 }
 
+function casanova_group_slots_table(): string {
+  global $wpdb;
+  return $wpdb->prefix . 'casanova_group_slots';
+}
+
+function casanova_charges_table(): string {
+  global $wpdb;
+  return $wpdb->prefix . 'casanova_charges';
+}
+
+function casanova_group_pay_tokens_table(): string {
+  global $wpdb;
+  return $wpdb->prefix . 'casanova_group_pay_tokens';
+}
+
 function casanova_payments_install(): void {
   global $wpdb;
   require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
   $table = casanova_payments_table();
   $links_table = casanova_payment_links_table();
+  $slots_table = casanova_group_slots_table();
+  $charges_table = casanova_charges_table();
+  $group_tokens_table = casanova_group_pay_tokens_table();
   $charset_collate = $wpdb->get_charset_collate();
 
 $sql = "CREATE TABLE $table (
@@ -79,4 +97,64 @@ last_check_at DATETIME NULL,
   ) $charset_collate;";
 
   dbDelta($sql_links);
+
+  $sql_slots = "CREATE TABLE $slots_table (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    id_expediente BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    id_reserva_pq BIGINT UNSIGNED NULL,
+    slot_index INT NOT NULL DEFAULT 0,
+    base_due DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    base_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(16) NOT NULL DEFAULT 'open',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_expediente (id_expediente),
+    KEY idx_reserva_pq (id_reserva_pq),
+    KEY idx_status (status),
+    UNIQUE KEY uq_slot (id_expediente, id_reserva_pq, slot_index)
+  ) $charset_collate;";
+
+  dbDelta($sql_slots);
+
+  $sql_charges = "CREATE TABLE $charges_table (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    id_expediente BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    id_reserva_pq BIGINT UNSIGNED NULL,
+    slot_id BIGINT UNSIGNED NULL,
+    title VARCHAR(190) NOT NULL DEFAULT '',
+    amount_due DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    amount_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(16) NOT NULL DEFAULT 'open',
+    type VARCHAR(32) DEFAULT NULL,
+    created_by BIGINT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_expediente (id_expediente),
+    KEY idx_reserva_pq (id_reserva_pq),
+    KEY idx_slot (slot_id),
+    KEY idx_status (status),
+    KEY idx_type (type)
+  ) $charset_collate;";
+
+  dbDelta($sql_charges);
+
+  $sql_group_tokens = "CREATE TABLE $group_tokens_table (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    token VARCHAR(80) NOT NULL,
+    id_expediente BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    id_reserva_pq BIGINT UNSIGNED NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'active',
+    expires_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY token (token),
+    KEY idx_expediente (id_expediente),
+    KEY idx_reserva_pq (id_reserva_pq),
+    KEY idx_status (status)
+  ) $charset_collate;";
+
+  dbDelta($sql_group_tokens);
 }
