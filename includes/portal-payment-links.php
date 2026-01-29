@@ -763,7 +763,7 @@ function casanova_render_payment_link_success($link): void {
   echo '<h2 style="margin:0 0 10px;">' . esc_html__('Pago registrado correctamente', 'casanova-portal') . '</h2>';
   echo '<p style="margin:0 0 16px;">' . esc_html__('Gracias. Hemos recibido tu pago.', 'casanova-portal') . '</p>';
 
-  $link_account_url = function_exists('site_url') ? site_url('/area-usuario/') : home_url('/');
+  $link_account_url = function_exists('site_url') ? site_url('/login/') : home_url('/');
   echo '<div style="padding:12px;border:1px solid #eee;border-radius:8px;background:#fafafa;">';
   echo '<strong>' . esc_html__('Quieres acceder a tus documentos y facturas?', 'casanova-portal') . '</strong><br />';
   echo '<a href="' . esc_url($link_account_url) . '" style="display:inline-block;margin-top:8px;color:#111;text-decoration:underline;">'
