@@ -108,19 +108,30 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
       : ('Pago Inespay ' . (string)($dataReturn['reference'] ?? ''));
 
 
-    // Resolver pagador real (idCliente) por DNI. Si no existe en GIAV, lo creamos con los datos de facturación.
+    // Resolver pagador real (idCliente) por DNI, para que el cobro quede asignado al que paga.
     $payer_id_cliente = (int)($intent->id_cliente ?? 0);
     $billing_dni = (string)($meta['billing_dni'] ?? '');
-    $billing_nombre = (string)($meta['billing_name'] ?? '');
-    $billing_apellidos = (string)($meta['billing_lastname'] ?? '');
-    $billing_email = (string)($meta['billing_email'] ?? '');
+    if ($billing_dni !== '' && function_exists('casanova_giav_cliente_search_por_dni') && function_exists('casanova_giav_extraer_idcliente')) {
+      try {
+        $resp_cli = casanova_giav_cliente_search_por_dni($billing_dni);
+        $idc = casanova_giav_extraer_idcliente($resp_cli);
+        if ($idc !== null && $idc !== '') $payer_id_cliente = (int)$idc;
+      } catch (Throwable $e) {}
 
-    if ($billing_dni !== '' && function_exists('casanova_giav_resolver_o_crear_cliente_por_dni')) {
-      $idc = casanova_giav_resolver_o_crear_cliente_por_dni($billing_dni, $billing_nombre, $billing_apellidos, $billing_email);
-      if ($idc > 0) $payer_id_cliente = (int)$idc;
+    // Si no existe cliente en GIAV, lo creamos con los datos de facturación para imputar bien el cobro.
+    if ($payer_id_cliente <= 0 && $billing_dni !== '' && function_exists('casanova_giav_cliente_create_from_billing')) {
+      $bid = casanova_giav_cliente_create_from_billing([
+        'dni' => $billing_dni,
+        'email' => (string)($meta['billing_email'] ?? ''),
+        'nombre' => (string)($meta['billing_name'] ?? ''),
+        'apellidos' => (string)($meta['billing_lastname'] ?? ''),
+      ]);
+      if (!empty($bid)) $payer_id_cliente = (int)$bid;
     }
 
-$giav_params = [
+    }
+
+    $giav_params = [
       'idFormaPago' => $id_forma_pago,
       'idOficina' => ($id_oficina > 0 ? (int)$id_oficina : null),
       'idExpediente' => (int)$intent->id_expediente,

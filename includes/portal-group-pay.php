@@ -325,10 +325,7 @@ function casanova_handle_group_pay_request(string $token): void {
 
   echo '<div style="background:#fafafa;border:1px solid #eee;border-radius:8px;padding:12px;margin:0 0 14px;">';
   echo '<div>' . esc_html(sprintf(__('Plazas pendientes: %s', 'casanova-portal'), $open_count)) . '</div>';
-  echo '<div style="margin-top:6px;">' . esc_html(sprintf(__('Total base pendiente (plazas abiertas): %s EUR', 'casanova-portal'), number_format($open_total, 2, ',', '.'))) . '</div>';
-  if ($basePending > 0.01) {
-    echo '<div style="margin-top:6px;">' . esc_html(sprintf(__('Saldo pendiente en GIAV (referencia): %s EUR', 'casanova-portal'), number_format($basePending, 2, ',', '.'))) . '</div>';
-  }
+  echo '<div style="margin-top:6px;">' . esc_html(sprintf(__('Total pendiente base: %s EUR', 'casanova-portal'), number_format($open_total, 2, ',', '.'))) . '</div>';
   if ($deadline_txt !== '') {
     echo '<div style="margin-top:6px;">' . esc_html(sprintf(__('Fecha limite: %s', 'casanova-portal'), $deadline_txt)) . '</div>';
   }
