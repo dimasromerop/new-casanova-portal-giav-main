@@ -102,6 +102,16 @@ function casanova_handle_group_pay_request(string $token): void {
   $calc = $ctx['calc'] ?? [];
   $numPax = (int)($ctx['num_pax'] ?? 0);
   $basePending = (float)($ctx['base_pending'] ?? 0);
+  $baseTotal = (float)($ctx['base_total'] ?? 0);
+  if ($baseTotal <= 0) {
+    // Fallback: si no viene Venta desde GIAV, aproximamos como pendiente + ya pagado en slots.
+    $slots_now = function_exists('casanova_group_slots_get') ? casanova_group_slots_get($idExpediente, $idReservaPQ ?: 0) : [];
+    $paid_now = 0.0;
+    if (!empty($slots_now)) {
+      foreach ($slots_now as $s) { $paid_now += (float)($s->base_paid ?? 0); }
+    }
+    $baseTotal = max(0.0, $basePending + $paid_now);
+  }
   $idReservaPQ = (int)($ctx['id_reserva_pq'] ?? $idReservaPQ);
 
   if ($numPax <= 0 || $basePending <= 0) {
@@ -114,7 +124,7 @@ function casanova_handle_group_pay_request(string $token): void {
     exit;
   }
 
-  casanova_ensure_group_slots($idExpediente, $idReservaPQ, $numPax, $basePending);
+  casanova_ensure_group_slots($idExpediente, $idReservaPQ, $numPax, $baseTotal);
   $open_slots = function_exists('casanova_group_slots_open') ? casanova_group_slots_open($idExpediente, $idReservaPQ) : [];
   if (empty($open_slots)) {
     casanova_render_payment_link_error(__('No quedan plazas pendientes.', 'casanova-portal'));

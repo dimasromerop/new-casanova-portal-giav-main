@@ -107,11 +107,23 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
       ? ('Depósito Inespay ' . (string)($dataReturn['reference'] ?? ''))
       : ('Pago Inespay ' . (string)($dataReturn['reference'] ?? ''));
 
+
+    // Resolver pagador real (idCliente) por DNI, para que el cobro quede asignado al que paga.
+    $payer_id_cliente = (int)($intent->id_cliente ?? 0);
+    $billing_dni = (string)($meta['billing_dni'] ?? '');
+    if ($billing_dni !== '' && function_exists('casanova_giav_cliente_search_por_dni') && function_exists('casanova_giav_extraer_idcliente')) {
+      try {
+        $resp_cli = casanova_giav_cliente_search_por_dni($billing_dni);
+        $idc = casanova_giav_extraer_idcliente($resp_cli);
+        if ($idc !== null && $idc !== '') $payer_id_cliente = (int)$idc;
+      } catch (Throwable $e) {}
+    }
+
     $giav_params = [
       'idFormaPago' => $id_forma_pago,
       'idOficina' => ($id_oficina > 0 ? (int)$id_oficina : null),
       'idExpediente' => (int)$intent->id_expediente,
-      'idCliente' => (int)$intent->id_cliente,
+      'idCliente' => (int)$payer_id_cliente,
       'idRelacionPasajeroReserva' => null,
       'idTipoOperacion' => 'Cobro',
       'importe' => (double)$intent->amount,
@@ -185,7 +197,7 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
             $id_reserva_pq = (int)($meta['id_reserva_pq'] ?? 0);
             $ctx = casanova_group_context_from_reservas((int)$intent->id_expediente, (int)$intent->id_cliente, $id_reserva_pq ?: null);
             if (!is_wp_error($ctx)) {
-              casanova_ensure_group_slots((int)$intent->id_expediente, (int)($ctx['id_reserva_pq'] ?? $id_reserva_pq), (int)($ctx['num_pax'] ?? 0), (float)($ctx['base_pending'] ?? 0));
+              casanova_ensure_group_slots((int)$intent->id_expediente, (int)($ctx['id_reserva_pq'] ?? $id_reserva_pq), (int)($ctx['num_pax'] ?? 0), (float)($ctx['base_total'] ?? ($ctx['base_pending'] ?? 0)));
             }
             $slot_ids = [];
             if (!empty($meta['slot_ids']) && is_array($meta['slot_ids'])) {

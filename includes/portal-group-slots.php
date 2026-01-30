@@ -178,24 +178,41 @@ function casanova_group_context_from_reservas(int $idExpediente, int $idCliente,
     $numPax = (int)($pq->NumPax ?? 0);
   }
 
-  $basePending = 0.0;
-  if ($pq && isset($pq->DatosExternos) && is_object($pq->DatosExternos)) {
-    $v = $pq->DatosExternos->ImporteAPagar ?? null;
-    if (is_numeric($v)) $basePending = (float)$v;
+  $baseTotal = 0.0;
+  if ($pq && isset($pq->Venta) && is_numeric($pq->Venta)) {
+    $baseTotal = (float)$pq->Venta;
+  } elseif ($pq && isset($pq->ImporteTotal) && is_numeric($pq->ImporteTotal)) {
+    $baseTotal = (float)$pq->ImporteTotal;
   }
-  if ($basePending <= 0 && $pq && isset($pq->ImporteAPagar) && is_numeric($pq->ImporteAPagar)) {
-    $basePending = (float)$pq->ImporteAPagar;
+
+  $basePending = 0.0;
+  // Prioridad: pendiente total del paquete (no "importe a pagar" por pax)
+  if ($pq && isset($pq->Pendiente) && is_numeric($pq->Pendiente)) {
+    $basePending = (float)$pq->Pendiente;
+  }
+  if ($basePending <= 0 && $pq && isset($pq->DatosExternos) && is_object($pq->DatosExternos)) {
+    $v = $pq->DatosExternos->TotalPendienteCobrosPasajeros ?? null;
+    if (is_numeric($v)) $basePending = (float)$v;
   }
   if ($basePending <= 0) {
     $basePending = (float)($calc['pendiente_real'] ?? 0);
   }
+  // Último recurso (legacy): algunas instalaciones solo exponen ImporteAPagar
+  if ($basePending <= 0 && $pq && isset($pq->ImporteAPagar) && is_numeric($pq->ImporteAPagar)) {
+    $basePending = (float)$pq->ImporteAPagar;
+  }
+  if ($basePending <= 0 && $pq && isset($pq->DatosExternos) && is_object($pq->DatosExternos)) {
+    $v = $pq->DatosExternos->ImporteAPagar ?? null;
+    if (is_numeric($v)) $basePending = (float)$v;
+  }
 
-  return [
+return [
     'reservas' => $reservas,
     'calc' => $calc,
     'pq' => $pq,
     'id_reserva_pq' => $idReservaPQResolved,
     'num_pax' => $numPax,
+    'base_total' => $baseTotal,
     'base_pending' => $basePending,
   ];
 }

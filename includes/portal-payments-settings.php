@@ -278,6 +278,8 @@ function casanova_payments_render_settings_page(): void {
               echo '</tr>';
             }
             echo '</tbody></table>';
+          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
+          echo '</form>';
             echo '<p class="description">Copia el <strong>ID (GIAV)</strong> para el override: <code>ID=porcentaje</code>.</p>';
           }
         }
@@ -433,6 +435,8 @@ function casanova_payments_render_settings_page(): void {
     
     
     echo '</tbody></table>';
+          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
+          echo '</form>';
 
     echo '<div class="casanova-menu-actions">';
     echo '<button type="button" class="button" id="casanova-menu-add">Añadir item</button>';
@@ -621,6 +625,16 @@ function casanova_payments_render_settings_page(): void {
     echo '<hr />';
     echo '<h2>Ultimos links</h2>';
 
+    $deleted = isset($_GET['link_deleted']) ? absint($_GET['link_deleted']) : -1;
+    if ($deleted >= 0) {
+      if ($deleted > 0) {
+        echo '<div class="notice notice-success"><p>' . esc_html(sprintf('Links eliminados: %d', $deleted)) . '</p></div>';
+      } else {
+        echo '<div class="notice notice-info"><p>' . esc_html('No se eliminaron links.') . '</p></div>';
+      }
+    }
+
+
     if (function_exists('casanova_payment_links_table')) {
       global $wpdb;
       $table = casanova_payment_links_table();
@@ -628,8 +642,14 @@ function casanova_payments_render_settings_page(): void {
       if ($exists === $table) {
         $rows = $wpdb->get_results("SELECT * FROM {$table} ORDER BY id DESC LIMIT 20");
         if (!empty($rows)) {
+          echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+          wp_nonce_field('casanova_delete_payment_links');
+          echo '<input type="hidden" name="action" value="casanova_delete_payment_links" />';
+          echo '<div style="margin:8px 0">';
+          echo '<button type="submit" class="button button-secondary" onclick="return confirm(\'Eliminar links seleccionados?\')">Eliminar seleccionados</button>';
+          echo '</div>';
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th>ID</th><th>Expediente</th><th>Scope</th><th>Plazas</th><th>Importe</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
+          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Expediente</th><th>Scope</th><th>Plazas</th><th>Importe</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
           foreach ($rows as $r) {
             $token = (string)($r->token ?? '');
             $url = ($token && function_exists('casanova_payment_link_url')) ? casanova_payment_link_url($token) : '';
@@ -644,6 +664,7 @@ function casanova_payments_render_settings_page(): void {
               $slots_count = isset($meta['slots_count']) ? (string)$meta['slots_count'] : '';
             }
             echo '<tr>';
+            echo '<td><input type="checkbox" name="link_ids[]" value="' . esc_attr((string)$r->id) . '" /></td>';
             echo '<td>' . esc_html((string)$r->id) . '</td>';
             echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
             echo '<td>' . esc_html((string)$r->scope) . '</td>';
@@ -654,9 +675,13 @@ function casanova_payments_render_settings_page(): void {
             echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir</a>' : '') . '</td>';
             echo '<td>' . esc_html((string)($r->expires_at ?? '')) . '</td>';
             echo '<td>' . esc_html((string)($r->created_at ?? '')) . '</td>';
+            $del_url = wp_nonce_url(add_query_arg(['action'=>'casanova_delete_payment_links','id'=>(int)$r->id], admin_url('admin-post.php')), 'casanova_delete_payment_links');
+            echo '<td><a href="' . esc_url($del_url) . '" class="button-link-delete" onclick="return confirm(\'Eliminar este link?\')">Eliminar</a></td>';
             echo '</tr>';
           }
           echo '</tbody></table>';
+          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
+          echo '</form>';
         } else {
           echo '<p class="description">No hay links creados.</p>';
         }
@@ -677,11 +702,12 @@ function casanova_payments_render_settings_page(): void {
         $rows = $wpdb->get_results("SELECT * FROM {$gt} ORDER BY id DESC LIMIT 20");
         if (!empty($rows)) {
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th>ID</th><th>Expediente</th><th>PQ</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
+          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Expediente</th><th>PQ</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
           foreach ($rows as $r) {
             $token = (string)($r->token ?? '');
             $url = ($token && function_exists('casanova_group_pay_url')) ? casanova_group_pay_url($token) : '';
             echo '<tr>';
+            echo '<td><input type="checkbox" name="link_ids[]" value="' . esc_attr((string)$r->id) . '" /></td>';
             echo '<td>' . esc_html((string)$r->id) . '</td>';
             echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
             echo '<td>' . esc_html((string)($r->id_reserva_pq ?? '')) . '</td>';
@@ -690,9 +716,13 @@ function casanova_payments_render_settings_page(): void {
             echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir</a>' : '') . '</td>';
             echo '<td>' . esc_html((string)($r->expires_at ?? '')) . '</td>';
             echo '<td>' . esc_html((string)($r->created_at ?? '')) . '</td>';
+            $del_url = wp_nonce_url(add_query_arg(['action'=>'casanova_delete_payment_links','id'=>(int)$r->id], admin_url('admin-post.php')), 'casanova_delete_payment_links');
+            echo '<td><a href="' . esc_url($del_url) . '" class="button-link-delete" onclick="return confirm(\'Eliminar este link?\')">Eliminar</a></td>';
             echo '</tr>';
           }
           echo '</tbody></table>';
+          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
+          echo '</form>';
         } else {
           echo '<p class="description">No hay tokens de grupo.</p>';
         }
@@ -727,7 +757,7 @@ function casanova_payments_render_settings_page(): void {
       echo '<h3>Slots</h3>';
       if (!empty($slots)) {
         echo '<table class="widefat striped">';
-        echo '<thead><tr><th>ID</th><th>Slot</th><th>Base Due</th><th>Base Paid</th><th>Status</th><th>PQ</th></tr></thead><tbody>';
+        echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Slot</th><th>Base Due</th><th>Base Paid</th><th>Status</th><th>PQ</th></tr></thead><tbody>';
         foreach ($slots as $s) {
           echo '<tr>';
           echo '<td>' . esc_html((string)$s->id) . '</td>';
@@ -739,6 +769,8 @@ function casanova_payments_render_settings_page(): void {
           echo '</tr>';
         }
         echo '</tbody></table>';
+          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
+          echo '</form>';
       } else {
         echo '<p class="description">No hay slots para este expediente.</p>';
       }
@@ -749,7 +781,7 @@ function casanova_payments_render_settings_page(): void {
         echo '<h3>Charges</h3>';
         if (!empty($charges)) {
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th>ID</th><th>Titulo</th><th>Tipo</th><th>Due</th><th>Paid</th><th>Status</th><th>Slot</th><th>PQ</th></tr></thead><tbody>';
+          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Titulo</th><th>Tipo</th><th>Due</th><th>Paid</th><th>Status</th><th>Slot</th><th>PQ</th></tr></thead><tbody>';
           foreach ($charges as $c) {
             echo '<tr>';
             echo '<td>' . esc_html((string)$c->id) . '</td>';
@@ -763,6 +795,8 @@ function casanova_payments_render_settings_page(): void {
             echo '</tr>';
           }
           echo '</tbody></table>';
+          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
+          echo '</form>';
         } else {
           echo '<p class="description">No hay charges para este expediente.</p>';
         }
@@ -927,6 +961,8 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><td><code>[casanova_bonos]</code></td><td>Listado de bonos disponibles (expedientes pagados), agrupado por viaje con enlaces a HTML y PDF.</td><td><code>days="3"</code>, <code>only_recent="1"</code></td></tr>';
     
     echo '</tbody></table>';
+          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
+          echo '</form>';
 
     echo '<h3>Notas importantes</h3>';
     echo '<ul style="max-width:1100px; list-style:disc; margin-left:20px">';

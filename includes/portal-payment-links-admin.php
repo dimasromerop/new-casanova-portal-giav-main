@@ -84,3 +84,41 @@ add_action('admin_post_casanova_create_payment_link', function () {
   wp_safe_redirect($url);
   exit;
 });
+
+
+
+add_action('admin_post_casanova_delete_payment_links', function () {
+  if (!current_user_can('manage_options')) {
+    wp_die(__('No autorizado.', 'casanova-portal'), 403);
+  }
+  check_admin_referer('casanova_delete_payment_links');
+
+  $ids = [];
+  if (isset($_REQUEST['id'])) {
+    $ids[] = absint($_REQUEST['id']);
+  }
+  if (!empty($_POST['link_ids']) && is_array($_POST['link_ids'])) {
+    foreach ($_POST['link_ids'] as $v) $ids[] = absint($v);
+  }
+  $ids = array_values(array_filter(array_unique($ids)));
+
+  $base = admin_url('options-general.php?page=casanova-payments&tab=links');
+  if (empty($ids)) {
+    wp_safe_redirect(add_query_arg(['link_deleted' => '0'], $base));
+    exit;
+  }
+
+  if (!function_exists('casanova_payment_links_table')) {
+    wp_safe_redirect(add_query_arg(['link_deleted' => '0'], $base));
+    exit;
+  }
+
+  global $wpdb;
+  $table = casanova_payment_links_table();
+  $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+  $sql = "DELETE FROM {$table} WHERE id IN ({$placeholders})";
+  $wpdb->query($wpdb->prepare($sql, ...$ids));
+
+  wp_safe_redirect(add_query_arg(['link_deleted' => (string)count($ids)], $base));
+  exit;
+});

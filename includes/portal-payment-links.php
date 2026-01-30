@@ -931,11 +931,21 @@ function casanova_maybe_send_magic_resto_link(int $intent_id): void {
   if (!function_exists('casanova_mail_send') || !function_exists('casanova_tpl_email_resto_pago_magic_link')) return;
 
   $url_pago = casanova_payment_link_url((string)$new->token);
+  $codExp = '';
+  $exp_id = (int)($link->id_expediente ?? 0);
+  if ($exp_id > 0 && function_exists('casanova_giav_expediente_get')) {
+    try {
+      $exp = casanova_giav_expediente_get($exp_id);
+      if (is_object($exp)) {
+        $codExp = (string)($exp->CodigoExpediente ?? ($exp->Codigo ?? ($exp->Titulo ?? '')));
+      }
+    } catch (Throwable $e) {}
+  }
   $tpl = casanova_tpl_email_resto_pago_magic_link([
     'to_email' => $email,
     'cliente_nombre' => (string)($meta['billing_name'] ?? ''),
     'idExpediente' => (int)($link->id_expediente ?? 0),
-    'codigoExpediente' => '',
+    'codigoExpediente' => $codExp,
     'importe' => number_format($remaining, 2, ',', '.') . ' €',
     'url_pago' => $url_pago,
   ]);
