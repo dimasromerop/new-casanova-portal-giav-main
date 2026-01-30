@@ -258,3 +258,61 @@ add_action('bricks/form/custom_action', function($form) {
   ]);
 
 }, 10, 1);
+
+
+/**
+ * Crea un cliente PARTICULAR en GIAV (Cliente_POST) y devuelve su idCliente.
+ * Usado para imputar cobros al pagador cuando el DNI no existe aún en GIAV.
+ */
+function casanova_giav_cliente_post_particular(string $dni, string $nombre, string $apellidos = '', string $email = ''): int {
+  $dni = preg_replace('/\s+/', '', strtoupper(trim($dni)));
+  $nombre = trim((string)$nombre);
+  $apellidos = trim((string)$apellidos);
+  $email = trim((string)$email);
+
+  if ($dni === '' || $nombre === '') return 0;
+
+  $p = new stdClass();
+  $p->apikey = defined('CASANOVA_GIAV_APIKEY') ? CASANOVA_GIAV_APIKEY : null;
+  $p->tipoCliente = 'Particular';
+  $p->documento = $dni;
+  if ($email !== '') $p->email = $email;
+  if ($apellidos !== '') $p->apellidos = $apellidos;
+  $p->nombre = $nombre;
+
+  try {
+    $resp = casanova_giav_call('Cliente_POST', $p);
+    // GIAV suele devolver un int (idCliente)
+    if (is_numeric($resp)) return (int)$resp;
+    if (is_object($resp) && isset($resp->Cliente_POSTResult) && is_numeric($resp->Cliente_POSTResult)) return (int)$resp->Cliente_POSTResult;
+  } catch (Throwable $e) {}
+
+  return 0;
+}
+
+/**
+ * Devuelve idCliente por DNI y, si no existe, intenta crearlo con los datos de facturación.
+ */
+function casanova_giav_resolver_o_crear_cliente_por_dni(string $dni, string $nombre = '', string $apellidos = '', string $email = ''): int {
+  $dni = preg_replace('/\s+/', '', strtoupper(trim($dni)));
+  if ($dni === '') return 0;
+
+  $idc = 0;
+  if (function_exists('casanova_giav_cliente_search_por_dni') && function_exists('casanova_giav_extraer_idcliente')) {
+    try {
+      $resp = casanova_giav_cliente_search_por_dni($dni);
+      $x = casanova_giav_extraer_idcliente($resp);
+      if ($x !== null && $x !== '') $idc = (int)$x;
+    } catch (Throwable $e) {}
+  }
+  if ($idc > 0) return $idc;
+
+  // Crear si tenemos datos mínimos
+  if ($nombre !== '' && function_exists('casanova_giav_cliente_post_particular')) {
+    $created = casanova_giav_cliente_post_particular($dni, $nombre, $apellidos, $email);
+    if ($created > 0) return $created;
+  }
+
+  return 0;
+}
+

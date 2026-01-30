@@ -208,18 +208,19 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
       : ('Pago Redsys ' . (string)($intent->order_redsys ?? ''));
 
 
-    // Resolver pagador real (idCliente) por DNI, para que el cobro quede asignado al que paga.
+    // Resolver pagador real (idCliente) por DNI. Si no existe en GIAV, lo creamos con los datos de facturación.
     $payer_id_cliente = (int)($intent->id_cliente ?? 0);
     $billing_dni = (string)($meta['billing_dni'] ?? '');
-    if ($billing_dni !== '' && function_exists('casanova_giav_cliente_search_por_dni') && function_exists('casanova_giav_extraer_idcliente')) {
-      try {
-        $resp_cli = casanova_giav_cliente_search_por_dni($billing_dni);
-        $idc = casanova_giav_extraer_idcliente($resp_cli);
-        if ($idc !== null && $idc !== '') $payer_id_cliente = (int)$idc;
-      } catch (Throwable $e) {}
+    $billing_nombre = (string)($meta['billing_name'] ?? ($payload['billing_name'] ?? ''));
+    $billing_apellidos = (string)($meta['billing_lastname'] ?? ($payload['billing_lastname'] ?? ''));
+    $billing_email = (string)($meta['billing_email'] ?? ($payload['billing_email'] ?? ''));
+
+    if ($billing_dni !== '' && function_exists('casanova_giav_resolver_o_crear_cliente_por_dni')) {
+      $idc = casanova_giav_resolver_o_crear_cliente_por_dni($billing_dni, $billing_nombre, $billing_apellidos, $billing_email);
+      if ($idc > 0) $payer_id_cliente = (int)$idc;
     }
 
-    $giav_params = [
+$giav_params = [
       'idFormaPago' => $id_forma_pago,
       'idOficina' => ($id_oficina > 0 ? (int)$id_oficina : null),
       'idExpediente' => (int)$intent->id_expediente,

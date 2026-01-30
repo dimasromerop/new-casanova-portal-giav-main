@@ -113,13 +113,35 @@ function casanova_ensure_group_slots(int $idExpediente, int $idReservaPQ, int $n
     if ((float)($s->base_paid ?? 0) > 0.01) $has_paid = true;
   }
 
-  $distribution = casanova_group_slots_distribution($baseTotalPending, $numPax);
+    $total_paid = 0.0;
+  $has_reserved = false;
+  $sum_due = 0.0;
+  foreach ($slots as $s) {
+    $total_paid += (float)($s->base_paid ?? 0);
+    $sum_due += (float)($s->base_due ?? 0);
+    if (!empty($s->reserved_until)) {
+      $ts = strtotime((string)$s->reserved_until);
+      if ($ts && $ts > time()) $has_reserved = true;
+    }
+  }
+  $total_paid = round($total_paid, 2);
+  $sum_due = round($sum_due, 2);
+
+$distribution = casanova_group_slots_distribution($baseTotalPending, $numPax);
 
   for ($i = 1; $i <= $numPax; $i++) {
     $due = (float)($distribution[$i - 1] ?? 0);
     if (isset($byIndex[$i])) {
       $s = $byIndex[$i];
-      if (!$has_paid && (float)($s->base_paid ?? 0) <= 0.01) {
+
+      // IMPORTANTE: el precio por plaza debe ser fijo y no depender de lo que paguen otros.
+      // Solo reajustamos base_due si:
+      // - no hay pagos aplicados a ningún slot
+      // - no hay slots reservados (locks)
+      // - y la suma de base_due no cuadra con el total base (p.ej. slots creados con un valor erróneo)
+      $can_reseed = ($total_paid <= 0.01) && (!$has_reserved) && ($sum_due > 0.01) && (abs($sum_due - $baseTotalPending) > 0.05);
+
+      if ($can_reseed && (float)($s->base_paid ?? 0) <= 0.01) {
         casanova_group_slots_update((int)$s->id, ['base_due' => $due]);
       }
       continue;
