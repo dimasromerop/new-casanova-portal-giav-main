@@ -37,10 +37,26 @@ function casanova_group_slots_get(int $idExpediente, int $idReservaPQ = 0): arra
   ) ?: [];
 }
 
+
+function casanova_group_slots_get_by_id(int $id) {
+  global $wpdb;
+  $table = casanova_group_slots_table();
+  $id = (int)$id;
+  if ($id <= 0) return null;
+  return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id=%d LIMIT 1", $id));
+}
+
 function casanova_group_slots_open(int $idExpediente, int $idReservaPQ = 0): array {
   $slots = casanova_group_slots_get($idExpediente, $idReservaPQ);
   $open = [];
+  $now = current_time('mysql');
   foreach ($slots as $s) {
+    // Excluir slots reservados (lock temporal) para evitar overbooking en link público.
+    $ru = (string)($s->reserved_until ?? '');
+    if ($ru !== '' && strtotime($ru) !== false && strtotime($ru) > strtotime($now)) {
+      continue;
+    }
+
     $due = (float)($s->base_due ?? 0);
     $paid = (float)($s->base_paid ?? 0);
     if ($due - $paid > 0.01) $open[] = $s;
@@ -54,7 +70,7 @@ function casanova_group_slots_update(int $id, array $fields): bool {
   $id = (int)$id;
   if ($id <= 0) return false;
 
-  $allowed = ['base_due','base_paid','status','updated_at'];
+  $allowed = ['base_due','base_paid','status','reserved_until','reserved_token','updated_at'];
   $clean = [];
   foreach ($fields as $k => $v) {
     if (!in_array($k, $allowed, true)) continue;
@@ -182,6 +198,126 @@ function casanova_group_context_from_reservas(int $idExpediente, int $idCliente,
     'num_pax' => $numPax,
     'base_pending' => $basePending,
   ];
+}
+
+
+
+/**
+ * Reserva (lock temporal) los primeros N slots abiertos para evitar race conditions en /pay/group/{token}.
+ * Devuelve los slots reservados (en orden de slot_index).
+ *
+ * Nota: no depende de transacciones. Usa UPDATE + SELECT por reserved_token.
+ */
+function casanova_group_slots_reserve(int $idExpediente, int $idReservaPQ, int $count, int $ttlMinutes = 15): array|WP_Error {
+  global $wpdb;
+  $table = casanova_group_slots_table();
+  $idExpediente = (int)$idExpediente;
+  $idReservaPQ = (int)$idReservaPQ;
+  $count = max(0, (int)$count);
+  $ttlMinutes = max(1, (int)$ttlMinutes);
+
+  if ($idExpediente <= 0 || $count <= 0) return [];
+
+  $token = bin2hex(random_bytes(16));
+  $now = current_time('mysql');
+  $expires = gmdate('Y-m-d H:i:s', time() + ($ttlMinutes * 60));
+  // Convertimos a horario WP (current_time es local WP); para DB guardamos en el mismo "mysql" que usa el plugin.
+  $expires = date('Y-m-d H:i:s', strtotime($now) + ($ttlMinutes * 60));
+
+  // Subquery con límite necesita envoltorio por MySQL.
+  if ($idReservaPQ > 0) {
+    $sql = $wpdb->prepare(
+      "UPDATE {$table} SET reserved_until=%s, reserved_token=%s, updated_at=%s
+       WHERE id IN (
+         SELECT id FROM (
+           SELECT id FROM {$table}
+           WHERE id_expediente=%d AND id_reserva_pq=%d
+             AND (reserved_until IS NULL OR reserved_until < %s)
+             AND (base_due - base_paid) > 0.01
+           ORDER BY slot_index ASC
+           LIMIT %d
+         ) t
+       )",
+      $expires, $token, $now,
+      $idExpediente, $idReservaPQ, $now,
+      $count
+    );
+  } else {
+    $sql = $wpdb->prepare(
+      "UPDATE {$table} SET reserved_until=%s, reserved_token=%s, updated_at=%s
+       WHERE id IN (
+         SELECT id FROM (
+           SELECT id FROM {$table}
+           WHERE id_expediente=%d
+             AND (reserved_until IS NULL OR reserved_until < %s)
+             AND (base_due - base_paid) > 0.01
+           ORDER BY slot_index ASC
+           LIMIT %d
+         ) t
+       )",
+      $expires, $token, $now,
+      $idExpediente, $now,
+      $count
+    );
+  }
+
+  $updated = $wpdb->query($sql);
+  if ($updated === false) {
+    return new WP_Error('slot_reserve_failed', $wpdb->last_error ?: 'slot reserve failed');
+  }
+  if ((int)$updated < $count) {
+    // No conseguimos reservar suficientes.
+    return [];
+  }
+
+  // Cargamos los slots reservados por token.
+  $rows = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$table} WHERE reserved_token=%s ORDER BY slot_index ASC", $token)) ?: [];
+  return $rows;
+}
+
+/**
+ * Asigna un pago a una lista explícita de slots (IDs), respetando el orden recibido.
+ * Útil cuando el link one-shot se generó reservando slots.
+ */
+function casanova_allocate_payment_to_slot_ids(array $slotIds, float $amountPaid): array {
+  $amountPaid = round((float)$amountPaid, 2);
+  $alloc = [];
+  if ($amountPaid <= 0.0) return $alloc;
+
+  $slotIds = array_values(array_filter(array_map('intval', $slotIds), fn($v) => $v > 0));
+  if (empty($slotIds)) return $alloc;
+
+  $remaining = $amountPaid;
+  foreach ($slotIds as $slotId) {
+    if ($remaining <= 0.0001) break;
+    $s = casanova_group_slots_get_by_id($slotId);
+    if (!$s) continue;
+
+    $due = (float)($s->base_due ?? 0);
+    $paid = (float)($s->base_paid ?? 0);
+    $open = $due - $paid;
+    if ($open <= 0.01) continue;
+
+    $apply = min($open, $remaining);
+    $new_paid = $paid + $apply;
+    $status = ($new_paid + 0.01 >= $due) ? 'paid' : 'open';
+
+    casanova_group_slots_update((int)$s->id, [
+      'base_paid' => $new_paid,
+      'status' => $status,
+      'reserved_until' => null,
+      'reserved_token' => null,
+    ]);
+
+    $alloc[] = [
+      'slot_id' => (int)$s->id,
+      'slot_index' => (int)($s->slot_index ?? 0),
+      'amount_applied' => round($apply, 2),
+    ];
+    $remaining -= $apply;
+  }
+
+  return $alloc;
 }
 
 /**

@@ -152,6 +152,14 @@ function casanova_handle_group_pay_request(string $token): void {
     }
     $billing_fullname = trim($billing_name . ' ' . $billing_lastname);
 
+    $email_raw = isset($_POST['billing_email']) ? (string)$_POST['billing_email'] : '';
+    $billing_email = trim(sanitize_email($email_raw));
+    if ($billing_email === '' || !is_email($billing_email)) {
+      casanova_render_payment_link_error(__('Debes indicar un email válido.', 'casanova-portal'));
+      exit;
+    }
+
+
     $dni_raw = isset($_POST['billing_dni']) ? (string)$_POST['billing_dni'] : '';
     $dni = strtoupper(preg_replace('/\s+/', '', sanitize_text_field($dni_raw)));
     if ($dni === '') {
@@ -171,7 +179,22 @@ function casanova_handle_group_pay_request(string $token): void {
       exit;
     }
 
-    $selected_slots = array_slice($open_slots, 0, $slots_count);
+    $selected_slots = [];
+    if (function_exists('casanova_group_slots_reserve')) {
+      $reserved = casanova_group_slots_reserve($idExpediente, $idReservaPQ, $slots_count, 15);
+      if (is_wp_error($reserved)) {
+        casanova_render_payment_link_error($reserved->get_error_message());
+        exit;
+      }
+      if (empty($reserved) || count($reserved) < $slots_count) {
+        casanova_render_payment_link_error(__('No quedan plazas disponibles.', 'casanova-portal'));
+        exit;
+      }
+      $selected_slots = $reserved;
+    } else {
+      // Fallback (no lock): usamos los primeros slots abiertos.
+      $selected_slots = array_slice($open_slots, 0, $slots_count);
+    }
     $total_due = 0.0;
     foreach ($selected_slots as $s) {
       $total_due += max(0.0, (float)($s->base_due ?? 0) - (float)($s->base_paid ?? 0));
@@ -227,6 +250,7 @@ function casanova_handle_group_pay_request(string $token): void {
       'status' => 'active',
       'created_by' => 'group',
       'billing_dni' => $dni,
+        'billing_email' => $billing_email,
       'metadata' => [
         'mode' => $mode,
         'slots_count' => $slots_count,
@@ -239,6 +263,7 @@ function casanova_handle_group_pay_request(string $token): void {
         'billing_name' => $billing_fullname,
         'billing_lastname' => $billing_lastname,
         'billing_dni' => $dni,
+        'billing_email' => $billing_email,
         'preferred_method' => $selected_method,
         'auto_start' => true,
       ],
@@ -317,6 +342,10 @@ function casanova_handle_group_pay_request(string $token): void {
 
   echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Apellidos', 'casanova-portal') . '</label>';
   echo '<input type="text" name="billing_lastname" autocomplete="family-name" required value="" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
+
+  echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Email', 'casanova-portal') . '</label>';
+  echo '<input type="email" name="billing_email" autocomplete="email" required value="" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
+
 
   echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('DNI / NIF (obligatorio)', 'casanova-portal') . '</label>';
   echo '<input type="text" name="billing_dni" autocomplete="tax-id" required value="" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';

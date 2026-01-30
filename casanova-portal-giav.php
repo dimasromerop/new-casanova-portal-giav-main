@@ -2,7 +2,7 @@
 /**
  * Plugin Name: New Casanova Portal - GIAV
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
- * Version: 0.30.4
+ * Version: 0.30.6
  * Author: Casanova Golf
  * Text Domain: casanova-portal
  * Domain Path: /languages
@@ -223,28 +223,8 @@ register_activation_hook(__FILE__, 'casanova_payments_install');
 register_activation_hook(__FILE__, 'casanova_portal_otp_install');
 
 // Activación: reglas de rewrite (return limpio de Inespay)
-register_activation_hook(__FILE__, function () {
-  if (function_exists('casanova_inespay_register_return_rewrite')) {
-    casanova_inespay_register_return_rewrite();
-  }
-  if (function_exists('casanova_payment_links_register_rewrite')) {
-    casanova_payment_links_register_rewrite();
-  }
-  if (function_exists('casanova_group_pay_register_rewrite')) {
-    casanova_group_pay_register_rewrite();
-  }
-  if (function_exists('flush_rewrite_rules')) {
-    flush_rewrite_rules();
-  }
-});
 
 // Activación: programa de fidelización (cron)
-register_activation_hook(__FILE__, function () {
-  if (!wp_next_scheduled('casanova_mulligans_daily_sync')) {
-    // Evitamos el "pico" típico de medianoche; WordPress terminará ejecutándolo cuando pueda.
-    wp_schedule_event(time() + 120, 'daily', 'casanova_mulligans_daily_sync');
-  }
-});
 
 // Desactivación: limpia cron fidelización
 register_deactivation_hook(__FILE__, function () {
@@ -383,3 +363,5 @@ add_action('wp_footer', function () {
   </script>
   <?php
 }, 50);
+
+

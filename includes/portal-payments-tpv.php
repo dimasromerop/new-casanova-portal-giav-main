@@ -290,7 +290,15 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
             if (!is_wp_error($ctx)) {
               casanova_ensure_group_slots((int)$intent->id_expediente, (int)($ctx['id_reserva_pq'] ?? $id_reserva_pq), (int)($ctx['num_pax'] ?? 0), (float)($ctx['base_pending'] ?? 0));
             }
-            $alloc = casanova_allocate_payment_to_slots((int)$intent->id_expediente, (float)$intent->amount, $id_reserva_pq);
+            $slot_ids = [];
+            if (!empty($meta['slot_ids']) && is_array($meta['slot_ids'])) {
+              $slot_ids = $meta['slot_ids'];
+            }
+            if (!empty($slot_ids) && function_exists('casanova_allocate_payment_to_slot_ids')) {
+              $alloc = casanova_allocate_payment_to_slot_ids($slot_ids, (float)$intent->amount);
+            } else {
+              $alloc = casanova_allocate_payment_to_slots((int)$intent->id_expediente, (float)$intent->amount, $id_reserva_pq);
+            }
             if (function_exists('casanova_payment_link_update') && function_exists('casanova_payment_link_merge_metadata')) {
               casanova_payment_link_update($payment_link_id, [
                 'metadata' => casanova_payment_link_merge_metadata($plink->metadata ?? null, [

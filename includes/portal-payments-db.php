@@ -106,12 +106,16 @@ last_check_at DATETIME NULL,
     base_due DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     base_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     status VARCHAR(16) NOT NULL DEFAULT 'open',
+    reserved_until DATETIME NULL,
+    reserved_token VARCHAR(64) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_expediente (id_expediente),
     KEY idx_reserva_pq (id_reserva_pq),
     KEY idx_status (status),
+    KEY idx_reserved_until (reserved_until),
+    KEY idx_reserved_token (reserved_token),
     UNIQUE KEY uq_slot (id_expediente, id_reserva_pq, slot_index)
   ) $charset_collate;";
 

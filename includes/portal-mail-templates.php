@@ -113,3 +113,41 @@ function casanova_tpl_email_expediente_pagado(array $ctx): array {
 
   return ['subject' => $subject, 'html' => $html];
 }
+
+/**
+ * Email: link seguro para pagar el resto (Magic Link).
+ * ctx esperado: to_email, cliente_nombre (opcional), idExpediente, codigoExpediente (opcional), importe, url_pago
+ */
+function casanova_tpl_email_resto_pago_magic_link(array $ctx): array {
+  $to = (string)($ctx['to_email'] ?? '');
+  $cliente = esc_html((string)($ctx['cliente_nombre'] ?? ''));
+  $idExp = (int)($ctx['idExpediente'] ?? 0);
+  $codExp = (string)($ctx['codigoExpediente'] ?? '');
+  $importe = (string)($ctx['importe'] ?? '');
+  $url = esc_url((string)($ctx['url_pago'] ?? ''));
+
+  $expLabel = $codExp !== '' ? esc_html($codExp) : ('#' . $idExp);
+
+  $subject = sprintf(__('Enlace para completar tu pago – Expediente %s', 'casanova-portal'), $expLabel);
+
+  $body = '';
+  if ($cliente !== '') {
+    $body .= '<p>' . sprintf(esc_html__('Hola %s,', 'casanova-portal'), $cliente) . '</p>';
+  } else {
+    $body .= '<p>' . esc_html__('Hola,', 'casanova-portal') . '</p>';
+  }
+
+  $body .= '<p>' . esc_html__('Ya hemos registrado tu depósito. Cuando quieras, puedes completar el resto del pago desde este enlace seguro:', 'casanova-portal') . '</p>';
+
+  $btn = '<a href="' . $url . '" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 14px;border-radius:8px;font-weight:600;">' . esc_html__('Pagar el resto', 'casanova-portal') . '</a>';
+  $body .= '<p style="margin:16px 0 18px;">' . $btn . '</p>';
+
+  if ($importe !== '') {
+    $body .= '<p style="color:#333;margin:0 0 10px;">' . sprintf(esc_html__('Importe pendiente: %s', 'casanova-portal'), '<strong>' . esc_html($importe) . '</strong>') . '</p>';
+  }
+
+  $body .= '<p style="color:#666;font-size:12px;">' . esc_html__('Si no has solicitado este enlace, puedes ignorar este email.', 'casanova-portal') . '</p>';
+
+  $html = casanova_mail_wrap_html($subject, $body);
+  return ['subject' => $subject, 'html' => $html, 'to' => $to];
+}
