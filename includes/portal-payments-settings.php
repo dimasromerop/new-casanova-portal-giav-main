@@ -542,6 +542,7 @@ function casanova_payments_render_settings_page(): void {
     } elseif ($group_error) {
       $msg = 'No se pudo crear el token de grupo.';
       if ($group_error === 'expediente') $msg = 'Expediente invalido.';
+      if ($group_error === 'unit_total') $msg = 'Importe total por persona invalido.';
       if ($group_error === 'missing') $msg = 'Modulo de grupos no disponible.';
       if ($group_error === 'create') $msg = 'Error al crear el token de grupo.';
       echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
@@ -563,6 +564,7 @@ function casanova_payments_render_settings_page(): void {
     echo '<option value="passenger_share">passenger_share</option>';
     echo '<option value="custom_amount">custom_amount</option>';
     echo '<option value="slot_base">slot_base (plazas base)</option>';
+    echo '<option value="group_base">group_base (importe fijo)</option>';
     echo '</select></td></tr>';
 
     echo '<tr><th scope="row"><label for="amount_authorized">Importe autorizado (EUR)</label></th>';
@@ -615,6 +617,9 @@ function casanova_payments_render_settings_page(): void {
 
     echo '<tr><th scope="row"><label for="group_id_reserva_pq">ID Reserva PQ (opcional)</label></th>';
     echo '<td><input name="group_id_reserva_pq" id="group_id_reserva_pq" type="number" min="0" step="1" class="regular-text" /></td></tr>';
+
+    echo '<tr><th scope="row"><label for="group_unit_total">Importe total por persona (EUR)</label></th>';
+    echo '<td><input name="group_unit_total" id="group_unit_total" type="text" required class="regular-text" placeholder="Ej: 300.00" /></td></tr>';
 
     echo '<tr><th scope="row"><label for="group_expires_at">Caduca el (opcional)</label></th>';
     echo '<td><input name="group_expires_at" id="group_expires_at" type="date" class="regular-text" /></td></tr>';
@@ -702,7 +707,7 @@ function casanova_payments_render_settings_page(): void {
         $rows = $wpdb->get_results("SELECT * FROM {$gt} ORDER BY id DESC LIMIT 20");
         if (!empty($rows)) {
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Expediente</th><th>PQ</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
+          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Expediente</th><th>PQ</th><th>Unit total</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
           foreach ($rows as $r) {
             $token = (string)($r->token ?? '');
             $url = ($token && function_exists('casanova_group_pay_url')) ? casanova_group_pay_url($token) : '';
@@ -711,6 +716,7 @@ function casanova_payments_render_settings_page(): void {
             echo '<td>' . esc_html((string)$r->id) . '</td>';
             echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
             echo '<td>' . esc_html((string)($r->id_reserva_pq ?? '')) . '</td>';
+            echo '<td>' . esc_html(number_format((float)($r->unit_total ?? 0), 2, ',', '.')) . '</td>';
             echo '<td>' . esc_html((string)$r->status) . '</td>';
             echo '<td><code>' . esc_html($token) . '</code></td>';
             echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir</a>' : '') . '</td>';
