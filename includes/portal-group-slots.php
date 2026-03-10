@@ -418,7 +418,7 @@ function casanova_group_token_update(int $id, array $fields): bool {
   $id = (int)$id;
   if ($id <= 0) return false;
 
-  $allowed = ['unit_total','status','expires_at','updated_at'];
+  $allowed = ['status','expires_at','unit_total','updated_at'];
   $clean = [];
   foreach ($fields as $k => $v) {
     if (!in_array($k, $allowed, true)) continue;
@@ -450,3 +450,4 @@ function casanova_group_pay_url(string $token): string {
   if ($token === '') return home_url('/');
   return home_url('/pay/group/' . rawurlencode($token) . '/');
 }
+

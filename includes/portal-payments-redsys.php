@@ -28,6 +28,30 @@ function casanova_redsys_order_from_intent_id(int $intent_id): string {
   $suffix = str_pad((string)$intent_id, 6, '0', STR_PAD_LEFT);
   return $prefix . $suffix; // 12 chars
 }
+
+if (!function_exists('casanova_tpv_notify_url')) {
+  function casanova_tpv_notify_url(): string {
+    $url = add_query_arg(['casanova_tpv_notify' => '1'], home_url('/'));
+    return (string) apply_filters('casanova_tpv_notify_url', $url);
+  }
+}
+
+if (!function_exists('casanova_tpv_return_url')) {
+  function casanova_tpv_return_url(bool $ok, string $token = ''): string {
+    $args = [
+      'casanova_tpv_return' => '1',
+      'result' => $ok ? 'ok' : 'ko',
+    ];
+
+    if ($token !== '') {
+      $args['token'] = $token;
+    }
+
+    $url = add_query_arg($args, home_url('/'));
+    return (string) apply_filters('casanova_tpv_return_url', $url, $ok, $token);
+  }
+}
+
 function casanova_redsys_is_base64(string $s): bool {
   $d = base64_decode($s, true);
   return $d !== false && base64_encode($d) === preg_replace('/\s+/', '', $s);

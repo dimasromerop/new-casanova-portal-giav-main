@@ -118,17 +118,24 @@ function casanova_custom_value($obj, $key): string {
   }
   return '';
 }
-function casanova_reserva_custom_tipo($reserva, $key_tipo = '2171'): string {
+function casanova_reserva_custom_tipo($reserva, $key_tipo = ['2236', '2171']): string {
   if (!is_object($reserva)) return '';
 
-  // 1) Directo en la reserva
-  $v = casanova_custom_value($reserva, $key_tipo);
-  if ($v !== '') return $v;
+  $keys = is_array($key_tipo) ? $key_tipo : [$key_tipo];
 
-  // 2) En DatosExternos (por si GIAV lo mueve)
-  $dx = $reserva->DatosExternos ?? null;
-  $v = casanova_custom_value($dx, $key_tipo);
-  if ($v !== '') return $v;
+  foreach ($keys as $key) {
+    $key = (string) $key;
+    if ($key === '') continue;
+
+    // 1) Directo en la reserva
+    $v = casanova_custom_value($reserva, $key);
+    if ($v !== '') return $v;
+
+    // 2) En DatosExternos (por si GIAV lo mueve)
+    $dx = $reserva->DatosExternos ?? null;
+    $v = casanova_custom_value($dx, $key);
+    if ($v !== '') return $v;
+  }
 
   return '';
 }
@@ -139,8 +146,8 @@ function casanova_is_golf_service($tipo, $reserva = null): bool {
   if ($tipo === 'GF') return true;
 
   if ($tipo === 'OT' && is_object($reserva)) {
-    $custom = casanova_reserva_custom_tipo($reserva, '2171');
-    return mb_strtolower(trim($custom), 'UTF-8') === 'golf';
+    $custom = mb_strtolower(trim(casanova_reserva_custom_tipo($reserva, ['2236', '2171'])), 'UTF-8');
+    return $custom !== '' && mb_strpos($custom, 'golf', 0, 'UTF-8') !== false;
   }
 
   return false;

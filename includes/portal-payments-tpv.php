@@ -10,6 +10,18 @@ add_action('admin_post_casanova_tpv_notify', 'casanova_handle_tpv_notify');
 add_action('admin_post_nopriv_casanova_tpv_return', 'casanova_handle_tpv_return');
 add_action('admin_post_casanova_tpv_return', 'casanova_handle_tpv_return');
 
+add_action('init', function () {
+  if (!empty($_REQUEST['casanova_tpv_notify'])) {
+    casanova_handle_tpv_notify();
+    exit;
+  }
+
+  if (!empty($_REQUEST['casanova_tpv_return'])) {
+    casanova_handle_tpv_return();
+    exit;
+  }
+}, 0);
+
 
 /**
  * ==========================
@@ -184,53 +196,14 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
     $payment_link_scope = (string)($payment_link['scope'] ?? '');
     $billing_dni = (string)($payload['billing_dni'] ?? ($payment_link['billing_dni'] ?? ''));
     $billing_name = trim((string)($payload['billing_name'] ?? ''));
-    $payment_link_meta = [];
-    if ($payment_link_id > 0 && function_exists('casanova_payment_link_get')) {
-      $plink_meta_row = casanova_payment_link_get($payment_link_id);
-      if ($plink_meta_row) {
-        $payment_link_meta = casanova_payment_link_decode_metadata((string)($plink_meta_row->metadata ?? ''));
-      }
-    }
-
-    $billing_email = trim((string)($payment_link_meta['billing_email'] ?? ($payload['billing_email'] ?? '')));
-    $billing_lastname = trim((string)($payment_link_meta['billing_lastname'] ?? ($payload['billing_lastname'] ?? '')));
-    if ($billing_name === '' && !empty($payment_link_meta['billing_name'])) {
-      $billing_name = trim((string)$payment_link_meta['billing_name']);
-    }
-    if ($billing_dni === '' && !empty($payment_link_meta['billing_dni'])) {
-      $billing_dni = (string)$payment_link_meta['billing_dni'];
-    }
-
-    $covers_self = !empty($payment_link_meta['covers_self']);
-    $covers_others = !empty($payment_link_meta['covers_others']);
-    $others_names = trim((string)($payment_link_meta['others_names'] ?? ''));
-    $internal_note = trim((string)($payment_link_meta['internal_note'] ?? ''));
-    $payer_fullname = trim($billing_name . ' ' . $billing_lastname);
-    if ($payer_fullname === '') $payer_fullname = $billing_name;
-
-    $giav_internal_note = sprintf(
-      'Pagador: %s %s (%s). Cubre: %s. Otros: %s. Nota: %s',
-      ($payer_fullname !== '' ? $payer_fullname : 'N/D'),
-      ($billing_dni !== '' ? $billing_dni : 'N/D'),
-      ($billing_email !== '' ? $billing_email : '-'),
-      ($covers_self ? 'si' : 'no'),
-      ($covers_others ? ($others_names !== '' ? $others_names : '-') : 'no'),
-      ($internal_note !== '' ? $internal_note : '-')
-    );
 
     $notes['billing_dni'] = $billing_dni ?: null;
     $notes['billing_name'] = $billing_name ?: null;
-    $notes['billing_email'] = $billing_email ?: null;
-    $notes['covers_self'] = $covers_self;
-    $notes['covers_others'] = $covers_others;
-    $notes['others_names'] = $others_names ?: null;
-    $notes['internal_note'] = $internal_note ?: null;
     $notes['payment_link'] = [
       'id' => $payment_link_id ?: null,
       'token' => $payment_link_token ?: null,
       'scope' => $payment_link_scope ?: null,
     ];
-    $notes['giav_internal_note'] = $giav_internal_note;
 
     $payer_name = 'Portal';
     if (!empty($intent->user_id) && function_exists('get_user_by')) {
@@ -238,13 +211,51 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
       if ($u && !empty($u->display_name)) {
         $payer_name = (string)$u->display_name;
       }
-    } elseif ($payer_fullname !== '') {
-      $payer_name = $payer_fullname;
+    } elseif ($billing_name !== '') {
+      $payer_name = $billing_name;
     }
 
     $concepto = $is_deposit
       ? ('Depósito Redsys ' . (string)($intent->order_redsys ?? ''))
       : ('Pago Redsys ' . (string)($intent->order_redsys ?? ''));
+
+    // Nota humana para GIAV (pagador + viajeros + nota interna).
+    $plink_meta = [];
+    if ($payment_link_id > 0 && function_exists('casanova_payment_link_get')) {
+      $plink_row = casanova_payment_link_get($payment_link_id);
+      if ($plink_row) {
+        $rawm = (string)($plink_row->metadata ?? '');
+        if ($rawm !== '') {
+          $dec = json_decode($rawm, true);
+          if (is_array($dec)) $plink_meta = $dec;
+        }
+      }
+    }
+    $note_email = (string)($plink_meta['billing_email'] ?? ($payload['billing_email'] ?? ''));
+    $billing_email = trim($note_email);
+    $billing_lastname = trim((string)($plink_meta['billing_lastname'] ?? ($payload['billing_lastname'] ?? '')));
+    if ($billing_name === '' && !empty($plink_meta['billing_name'])) {
+      $billing_name = trim((string)$plink_meta['billing_name']);
+    }
+    if ($billing_dni === '' && !empty($plink_meta['billing_dni'])) {
+      $billing_dni = (string)$plink_meta['billing_dni'];
+    }
+    $note_covers_self = !empty($plink_meta['covers_self']);
+    $note_covers_others = !empty($plink_meta['covers_others']);
+    $note_others = $plink_meta['others_names'] ?? [];
+    if (!is_array($note_others)) $note_others = [];
+    $note_internal = trim((string)($plink_meta['internal_note'] ?? ''));
+
+    $others_txt = '';
+    if ($note_covers_others && !empty($note_others)) {
+      $others_txt = implode(', ', array_map('sanitize_text_field', array_slice($note_others, 0, 20)));
+    }
+    $giav_human_note = 'Pagador: ' . trim($payer_name . ' ' . $billing_dni) . ' (' . $note_email . '). '
+      . 'Cubre: ' . ($note_covers_self ? 'sí' : 'no') . '. '
+      . 'Otros: ' . ($others_txt !== '' ? $others_txt : '-') . '. '
+      . 'Nota: ' . ($note_internal !== '' ? $note_internal : '-');
+
+    $notasInternas = $giav_human_note . ' | order=' . (string)($params['Ds_Order'] ?? '') . ' auth=' . (string)($params['Ds_AuthorisationCode'] ?? '');
 
 
     // Resolver pagador real (idCliente) por DNI, para que el cobro quede asignado al que paga.
@@ -280,7 +291,7 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
       'concepto' => $concepto,
       'documento' => (string)($params['Ds_AuthorisationCode'] ?? ($params['Ds_Merchant_Identifier'] ?? '')),
       'pagador' => $payer_name,
-      'notasInternas' => $giav_internal_note,
+      'notasInternas' => $notasInternas,
       'autocompensar' => true,
       'idEntityStage' => null,
       // customDataValues OMITIDO: Key debe ser int y no sabemos los IDs en tu GIAV.
@@ -407,18 +418,21 @@ function casanova_handle_tpv_return(): void {
   if ($mpB64 === '' || $sig === '') {
   // fallback: return por GET sin payload, usamos token en URL
   $token_qs = (string)($_REQUEST['token'] ?? '');
+  $result_qs = strtolower(trim((string)($_REQUEST['result'] ?? '')));
+  $return_ok = ($result_qs === 'ok');
   error_log('[CASANOVA][TPV][RETURN] missing params fallback token=' . $token_qs);
 
   if ($token_qs !== '' && function_exists('casanova_payment_intent_get_by_token')) {
     $intent = casanova_payment_intent_get_by_token($token_qs);
     if ($intent) {
       casanova_payment_intent_update((int)$intent->id, [
-        'status' => (($_REQUEST['result'] ?? '') === 'ok') ? 'returned_ok' : 'returned_ko',
+        'status' => $return_ok ? 'return_pending_notify' : 'returned_ko',
         'payload' => casanova_payload_merge($intent->payload ?? [], [
           'redsys_return' => [
             'valid_signature' => false,
             'error' => 'missing_params_return_get',
-            'result' => (string)($_REQUEST['result'] ?? ''),
+            'result' => $result_qs,
+            'awaiting_notify' => $return_ok,
             'request_keys' => [
               'get' => array_keys($_GET),
               'post' => array_keys($_POST),
@@ -429,26 +443,29 @@ function casanova_handle_tpv_return(): void {
       ]);
 
       // Agenda reconciliación (una vez)
-if (!wp_next_scheduled('casanova_job_reconcile_payment', [(int)$intent->id])) {
-  $when = time() + 15;
-  wp_schedule_single_event($when, 'casanova_job_reconcile_payment', [(int)$intent->id]);
-  if (function_exists('casanova_log')) {
-    casanova_log('tpv', 'reconcile scheduled', ['when' => $when, 'intent_id' => (int)$intent->id], 'info');
-  } else {
-    error_log('[CASANOVA][TPV] reconcile scheduled when=' . $when . ' intent_id=' . (int)$intent->id);
-  }
-} else {
-  $ts = wp_next_scheduled('casanova_job_reconcile_payment', [(int)$intent->id]);
-  if (function_exists('casanova_log')) {
-    casanova_log('tpv', 'reconcile already scheduled', ['at' => $ts, 'intent_id' => (int)$intent->id], 'debug');
-  } else {
-    error_log('[CASANOVA][TPV] reconcile already scheduled at=' . (string)$ts . ' intent_id=' . (int)$intent->id);
-  }
-}
+      // Sin MerchantParameters no podemos validar el pago desde el navegador.
+      // El registro en GIAV queda a la espera del notify servidor-a-servidor.
+      if ($return_ok) {
+        if (!wp_next_scheduled('casanova_job_reconcile_payment', [(int)$intent->id])) {
+          $when = time() + 15;
+          wp_schedule_single_event($when, 'casanova_job_reconcile_payment', [(int)$intent->id]);
+          if (function_exists('casanova_log')) {
+            casanova_log('tpv', 'reconcile scheduled', ['when' => $when, 'intent_id' => (int)$intent->id], 'info');
+          } else {
+            error_log('[CASANOVA][TPV] reconcile scheduled when=' . $when . ' intent_id=' . (int)$intent->id);
+          }
+        } else {
+          $ts = wp_next_scheduled('casanova_job_reconcile_payment', [(int)$intent->id]);
+          if (function_exists('casanova_log')) {
+            casanova_log('tpv', 'reconcile already scheduled', ['at' => $ts, 'intent_id' => (int)$intent->id], 'debug');
+          } else {
+            error_log('[CASANOVA][TPV] reconcile already scheduled at=' . (string)$ts . ' intent_id=' . (int)$intent->id);
+          }
+        }
+      }
 
 
-      $ok = (($_REQUEST['result'] ?? '') === 'ok');
-      wp_safe_redirect(casanova_tpv_redirect_url_for_intent($intent, $ok));
+      wp_safe_redirect(casanova_tpv_redirect_url_for_intent($intent, $return_ok));
       exit;
     }
   }
@@ -574,8 +591,14 @@ function casanova_handle_tpv_notify(): void {
   }
 
   // Idempotencia básica
+  $intent_payload = is_array($intent->payload ?? null)
+    ? (array)$intent->payload
+    : (json_decode((string)($intent->payload ?? ''), true) ?: []);
+  if (!is_array($intent_payload)) $intent_payload = [];
+  $has_giav_cobro = !empty($intent_payload['giav_cobro']['cobro_id']) || !empty($intent_payload['giav_cobro']['inserted_at']);
+
   $curr_status = (string)($intent->status ?? '');
-  if ($curr_status === 'reconciled' || $curr_status === 'failed') {
+  if ($curr_status === 'reconciled' || $has_giav_cobro) {
     status_header(200);
     echo 'OK';
     exit;

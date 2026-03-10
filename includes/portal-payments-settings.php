@@ -36,6 +36,10 @@ function casanova_payments_get_deposit_min_amount(): float {
   return $m;
 }
 
+function casanova_portal_mulligans_enabled(): bool {
+  return (bool) get_option('casanova_portal_mulligans_enabled', 1);
+}
+
 add_action('admin_menu', function () {
   add_options_page(
     'Casanova Portal',
@@ -87,6 +91,13 @@ add_action('admin_init', function () {
   ]);
 
   // --- Portal (legacy templates por vista)
+  register_setting('casanova_portal', 'casanova_portal_mulligans_enabled', [
+    'type' => 'boolean',
+    'sanitize_callback' => function($value) {
+      return !empty($value) ? 1 : 0;
+    },
+    'default' => 1,
+  ]);
   register_setting('casanova_portal', 'casanova_portal_tpl_dashboard', ['type' => 'integer', 'sanitize_callback' => 'absint']);
   register_setting('casanova_portal', 'casanova_portal_tpl_expedientes', ['type' => 'integer', 'sanitize_callback' => 'absint']);
   register_setting('casanova_portal', 'casanova_portal_tpl_mulligans', ['type' => 'integer', 'sanitize_callback' => 'absint']);
@@ -288,6 +299,7 @@ function casanova_payments_render_settings_page(): void {
 
   } elseif ($tab === 'portal') {
     // Legacy templates por vista (compatibilidad)
+    $mulligans_enabled = casanova_portal_mulligans_enabled();
     $tpl_dashboard   = (int) get_option('casanova_portal_tpl_dashboard', 0);
     $tpl_expedientes = (int) get_option('casanova_portal_tpl_expedientes', 0);
     $tpl_mulligans   = (int) get_option('casanova_portal_tpl_mulligans', 0);
@@ -311,6 +323,14 @@ function casanova_payments_render_settings_page(): void {
     settings_fields('casanova_portal');
 
     echo '<table class="form-table" role="presentation">';
+    echo '<tr><th scope="row">Programa Mulligans</th><td>';
+    echo '<input type="hidden" name="casanova_portal_mulligans_enabled" value="0" />';
+    echo '<label for="casanova_portal_mulligans_enabled">';
+    echo '<input type="checkbox" id="casanova_portal_mulligans_enabled" name="casanova_portal_mulligans_enabled" value="1" ' . checked($mulligans_enabled, true, false) . ' /> ';
+    echo 'Mostrar Mulligans en el portal';
+    echo '</label>';
+    echo '<p class="description">Si lo desactivas, Mulligans deja de mostrarse en el dashboard, en la navegaci&oacute;n y en sus vistas del portal, pero no se toca la l&oacute;gica interna.</p></td></tr>';
+
     echo '<tr><th scope="row">Dashboard</th><td>';
     $render_select('casanova_portal_tpl_dashboard', $tpl_dashboard);
     echo '<p class="description">Vista: <code>?view=dashboard</code></p></td></tr>';
@@ -342,7 +362,7 @@ function casanova_payments_render_settings_page(): void {
       $items = [
         ['key'=>'dashboard','label'=>'Principal','icon'=>'home','template_id'=>(int)get_option('casanova_portal_tpl_dashboard',0),'order'=>10,'enabled'=>1,'preserve'=>[]],
         ['key'=>'expedientes','label'=>'Reservas','icon'=>'briefcase','template_id'=>(int)get_option('casanova_portal_tpl_expedientes',0),'order'=>20,'enabled'=>1,'preserve'=>['expediente']],
-        ['key'=>'mulligans','label'=>'Mulligans','icon'=>'flag','template_id'=>(int)get_option('casanova_portal_tpl_mulligans',0),'order'=>30,'enabled'=>1,'preserve'=>[]],
+        ['key'=>'mulligans','label'=>'Mulligans','icon'=>'flag','template_id'=>(int)get_option('casanova_portal_tpl_mulligans',0),'order'=>30,'enabled'=>(casanova_portal_mulligans_enabled() ? 1 : 0),'preserve'=>[]],
         ['key'=>'mensajes','label'=>'Mensajes','icon'=>'message','template_id'=>(int)get_option('casanova_portal_tpl_mensajes',0),'order'=>35,'enabled'=>1,'preserve'=>[]],
         ['key'=>'perfil','label'=>'Mis datos','icon'=>'user','template_id'=>(int)get_option('casanova_portal_tpl_perfil',0),'order'=>40,'enabled'=>1,'preserve'=>[]],
       ];
@@ -542,7 +562,6 @@ function casanova_payments_render_settings_page(): void {
     } elseif ($group_error) {
       $msg = 'No se pudo crear el token de grupo.';
       if ($group_error === 'expediente') $msg = 'Expediente invalido.';
-      if ($group_error === 'unit_total') $msg = 'Importe total por persona invalido.';
       if ($group_error === 'missing') $msg = 'Modulo de grupos no disponible.';
       if ($group_error === 'create') $msg = 'Error al crear el token de grupo.';
       echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
@@ -564,7 +583,6 @@ function casanova_payments_render_settings_page(): void {
     echo '<option value="passenger_share">passenger_share</option>';
     echo '<option value="custom_amount">custom_amount</option>';
     echo '<option value="slot_base">slot_base (plazas base)</option>';
-    echo '<option value="group_base">group_base (importe fijo)</option>';
     echo '</select></td></tr>';
 
     echo '<tr><th scope="row"><label for="amount_authorized">Importe autorizado (EUR)</label></th>';
@@ -619,7 +637,7 @@ function casanova_payments_render_settings_page(): void {
     echo '<td><input name="group_id_reserva_pq" id="group_id_reserva_pq" type="number" min="0" step="1" class="regular-text" /></td></tr>';
 
     echo '<tr><th scope="row"><label for="group_unit_total">Importe total por persona (EUR)</label></th>';
-    echo '<td><input name="group_unit_total" id="group_unit_total" type="text" required class="regular-text" placeholder="Ej: 300.00" /></td></tr>';
+    echo '<td><input name="group_unit_total" id="group_unit_total" type="text" required class="regular-text" placeholder="Ej: 250.00" /></td></tr>';
 
     echo '<tr><th scope="row"><label for="group_expires_at">Caduca el (opcional)</label></th>';
     echo '<td><input name="group_expires_at" id="group_expires_at" type="date" class="regular-text" /></td></tr>';
@@ -707,7 +725,7 @@ function casanova_payments_render_settings_page(): void {
         $rows = $wpdb->get_results("SELECT * FROM {$gt} ORDER BY id DESC LIMIT 20");
         if (!empty($rows)) {
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Expediente</th><th>PQ</th><th>Unit total</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
+          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Expediente</th><th>PQ</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
           foreach ($rows as $r) {
             $token = (string)($r->token ?? '');
             $url = ($token && function_exists('casanova_group_pay_url')) ? casanova_group_pay_url($token) : '';
@@ -716,7 +734,6 @@ function casanova_payments_render_settings_page(): void {
             echo '<td>' . esc_html((string)$r->id) . '</td>';
             echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
             echo '<td>' . esc_html((string)($r->id_reserva_pq ?? '')) . '</td>';
-            echo '<td>' . esc_html(number_format((float)($r->unit_total ?? 0), 2, ',', '.')) . '</td>';
             echo '<td>' . esc_html((string)$r->status) . '</td>';
             echo '<td><code>' . esc_html($token) . '</code></td>';
             echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir</a>' : '') . '</td>';

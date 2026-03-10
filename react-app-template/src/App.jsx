@@ -1,4 +1,4 @@
-/*
+﻿/*
   App.portal.viajes-detalle-tabs.jsx
   - Viajes: listado con tabla rica (ancho ampliado + fechas ES)
   - Viaje: vista detalle con breadcrumb + header + tabs (Resumen/Pagos/Facturas/Bonos/Mensajes)
@@ -172,6 +172,7 @@ function TableSkeleton({ rows = 6, cols = 7 }) {
 const LS_KEYS = {
   inboxLatestTs: "casanovaPortal_inboxLatestTs",
   messagesLastSeenTs: "casanovaPortal_messagesLastSeenTs",
+  theme: "casanovaPortal_theme",
 };
 
 function lsGetInt(key, fallback = 0) {
@@ -188,6 +189,38 @@ function lsSetInt(key, value) {
   try {
     window.localStorage.setItem(key, String(value));
   } catch {}
+}
+
+function lsGet(key, fallback = "") {
+  try {
+    const v = window.localStorage.getItem(key);
+    return typeof v === "string" && v !== "" ? v : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function lsSet(key, value) {
+  try {
+    if (value === null || value === undefined || value === "") {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(key, String(value));
+  } catch {}
+}
+
+function resolveInitialTheme() {
+  const stored = String(lsGet(LS_KEYS.theme, "")).toLowerCase();
+  if (stored === "dark" || stored === "light") return stored;
+  try {
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      return "dark";
+    }
+  } catch {
+    // ignore
+  }
+  return "light";
 }
 function formatDateES(iso) {
   if (!iso || typeof iso !== "string") return "—";
@@ -365,6 +398,38 @@ function IconPlane() {
   );
 }
 
+function IconBed() {
+  return (
+    <svg {...KPI_ICON_PROPS} aria-hidden="true">
+      <path d="M4 12V9.5A2.5 2.5 0 0 1 6.5 7H9a2 2 0 0 1 2 2v3" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+      <path d="M11 12V8.8A1.8 1.8 0 0 1 12.8 7H16a4 4 0 0 1 4 4v1" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+      <path d="M4 12h16v4H4z" fill="none" stroke="currentColor" strokeWidth={1.5} />
+      <path d="M6 16v2M18 16v2" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconGolfFlag() {
+  return (
+    <svg {...KPI_ICON_PROPS} aria-hidden="true">
+      <path d="M8 20V4" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+      <path d="M8 5c1.2 0 2.2-.8 3.8-.8 1.7 0 2.3.8 3.8.8 1.2 0 1.9-.4 2.4-.7v6.4c-.5.3-1.2.7-2.4.7-1.5 0-2.1-.8-3.8-.8-1.6 0-2.6.8-3.8.8" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />
+      <path d="M6 20h4" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconCar() {
+  return (
+    <svg {...KPI_ICON_PROPS} aria-hidden="true">
+      <path d="M6.5 16.5h11a1.5 1.5 0 0 0 1.5-1.5v-3l-1.7-3.6A2.2 2.2 0 0 0 15.3 7H8.7a2.2 2.2 0 0 0-2 1.4L5 12v3a1.5 1.5 0 0 0 1.5 1.5z" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" />
+      <path d="M7 12h10" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+      <circle cx={8.5} cy={16.5} r={1.4} fill="none" stroke="currentColor" strokeWidth={1.5} />
+      <circle cx={15.5} cy={16.5} r={1.4} fill="none" stroke="currentColor" strokeWidth={1.5} />
+    </svg>
+  );
+}
+
 function IconBriefcase() {
   return (
     <svg {...KPI_ICON_PROPS} aria-hidden="true">
@@ -444,6 +509,21 @@ function IconGlobe() {
       <path d="M3 12h18" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
       <path d="M12 3c3 3 3 15 0 18" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
       <path d="M12 3c-3 3-3 15 0 18" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconMoon() {
+  return (
+    <svg {...KPI_ICON_PROPS} aria-hidden="true">
+      <path
+        d="M16.7 14.1A6.8 6.8 0 0 1 9.9 7.3c0-.9.2-1.8.5-2.6A8 8 0 1 0 19.3 15c-.8.3-1.7.5-2.6.5z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -553,8 +633,12 @@ const NAV_ITEMS = [
   },
 ];
 
+function getNavItems({ mulligansEnabled = true } = {}) {
+  return NAV_ITEMS.filter((item) => mulligansEnabled || item.key !== "mulligans");
+}
+
 /* ===== Shell ===== */
-function Sidebar({ view, unread = 0 }) {
+function Sidebar({ view, unread = 0, items = NAV_ITEMS }) {
   return (
     <aside className="cp-sidebar">
       <div className="cp-brand" style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -575,7 +659,7 @@ function Sidebar({ view, unread = 0 }) {
       </div>
 
       <nav className="cp-nav">
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const IconComponent = item.icon;
           const active = item.isActive(view);
           return (
@@ -604,7 +688,7 @@ function Sidebar({ view, unread = 0 }) {
   );
 }
 
-function Topbar({ title, chip, onRefresh, isRefreshing, profile, onGo, onLogout, onLocale }) {
+function Topbar({ title, chip, onRefresh, isRefreshing, profile, onGo, onLogout, onLocale, theme, onToggleTheme }) {
   return (
     <div className="cp-topbar">
       <div className="cp-topbar-inner">
@@ -616,7 +700,7 @@ function Topbar({ title, chip, onRefresh, isRefreshing, profile, onGo, onLogout,
             {tt("Actualizar")}
           </button>
           <LanguageMenu locale={profile?.locale} onLocale={onLocale} />
-          <UserMenu profile={profile} onGo={onGo} onLogout={onLogout} />
+          <UserMenu profile={profile} onGo={onGo} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
         </div>
       </div>
     </div>
@@ -721,7 +805,104 @@ function initials(name) {
   return (a + b).toUpperCase();
 }
 
-function UserMenu({ profile, onGo, onLogout }) {
+function firstNameFromProfile(profile) {
+  const giavName = String(profile?.giav?.nombre || "").trim();
+  if (giavName) return giavName.split(/\s+/)[0] || "";
+
+  const displayName = String(profile?.user?.displayName || "").trim();
+  if (displayName) return displayName.split(/\s+/)[0] || "";
+
+  return "";
+}
+
+function uniqueStrings(values) {
+  const seen = new Set();
+  const out = [];
+  for (const value of Array.isArray(values) ? values : []) {
+    const clean = String(value || "").trim();
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(clean);
+  }
+  return out;
+}
+
+function serviceDetailPayload(service) {
+  if (service?.details && typeof service.details === "object") return service.details;
+  if (service?.detail?.details && typeof service.detail.details === "object") return service.detail.details;
+  return {};
+}
+
+function serviceSemanticType(service) {
+  const semantic = String(service?.semantic_type || "").trim().toLowerCase();
+  if (semantic) return semantic;
+
+  const detailPayload = serviceDetailPayload(service);
+  const type = String(service?.type || service?.detail?.type || "").trim().toUpperCase();
+  if (type === "HT") return "hotel";
+  if (type === "GF") return "golf";
+  if (type === "TR") return "transfer";
+  if (type === "AV") return "flight";
+  if (type === "OT") {
+    if (detailPayload.players !== undefined && detailPayload.players !== null && detailPayload.players !== "") return "golf";
+    if (detailPayload.route || detailPayload.flight_code || detailPayload.schedule) return "flight";
+    if (Array.isArray(detailPayload.segments) && detailPayload.segments.length) return "flight";
+  }
+  return "other";
+}
+
+function compactList(values, limit = 2) {
+  const list = uniqueStrings(values);
+  if (!list.length) return "";
+  if (list.length <= limit) return list.join(" · ");
+  return `${list.slice(0, limit).join(" · ")} +${list.length - limit}`;
+}
+
+function dateToUtcMidnight(value) {
+  const input = String(value || "").trim();
+  if (!input) return null;
+
+  let match = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const [, year, month, day] = match;
+    return Date.UTC(Number(year), Number(month) - 1, Number(day));
+  }
+
+  match = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (match) {
+    const [, day, month, year] = match;
+    return Date.UTC(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(input);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+function countNightsBetween(start, end) {
+  const startUtc = dateToUtcMidnight(start);
+  const endUtc = dateToUtcMidnight(end);
+  if (!Number.isFinite(startUtc) || !Number.isFinite(endUtc)) return 0;
+  return Math.max(0, Math.round((endUtc - startUtc) / 86400000));
+}
+
+function flightSummary(service) {
+  const details = serviceDetailPayload(service);
+  const segments = uniqueStrings(Array.isArray(details.segments) ? details.segments : []);
+  if (segments.length) return compactList(segments, 1);
+
+  const parts = [
+    String(details.flight_code || "").trim(),
+    String(details.route || "").trim(),
+  ].filter(Boolean);
+  if (parts.length) return parts.join(" · ");
+
+  return String(service?.title || "").trim();
+}
+
+function UserMenu({ profile, onGo, onLogout, theme = "light", onToggleTheme }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -737,6 +918,7 @@ function UserMenu({ profile, onGo, onLogout }) {
   const name = profile?.user?.displayName || profile?.giav?.nombre || "";
   const email = profile?.user?.email || profile?.giav?.email || "";
   const avatarUrl = profile?.user?.avatarUrl || "";
+  const isDark = theme === "dark";
 
   return (
     <div className="cp-user" ref={ref}>
@@ -769,6 +951,24 @@ function UserMenu({ profile, onGo, onLogout }) {
           <button type="button" className="cp-user-item" onClick={() => { setOpen(false); onGo("security"); }} role="menuitem">
             <span className="cp-user-item-ico" aria-hidden="true"><IconShieldCheck /></span>
             {t('menu_security', 'Seguridad')}
+          </button>
+
+          <div className="cp-user-sep" />
+          <button
+            type="button"
+            className="cp-user-item cp-user-item--toggle"
+            onClick={() => { if (typeof onToggleTheme === "function") onToggleTheme(); }}
+            role="menuitemcheckbox"
+            aria-checked={isDark ? "true" : "false"}
+          >
+            <span className="cp-user-item-ico" aria-hidden="true"><IconMoon /></span>
+            <span className="cp-user-item-copy">
+              <span className="cp-user-item-title">{tt("Modo oscuro")}</span>
+              <span className="cp-user-item-note">{isDark ? tt("Activado") : tt("Desactivado")}</span>
+            </span>
+            <span className={`cp-theme-switch ${isDark ? "is-on" : ""}`} aria-hidden="true">
+              <span className="cp-theme-switch__thumb" />
+            </span>
           </button>
 
           <div className="cp-user-sep" />
@@ -821,7 +1021,7 @@ function ProfileView({ profile, onSave, onLocale }) {
 
   return (
     <div className="cp-content">
-      <div className="cp-card" style={{ background: "#fff" }}>
+      <div className="cp-card" style={{ background: "var(--surface)" }}>
         <div className="cp-card-title">{tt("Información personal")}</div>
 
         <div className="cp-grid2">
@@ -874,7 +1074,7 @@ function ProfileView({ profile, onSave, onLocale }) {
         </div>
       </div>
 
-      <div className="cp-card" style={{ background: "#fff" }}>
+      <div className="cp-card" style={{ background: "var(--surface)" }}>
         <div className="cp-card-title">{t('portal_language', 'Idioma del portal')}</div>
         <div className="cp-row" style={{ gap: 12, alignItems: "center" }}>
           <select className="cp-input" value={locale} onChange={(e) => onLocale(e.target.value)} style={{ maxWidth: 280 }}>
@@ -895,7 +1095,7 @@ function SecurityView({ onChangePassword }) {
 
   return (
     <div className="cp-content">
-      <div className="cp-card" style={{ background: "#fff" }}>
+      <div className="cp-card" style={{ background: "var(--surface)" }}>
         <div className="cp-card-title">{tt("Cambiar contraseña")}</div>
         <div className="cp-help" style={{ marginTop: -6, marginBottom: 18 }}>
           {tt("Tu contraseña es tu llave digital. No la compartas, aunque a los humanos les encante hacerlo.")}
@@ -1001,7 +1201,7 @@ function TripsList({ mock, onOpen, dashboard }) {
 
   return (
     <div className="cp-content" style={{ maxWidth: 1600, width: "100%", margin: "0 auto", paddingTop: 8 }}>
-      <div className="cp-card" style={{ background: "#fff" }}>
+      <div className="cp-card" style={{ background: "var(--surface)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
           <div className="cp-card-title" style={{ margin: 0 }}>{tt("Tus viajes")}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1010,7 +1210,7 @@ function TripsList({ mock, onOpen, dashboard }) {
               value={year}
               onChange={(e) => setYear(e.target.value)}
               className="cp-select"
-              style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.12)", background: "#fff" }}
+              style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)" }}
             >
               {years.map((optionYear) => (
                 <option key={optionYear} value={optionYear}>{optionYear}</option>
@@ -1029,7 +1229,7 @@ function TripsList({ mock, onOpen, dashboard }) {
           ) : (
             <table width="100%" cellPadding="10" style={{ borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}>
+                <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
                   <th style={{ width: 120 }}>{tt("Expediente")}</th>
                   <th>{tt("Viaje")}</th>
                   <th style={{ width: 140 }}>{tt("Inicio")}</th>
@@ -1074,7 +1274,7 @@ function TripsList({ mock, onOpen, dashboard }) {
                     const statusLabel = t.status || "";
                     const statusVariant = getStatusVariant(statusLabel);
                     return (
-                      <tr key={t.id} style={{ borderBottom: "1px solid #eee" }}>
+                      <tr key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
                         <td>{t.code || `#${t.id}`}</td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{t.title}</div>
@@ -1340,53 +1540,78 @@ function PaymentActions({ expediente, payments, mock }) {
   };
 
   const hasActions = depositAllowed || balanceAllowed;
+  const hasMultipleActionChoices = depositAllowed && balanceAllowed;
   const currency = payments?.currency || "EUR";
+  const transferNote = tt("El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.");
 
   return (
     <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-      <div className="cp-pay-methods" role="tablist" aria-label={tt("Método de pago")}>
-        {methods.filter((m) => m && m.enabled).map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            className={`cp-pay-method ${payMethod === m.id ? "is-active" : ""}`}
-            onClick={() => setPayMethod(m.id)}
-          >
-            {m.label || (m.id === "card" ? tt("Tarjeta") : tt("Transferencia bancaria"))}
-          </button>
-        ))}
+      <div className="cp-pay-section">
+        <div className="cp-pay-section__label">{tt("Elige método de pago")}</div>
+        <div className="cp-pay-methods" role="tablist" aria-label={tt("Método de pago")}>
+          {methods.filter((m) => m && m.enabled).map((m) => {
+            const isBankTransfer = m.id === "bank_transfer";
+            const title = isBankTransfer
+              ? tt("Transferencia bancaria online")
+              : (m.label || tt("Tarjeta"));
+            const meta = isBankTransfer
+              ? tt("PSD2 · Sin recargo")
+              : tt("Pago inmediato y seguro");
+            return (
+              <button
+                key={m.id}
+                type="button"
+                className={`cp-pay-method ${payMethod === m.id ? "is-active" : ""}`}
+                onClick={() => setPayMethod(m.id)}
+              >
+                <span className="cp-pay-method__title">{title}</span>
+                <span className="cp-pay-method__meta">{meta}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {payMethod === "bank_transfer" ? (
-        <div className="cp-meta">
-          {tt("La transferencia se confirma cuando el banco la procesa. Puede tardar unas horas o hasta 1-2 días laborables.")}
+        <div className="cp-pay-method-note">
+          {transferNote}
         </div>
       ) : null}
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+      <div className="cp-pay-section">
+        <div className="cp-pay-section__label">{tt("Selecciona cuánto pagar ahora")}</div>
+        <div className="cp-pay-cta-row">
         {depositAllowed ? (
           <button
-            className="cp-btn primary"
-            style={{ whiteSpace: "nowrap" }}
+            className={`cp-btn cp-pay-cta ${hasMultipleActionChoices ? "is-secondary" : "primary"}`.trim()}
             disabled={state.loading !== null}
             onClick={() => startIntent("deposit", payMethod)}
           >
             {state.loading === "deposit"
               ? tt("Redirigiendo…")
-              : ttf("Pagar depósito ({amount})", { amount: euro(depositAmount, currency) })}
+              : (
+                <>
+                  <span className="cp-pay-cta__label">{tt("Pagar depósito")}</span>
+                  <span className="cp-pay-cta__amount">{euro(depositAmount, currency)}</span>
+                </>
+              )}
           </button>
         ) : null}
 
         {balanceAllowed ? (
           <button
-            className="cp-btn primary"
-            style={{ whiteSpace: "nowrap" }}
+            className="cp-btn primary cp-pay-cta"
             disabled={state.loading !== null}
             onClick={() => startIntent("balance", payMethod)}
           >
             {state.loading === "balance"
               ? tt("Redirigiendo…")
-              : ttf("Pagar pendiente ({amount})", { amount: euro(balanceAmount, currency) })}
+              : (
+                <>
+                  <span className="cp-pay-cta__label">{tt("Pagar pendiente")}</span>
+                  <span className="cp-pay-cta__amount">{euro(balanceAmount, currency)}</span>
+                </>
+              )}
           </button>
         ) : null}
 
@@ -1395,6 +1620,7 @@ function PaymentActions({ expediente, payments, mock }) {
             {tt("Aún no hay pagos disponibles para este viaje.")}
           </div>
         ) : null}
+        </div>
       </div>
 
       {state.error ? (
@@ -1788,7 +2014,7 @@ function ServiceItem({ service, indent = false }) {
     );
   }
 
-function TripDetailView({ mock, expediente, dashboard, onLatestTs, onSeen }) {
+function TripDetailView({ mock, expediente, dashboard, onLatestTs, onSeen, mulligansEnabled = true }) {
   const trips = Array.isArray(dashboard?.trips) ? dashboard.trips : [];
   const fallbackTrip = trips.find((t) => String(t.id) === String(expediente)) || { id: expediente };
 
@@ -1861,13 +2087,15 @@ function TripDetailView({ mock, expediente, dashboard, onLatestTs, onSeen }) {
         { key: "total", label: "Total", value: totalLabel, icon: <IconBriefcase />, colorClass: "is-salmon" },
         { key: "paid", label: tt("Pagado"), value: paidLabel, icon: <IconShieldCheck />, colorClass: "is-blue" },
         { key: "pending", label: tt("Pendiente"), value: pendingLabel, icon: <IconClockArrow />, colorClass: "is-green" },
-        {
-          key: "mulligans",
-          label: "Mulligans usados",
-          value: mulligansUsed.toLocaleString("es-ES"),
-          icon: <IconSparkle />,
-          colorClass: "is-lilac",
-        },
+        ...(mulligansEnabled
+          ? [{
+              key: "mulligans",
+              label: "Mulligans usados",
+              value: mulligansUsed.toLocaleString("es-ES"),
+              icon: <IconSparkle />,
+              colorClass: "is-lilac",
+            }]
+          : []),
       ]
     : [];
 
@@ -1946,7 +2174,7 @@ function TripDetailView({ mock, expediente, dashboard, onLatestTs, onSeen }) {
 
       <div style={{ marginTop: 14 }}>
         {loading ? (
-          <div className="cp-card" style={{ background: "#fff" }}><div className="cp-card-title">{tt("Cargando expediente")}</div><Skeleton lines={8} /></div>
+          <div className="cp-card" style={{ background: "var(--surface)" }}><div className="cp-card-title">{tt("Cargando expediente")}</div><Skeleton lines={8} /></div>
         ) : err ? (
           <div className="cp-notice is-warn">{tt("No se puede cargar el expediente ahora mismo.")}</div>
         ) : null}
@@ -2280,11 +2508,48 @@ function CardTitleWithIcon({ icon: Icon, children }) {
   );
 }
 
-function DashboardView({ data, heroImageUrl, heroMap }) {
+function DashboardGlanceItem({ icon: Icon, label, value, note, loading = false }) {
+  return (
+    <article className={`cp-trip-glance__item ${loading ? "is-loading" : ""}`}>
+      <span className="cp-trip-glance__icon" aria-hidden="true"><Icon /></span>
+      <div className="cp-trip-glance__label">{label}</div>
+      {loading ? (
+        <div className="cp-trip-glance__skeleton" aria-hidden="true">
+          <span className="cp-trip-skeleton__line is-title" />
+          <span className="cp-trip-skeleton__line is-copy" />
+        </div>
+      ) : (
+        <>
+          <div className="cp-trip-glance__value">{value}</div>
+          <div className="cp-trip-glance__note">{note}</div>
+        </>
+      )}
+    </article>
+  );
+}
+
+function DashboardView({ data, heroImageUrl, heroMap, tripDetail = null, tripDetailLoading = false, mulligansEnabled = true, profile = null }) {
+  const [heroImageReady, setHeroImageReady] = useState(false);
+  const [heroImageError, setHeroImageError] = useState(false);
   const nextTrip = data?.next_trip || null;
   const payments = data?.payments || null;
   const mull = data?.mulligans || null;
   const action = data?.next_action || null;
+  const preferredFirstName = firstNameFromProfile(profile);
+  const detail = tripDetail && typeof tripDetail === "object" ? tripDetail : null;
+  const showTripDetailSkeleton = Boolean(tripDetailLoading && nextTrip?.id);
+  const detailTrip = detail?.trip && typeof detail.trip === "object" ? detail.trip : null;
+  const packageServices = Array.isArray(detail?.package?.services) ? detail.package.services : [];
+  const extraServices = Array.isArray(detail?.extras) ? detail.extras : [];
+  const allServices = [...packageServices, ...extraServices];
+  const hotelServices = allServices.filter((service) => serviceSemanticType(service) === "hotel");
+  const golfServices = allServices.filter((service) => serviceSemanticType(service) === "golf");
+  const flightServices = allServices.filter((service) => serviceSemanticType(service) === "flight");
+  const transferServices = allServices.filter((service) => serviceSemanticType(service) === "transfer");
+  const otherServices = allServices.filter((service) => {
+    const semantic = serviceSemanticType(service);
+    return semantic !== "hotel" && semantic !== "golf" && semantic !== "flight" && semantic !== "transfer";
+  });
 
   const hasPaymentsData = payments && !Array.isArray(payments);
   const totalAmount = hasPaymentsData ? Number(payments?.total) : Number.NaN;
@@ -2313,44 +2578,53 @@ function DashboardView({ data, heroImageUrl, heroMap }) {
   const tierSlug = tierRaw
     .trim()
     .toLowerCase()
-    .replace(/\\s+/g, "_")
-    .replace(/\\+/g, "_plus")
-    .replace(/\\-/g, "_");
+    .replace(/\s+/g, "_")
+    .replace(/\+/g, "_plus")
+    .replace(/\-/g, "_");
   const tierClass = tierSlug ? "is-" + tierSlug : "";
   const multLabel = typeof mull?.mult === "number" ? ("x" + mull.mult) : null;
-  const progressRaw = (typeof mull?.progress_pct === "number") ? mull.progress_pct : (typeof mull?.progress === "number" ? (mull.progress <= 1 ? mull.progress * 100 : mull.progress) : 0);
+  const progressRaw = typeof mull?.progress_pct === "number"
+    ? mull.progress_pct
+    : (typeof mull?.progress === "number" ? (mull.progress <= 1 ? mull.progress * 100 : mull.progress) : 0);
   const progressPct = Math.max(0, Math.min(100, Math.round(progressRaw || 0)));
   const remaining = typeof mull?.remaining_to_next === "number" ? mull.remaining_to_next : null;
   const nextTier = mull?.next_tier_label ? String(mull.next_tier_label) : null;
   const hintText = (remaining !== null && nextTier) ? ("Te faltan " + euro(remaining) + " para subir a " + nextTier + ".") : null;
 
   const postTrip = Boolean(data?.post_trip?.is_post_trip);
-  const reviewUrl = data?.post_trip?.review_url ? String(data.post_trip.review_url) : "";
-
-  const tripLabel = nextTrip?.title ? String(nextTrip.title) : (postTrip ? tt("Tu viaje") : tt("Viaje"));
-  const tripCode = nextTrip?.code ? String(nextTrip.code) : "";
+  const heroTrip = detailTrip || nextTrip || null;
+  const tripLabel = heroTrip?.title ? String(heroTrip.title) : (postTrip ? tt("Tu viaje") : tt("Viaje"));
+  const tripCode = heroTrip?.code ? String(heroTrip.code) : "";
   const tripContext = tripCode ? `${tripLabel} (${tripCode})` : tripLabel;
-  const tripMeta = [tripCode, nextTrip?.date_range].filter(Boolean).join(" · ");
+  const tripDates = normalizeTripDates(heroTrip || nextTrip);
+  const tripDateRange = [formatDateES(tripDates.start), formatDateES(tripDates.end)].filter((value) => value && value !== "—").join(" — ");
+  const tripReferenceLabel = tripCode ? `${tt("Referencia")} ${tripCode}` : "";
   const daysLeftRaw = Number(nextTrip?.days_left);
   const daysLeft = Number.isFinite(daysLeftRaw) ? Math.max(0, Math.round(daysLeftRaw)) : null;
   let daysLeftLabel = null;
   if (postTrip) {
-    daysLeftLabel = "Viaje finalizado";
+    daysLeftLabel = tt("Viaje finalizado");
   } else if (daysLeft !== null) {
-    daysLeftLabel = daysLeft === 0 ? "Empieza hoy" : `Empieza en ${daysLeft} días`;
+    daysLeftLabel = daysLeft === 0 ? tt("Tu viaje empieza hoy") : `Tu viaje empieza en ${daysLeft} días`;
   }
-  const calendarUrl = nextTrip?.calendar_url ? String(nextTrip.calendar_url) : "";
 
+  const mapUrl = heroMap?.url ? String(heroMap.url) : "";
+  const hasTrip = Boolean(nextTrip?.id);
   const isPaid = pendingAmount !== null ? pendingAmount <= 0.01 : false;
+
   const actionStatus = action?.status || (hasPaymentsData ? (isPaid ? "ok" : "pending") : "info");
   const actionBadge = action?.badge || (hasPaymentsData ? (isPaid ? tt("Todo listo") : tt("Pendiente")) : tt("Info"));
-  const actionText = action?.description || (!nextTrip
-    ? "No hay viajes próximos para mostrar aquí."
-    : !hasPaymentsData
-      ? "Cuando haya información de pagos, la verás reflejada aquí."
-      : isPaid
-        ? "Todo listo. No tienes nada pendiente ahora mismo."
-        : `Tienes un pago pendiente de ${euro(pendingAmount)}.`);
+  const actionText = !nextTrip
+    ? tt("Todavía no tienes un viaje activo. Cuando lo tengas, aquí verás el siguiente paso con claridad.")
+    : actionStatus === "pending" && pendingAmount !== null
+      ? `Tienes un pago pendiente de ${euro(pendingAmount)} para este viaje.`
+      : actionStatus === "invoices"
+        ? tt("Ya tienes documentación disponible para este viaje.")
+        : actionStatus === "ok"
+          ? tt("Todo está en orden. Ahora solo queda preparar el viaje con calma.")
+          : !hasPaymentsData
+            ? tt("Estamos preparando la información de este viaje. En cuanto esté lista, la verás aquí.")
+            : (action?.description || tt("Aquí verás el siguiente paso importante de tu viaje."));
   const actionTripLabel = action?.trip_label || (nextTrip ? tripContext : "");
   const actionNote = action?.note || null;
   const noteExpedienteId = actionNote?.expediente_id ? String(actionNote.expediente_id) : "";
@@ -2363,6 +2637,104 @@ function DashboardView({ data, heroImageUrl, heroMap }) {
       })()
     : (actionNote?.url ? String(actionNote.url) : "");
   const actionPillClass = actionStatus === "pending" ? "is-warn" : (actionStatus === "ok" ? "is-ok" : "is-info");
+  const actionPillLabel = actionStatus === "invoices" && typeof action?.invoice_count === "number"
+    ? `${actionBadge} · ${action.invoice_count}`
+    : actionBadge;
+  const actionCtaLabel = actionStatus === "pending" ? tt("Ver pagos") : (actionStatus === "invoices" ? tt("Ver facturas") : tt("Ver viaje"));
+
+  const hotelTitles = uniqueStrings(hotelServices.map((service) => service?.title));
+  const golfTitles = uniqueStrings(golfServices.map((service) => service?.title));
+  const flightTitles = uniqueStrings(flightServices.map((service) => flightSummary(service)));
+  const transferTitles = uniqueStrings(transferServices.map((service) => service?.title));
+  const otherTitles = uniqueStrings(otherServices.map((service) => service?.title));
+  const primaryHotel = hotelTitles[0] || "";
+  const hotelCount = hotelTitles.length;
+  const golfCount = golfServices.length;
+  const flightCount = flightServices.length;
+  const transferCount = transferServices.length;
+  const extrasCount = otherServices.length;
+  const nights = countNightsBetween(tripDates.start, tripDates.end);
+  const nightsLabel = nights ? `${nights} ${nights === 1 ? tt("noche") : tt("noches")}` : "";
+  const golfLabel = golfCount ? `${golfCount} ${golfCount === 1 ? tt("ronda de golf") : tt("rondas de golf")}` : "";
+  const flightLabel = flightCount
+    ? (flightServices.every((service) => service?.included !== false) ? tt("vuelos incluidos") : tt("vuelos previstos"))
+    : "";
+  const transferLabel = transferCount
+    ? (transferServices.every((service) => service?.included !== false) ? tt("traslados incluidos") : tt("traslados previstos"))
+    : "";
+  const mobilityLabel = flightCount && transferCount
+    ? (
+        flightServices.every((service) => service?.included !== false) &&
+        transferServices.every((service) => service?.included !== false)
+          ? tt("vuelos y traslados incluidos")
+          : tt("vuelos y traslados previstos")
+      )
+    : (flightLabel || transferLabel);
+  const supportLabel = tt("asistencia Casanova Golf");
+  const destinationLine = [primaryHotel, compactList(golfTitles, 2)].filter(Boolean).join(" · ") || primaryHotel || compactList(golfTitles, 2) || compactList(otherTitles, 1);
+  const heroLead = nextTrip
+    ? tt("Todo lo importante de tu viaje, en un vistazo claro, cuidado y agradable.")
+    : tt("Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila.");
+  const heroSummaryLine = [nightsLabel, golfLabel, mobilityLabel, supportLabel].filter(Boolean).slice(0, 4).join(" · ");
+  const heroVisualLabel = destinationLine || tripLabel || tt("Tu próximo viaje");
+  const heroVisualCopy = compactList(golfTitles, 1) || tripDateRange || heroSummaryLine || heroLead;
+  const hotelNamesLabel = hotelTitles.join(" · ");
+  const golfNamesLabel = golfTitles.join(" · ");
+  const hotelCountLabel = hotelCount ? `${hotelCount} ${hotelCount === 1 ? tt("hotel") : tt("hoteles")}` : "";
+  const hotelGlanceValue = nightsLabel || hotelCountLabel || tt("Hotel por confirmar");
+  const hotelGlanceNote = hotelNamesLabel || tt("Estancia por confirmar");
+  const golfGlanceValue = golfLabel || tt("Rondas de golf por confirmar");
+  const golfGlanceNote = golfNamesLabel || tt("Campos por confirmar");
+  const logisticsValue = flightCount
+    ? compactList(flightTitles, 1)
+    : (transferCount
+      ? compactList(transferTitles, 1)
+      : (extrasCount ? compactList(otherTitles, 1) : tt("Sin extras destacados")));
+  const logisticsNote = flightCount && transferCount
+    ? mobilityLabel
+    : (flightCount
+      ? flightLabel
+      : (transferCount
+        ? transferLabel
+        : (extrasCount ? tt("Servicios del viaje") : tt("Se completará cuando quede confirmado"))));
+  const milestoneHeadline = action?.title || (actionStatus === "pending"
+    ? tt("Pago pendiente")
+    : (actionStatus === "invoices"
+      ? tt("Documentación disponible")
+      : (isPaid ? tt("Todo en marcha") : tt("Tu viaje en marcha"))));
+  const includeStay = primaryHotel
+    ? `${nightsLabel ? `${nightsLabel} · ` : ""}${primaryHotel}`
+    : (nightsLabel || tt("Estancia por confirmar"));
+  const includeGolf = golfCount
+    ? `${golfLabel}${golfTitles.length ? ` · ${compactList(golfTitles, 2)}` : ""}`
+    : tt("Rondas de golf por confirmar");
+  const includeMobility = [flightCount ? compactList(flightTitles, 1) : "", transferCount ? compactList(transferTitles, 1) : ""]
+    .filter(Boolean)
+    .join(" · ")
+    || (extrasCount ? compactList(otherTitles, 1) : tt("Los vuelos y traslados aparecerán aquí cuando estén definidos"));
+  const includeExtras = extrasCount
+    ? compactList(otherTitles, 2)
+    : tt("Coordinación y asistencia de Casanova Golf durante tu viaje");
+
+  const agency = window.CasanovaPortal?.agency || {};
+  const agencyName = String(agency.nombre || "Casanova Golf").trim();
+  const agencyTel = String(agency.tel || "").trim();
+  const agencyEmail = String(agency.email || "").trim();
+  const messageSnippet = String(data?.messages?.snippet || "").trim();
+  const messageWhen = String(data?.messages?.when || "").trim();
+  const unreadMessages = typeof data?.messages?.unread === "number" ? data.messages.unread : 0;
+  const messageMeta = [
+    messageWhen,
+    unreadMessages > 0 ? `${unreadMessages} ${unreadMessages === 1 ? tt("mensaje sin leer") : tt("mensajes sin leer")}` : "",
+  ].filter(Boolean).join(" · ");
+
+  useEffect(() => {
+    setHeroImageReady(false);
+    setHeroImageError(false);
+  }, [heroImageUrl]);
+
+  const showHeroImage = Boolean(heroImageUrl) && !heroImageError;
+  const showHeroMediaSkeleton = showTripDetailSkeleton || (showHeroImage && !heroImageReady);
 
   const viewTrip = () => {
     if (!nextTrip?.id) return;
@@ -2386,10 +2758,9 @@ function DashboardView({ data, heroImageUrl, heroMap }) {
     else if (actionStatus === "invoices") setParam("tab", "invoices");
   };
 
-  const actionCtaLabel = actionStatus === "pending" ? tt("Ver pagos") : (actionStatus === "invoices" ? "Ver facturas" : "Ver viaje");
-  const actionPillLabel = actionStatus === "invoices" && typeof action?.invoice_count === "number"
-    ? `${actionBadge} · ${action.invoice_count}`
-    : actionBadge;
+  const viewMessages = () => {
+    setParam("view", "inbox");
+  };
 
   const viewNoteTrip = (event) => {
     if (!noteExpedienteId) return;
@@ -2400,236 +2771,273 @@ function DashboardView({ data, heroImageUrl, heroMap }) {
 
   return (
     <div className="cp-content">
-      <div className="cp-grid cp-dash-grid cp-dash-premium">
-        {/* HERO: Próximo viaje */}
-        <section className="cp-hero cp-dash-span-12">
-          <div className="cp-hero__bg" aria-hidden="true" />
-          <div className="cp-hero__content">
-            <div className="cp-hero__top">
-              <div className="cp-hero__eyebrow">{postTrip ? tt("Tu último viaje") : tt("Tu próximo viaje")}</div>
-              <div className="cp-hero__badges">
-                {daysLeftLabel ? <span className="cp-pill cp-hero-pill">{daysLeftLabel}</span> : null}
-                {(postTrip || nextTrip?.status) ? (
-                  <span className="cp-pill cp-hero-pill">{postTrip ? tt("Finalizado") : nextTrip.status}</span>
-                ) : null}
+      {preferredFirstName ? (
+        <div className="cp-dashboard-welcome">
+          <div className="cp-dashboard-welcome__eyebrow">{tt("Bienvenido de nuevo")}</div>
+          <div className="cp-dashboard-welcome__title">{tt("Hola")}, {preferredFirstName}</div>
+        </div>
+      ) : null}
+
+      <div className="cp-grid cp-dash-grid cp-dash-premium cp-dashboard-grid cp-trip-home">
+        <section className="cp-trip-hero-card cp-dash-span-12">
+          <div className="cp-trip-hero-card__copy">
+            <div className="cp-trip-hero-card__eyebrow">{postTrip ? tt("Tu último viaje") : tt("Tu próximo viaje")}</div>
+            <div className="cp-trip-hero-card__title">{nextTrip ? tripLabel : tt("Todo preparado para tu próxima reserva")}</div>
+
+            {destinationLine ? (
+              <div className="cp-trip-hero-card__destination">
+                <span className="cp-trip-hero-card__destination-icon" aria-hidden="true"><IconMapPin /></span>
+                <span>{destinationLine}</span>
               </div>
+            ) : null}
+
+            <div className="cp-trip-hero-card__meta">
+              <span className="cp-trip-hero-card__meta-item">
+                <span className="cp-trip-hero-card__meta-icon" aria-hidden="true"><IconCalendar /></span>
+                <span>{tripDateRange || tt("Fechas por confirmar")}</span>
+              </span>
+              {tripReferenceLabel ? <span className="cp-trip-hero-card__meta-item is-reference">{tripReferenceLabel}</span> : null}
+              {heroTrip?.status ? <span className="cp-pill cp-trip-hero-card__status">{heroTrip.status}</span> : null}
             </div>
 
-            {nextTrip ? (
-              <>
-                <div className="cp-hero__header">
-                  <div className="cp-hero__heading">
-                    <div className="cp-hero__title">{tripLabel}</div>
-                    <div className="cp-hero__meta">
-                      {tripMeta || "Fechas por confirmar"}
-                      {heroMap?.url ? (
-                        <a
-                          className="cp-hero__meta-link"
-                          href={heroMap.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={tt("Abrir en Google Maps")}
-                        >
-                          {heroMap?.type === 'route' ? tt("Ver ruta") : tt("Ver mapa")}
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
+            <div className="cp-trip-hero-card__summary">{heroSummaryLine || heroLead}</div>
+            {!heroSummaryLine ? <div className="cp-trip-hero-card__lead">{heroLead}</div> : null}
 
-                  {heroImageUrl ? (
-                    <div className="cp-hero__media" aria-hidden="true">
-                      <img className="cp-hero__media-img" src={heroImageUrl} alt="" loading="lazy" />
-                    </div>
-                  ) : (
-                    <div className="cp-hero__media is-empty" aria-hidden="true" />
-                  )}
-                </div>
+            <div className="cp-trip-hero-card__actions">
+              <button className="cp-btn primary" onClick={viewTrip} disabled={!hasTrip}>
+                {t("view_details", "Ver detalles")}
+              </button>
+              <button className="cp-btn cp-btn--ghost" onClick={viewPayments} disabled={!hasPaymentsData}>
+                {tt("Pagos")}
+              </button>
+              {mapUrl ? (
+                <a className="cp-btn cp-btn--ghost" href={mapUrl} target="_blank" rel="noreferrer">
+                  {heroMap?.type === "route" ? tt("Ver ruta") : tt("Ver mapa")}
+                </a>
+              ) : null}
+            </div>
+          </div>
 
-                <div className="cp-hero__kpis">
-                  <div className="cp-hero-kpi">
-                    <div className="cp-hero-kpi__label">{tt("Total del viaje")}</div>
-                    <div className="cp-hero-kpi__value">{hasPaymentsData ? totalLabel : "—"}</div>
+          <div className="cp-trip-hero-card__visual">
+            <div className={`cp-trip-hero-card__media ${showHeroImage ? "has-image" : "is-fallback"} ${showHeroMediaSkeleton ? "is-loading" : ""}`}>
+              {showHeroImage ? (
+                <img
+                  className={`cp-trip-hero-card__media-img ${heroImageReady ? "is-ready" : ""}`}
+                  src={heroImageUrl}
+                  alt=""
+                  loading="lazy"
+                  onLoad={() => setHeroImageReady(true)}
+                  onError={() => setHeroImageError(true)}
+                />
+              ) : null}
+              <div className="cp-trip-hero-card__media-overlay" aria-hidden="true" />
+              {daysLeftLabel ? <span className="cp-trip-hero-card__countdown">{daysLeftLabel}</span> : null}
+              <div className="cp-trip-hero-card__media-panel">
+                {showHeroMediaSkeleton ? (
+                  <div className="cp-trip-hero-card__media-skeleton" aria-hidden="true">
+                    <span className="cp-trip-skeleton__line is-kicker" />
+                    <span className="cp-trip-skeleton__line is-heading" />
+                    <span className="cp-trip-skeleton__line is-heading short" />
+                    <span className="cp-trip-skeleton__line is-copy" />
                   </div>
-                  <div className="cp-hero-kpi">
-                    <div className="cp-hero-kpi__label">{tt("Pendiente")}</div>
-                    <div className="cp-hero-kpi__value is-warn">{hasPaymentsData ? pendingLabel : "—"}</div>
-                  </div>
-                  <div className="cp-hero-kpi">
-                    <div className="cp-hero-kpi__label">{tt("Pagado")}</div>
-                    <div className="cp-hero-kpi__value">{hasPaymentsData ? paidLabel : "—"}</div>
-                  </div>
-                </div>
-
-                <div className="cp-hero__actions">
-                  <div className="cp-hero__actions-left">
-                    <button className="cp-btn primary" onClick={viewTrip}>
-                      {t('view_details', 'Ver detalles')}
-                    </button>
-                    <button className="cp-btn cp-btn--ghost" onClick={viewPayments} disabled={!hasPaymentsData}>
-                      {tt("Pagos")}
-                    </button>
-                    {calendarUrl ? (
-                      <a className="cp-btn cp-btn--ghost" href={calendarUrl}>
-                        {tt("Añadir al calendario")}
-                      </a>
-                    ) : null}
-
-                    {postTrip && reviewUrl ? (
-                      <a className="cp-btn cp-btn--ghost" href={reviewUrl} target="_blank" rel="noreferrer">
-                        {tt("Dejar opinión")}
-                      </a>
-                    ) : null}
-                  </div>
-                  <div className="cp-hero__actions-right">
-                    <button
-                      type="button"
-                      className={`cp-pill cp-hero-pill cp-pill--clickable ${actionPillClass}`}
-                      onClick={viewActionTrip}
-                      title={actionStatus === "pending" ? "Ir a pagos" : (actionStatus === "invoices" ? "Ir a facturas" : "Ir al viaje")}
-                    >
-                      {actionPillLabel}
-                    </button>
-                    <span className="cp-hero__hint">{actionTripLabel ? `Para: ${actionTripLabel}` : ""}</span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="cp-hero__empty">
-                <div className="cp-hero__title">{tt("Aún no tienes un próximo viaje")}</div>
-                <div className="cp-hero__meta">{tt("Cuando confirmes una reserva, la verás aquí con todos sus detalles.")}</div>
+                ) : (
+                  <>
+                    <div className="cp-trip-hero-card__media-kicker">{tt("Viaje destacado")}</div>
+                    <div className="cp-trip-hero-card__media-title">{heroVisualLabel || tt("Tu próximo viaje")}</div>
+                    <div className="cp-trip-hero-card__media-copy">{heroVisualCopy || tt("Una vista rápida de lo esencial de tu viaje.")}</div>
+                  </>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </section>
 
-        {/* Cards secundarias */}
-        <section className="cp-card cp-dash-card cp-dash-span-4 cp-card--quiet">
-          <div className="cp-dash-head">
-            <CardTitleWithIcon icon={IconClipboardList}>{tt("Siguiente paso")}</CardTitleWithIcon>
-            <button
-              type="button"
-              className={`cp-pill cp-dash-pill cp-pill--clickable ${actionPillClass}`}
-              onClick={actionTripLabel ? viewActionTrip : undefined}
-              title={actionTripLabel ? tt("Ver detalle") : ""}
-              disabled={!actionTripLabel}
-            >
-              {actionPillLabel}
-            </button>
-          </div>
-          {actionTripLabel ? (
-            <div className="cp-dash-context">
-              {tt("Para:")} <strong>{actionTripLabel}</strong>
+        <section className="cp-trip-glance cp-dash-span-12">
+          <div className="cp-trip-glance__head">
+            <div>
+              <div className="cp-trip-module__eyebrow">{tt("Tu viaje de un vistazo")}</div>
+              <div className="cp-trip-module__title">{tt("Los puntos clave de tu viaje")}</div>
             </div>
-          ) : null}
-          <div className="cp-dash-note">{actionText}</div>
+            {actionTripLabel ? <span className={`cp-pill cp-trip-glance__badge ${actionPillClass}`}>{actionPillLabel}</span> : null}
+          </div>
+
+          <div className="cp-trip-glance__grid">
+            <DashboardGlanceItem
+              icon={IconBed}
+              label={tt("Hotel")}
+              value={hotelGlanceValue}
+              note={hotelGlanceNote}
+              loading={showTripDetailSkeleton}
+            />
+
+            <DashboardGlanceItem
+              icon={IconGolfFlag}
+              label={tt("Golf")}
+              value={golfGlanceValue}
+              note={golfGlanceNote}
+              loading={showTripDetailSkeleton}
+            />
+
+            <DashboardGlanceItem
+              icon={IconCar}
+              label={tt("Vuelos y traslados")}
+              value={logisticsValue}
+              note={logisticsNote}
+              loading={showTripDetailSkeleton}
+            />
+
+            <DashboardGlanceItem
+              icon={IconClockArrow}
+              label={tt("Próximo paso")}
+              value={milestoneHeadline}
+              note={actionTripLabel || tt("Te acompañaremos desde aquí")}
+            />
+          </div>
+        </section>
+
+        <article className="cp-trip-module cp-trip-module--action cp-dash-span-4">
+          <div className="cp-trip-module__eyebrow">{tt("Próximo paso")}</div>
+          <div className="cp-trip-module__title">{milestoneHeadline}</div>
+          <div className="cp-trip-module__copy">{actionText}</div>
           {actionNote?.label && actionNoteUrl ? (
-            <div className="cp-dash-note-box">
-              También tienes otro viaje a la vista:{" "}
+            <div className="cp-trip-module__note">
+              {tt("También tienes otro viaje a la vista:")} {" "}
               <a href={actionNoteUrl} onClick={noteExpedienteId ? viewNoteTrip : undefined}>
                 {actionNote.label}
               </a>
-              {actionNote.pending ? ` · Pendiente: ${actionNote.pending}` : ""}
+              {actionNote.pending ? ` · ${tt("Pendiente")}: ${actionNote.pending}` : ""}
             </div>
           ) : null}
-          {actionTripLabel ? (
-            <button className="cp-btn primary" onClick={viewActionTrip}>
-              {actionCtaLabel}
-            </button>
-          ) : null}
-        </section>
-
-        <section className="cp-card cp-dash-card cp-dash-span-4 cp-card--quiet">
-          <div className="cp-dash-head">
-            <CardTitleWithIcon icon={IconWallet}>{tt("Pagos")}</CardTitleWithIcon>
-            {hasPaymentsData ? (
-              <span className={`cp-pill cp-dash-pill ${isPaid ? "is-ok" : "is-warn"}`}>
-                {isPaid ? tt("Todo pagado") : tt("Pendiente")}
-              </span>
-            ) : null}
+          <div className="cp-trip-module__footer">
+            {actionTripLabel ? (
+              <button className="cp-btn primary" onClick={viewActionTrip}>
+                {actionCtaLabel}
+              </button>
+            ) : <span />}
+            <span className={`cp-pill cp-trip-module__status ${actionPillClass}`}>{actionPillLabel}</span>
           </div>
+        </article>
+
+        <article className="cp-trip-module cp-trip-module--finance cp-dash-span-4">
+          <div className="cp-trip-module__eyebrow">{tt("Pagos del viaje")}</div>
+          <div className="cp-trip-module__title">{tt("Pagos")}</div>
           {hasPaymentsData ? (
             <>
-              <div className="cp-dash-stats">
-                <div>
-                  <div className="cp-dash-stat-label">{tt("Pagado")}</div>
-                  <div className="cp-dash-stat-value">{paidLabel}</div>
+              <div className="cp-trip-finance">
+                <div className="cp-trip-finance__stat">
+                  <span>{tt("Pagado")}</span>
+                  <strong>{paidLabel}</strong>
                 </div>
-                <div>
-                  <div className="cp-dash-stat-label">{tt("Total")}</div>
-                  <div className="cp-dash-stat-value">{totalLabel}</div>
+                <div className="cp-trip-finance__stat">
+                  <span>{tt("Pendiente")}</span>
+                  <strong className="is-warn">{pendingLabel}</strong>
+                </div>
+                <div className="cp-trip-finance__stat">
+                  <span>{tt("Total")}</span>
+                  <strong>{totalLabel}</strong>
                 </div>
               </div>
-              <div className="cp-dash-progress">
-                <div className="cp-dash-progress-bar" style={{ width: `${paymentProgress}%` }} />
+              <div className="cp-trip-finance__meter">
+                <span className="cp-trip-finance__meter-bar" style={{ width: `${paymentProgress}%` }} />
               </div>
-              <div className="cp-dash-meta">Has pagado {paidLabel} de {totalLabel}</div>
+              <div className="cp-trip-module__meta">
+                {isPaid ? tt("Todo el viaje está liquidado.") : `Has pagado ${paidLabel} de ${totalLabel}.`}
+              </div>
               <button className="cp-btn cp-btn--ghost" onClick={viewPayments}>
-                {tt("Ver detalle")}
+                {tt("Ver pagos")}
               </button>
             </>
           ) : (
-            <div className="cp-muted" style={{ marginTop: 12 }}>
-              {tt("No hay datos de pagos disponibles por el momento.")}
+            <div className="cp-trip-module__copy">
+              {tt("Todavía no hay datos de pagos disponibles. En cuanto estén listos, aparecerán aquí resumidos.")}
             </div>
           )}
-        </section>
+        </article>
 
-        <section className="cp-card cp-dash-card cp-dash-span-4 cp-card--quiet">
-          <div className="cp-dash-head">
-            <CardTitleWithIcon icon={IconMapPin}>{tt("Tu viaje")}</CardTitleWithIcon>
-            {tripCode ? <span className="cp-pill cp-dash-pill is-info">{tripCode}</span> : null}
+        <article className="cp-trip-module cp-trip-module--includes cp-dash-span-4">
+          <div className="cp-trip-module__eyebrow">{tt("Lo que incluye tu viaje")}</div>
+          <div className="cp-trip-module__title">{tt("Tu viaje incluye")}</div>
+          <div className="cp-trip-includes">
+            <div className="cp-trip-includes__row">
+              <span>{tt("Estancia")}</span>
+              <strong>{includeStay}</strong>
+            </div>
+            <div className="cp-trip-includes__row">
+              <span>{tt("Golf")}</span>
+              <strong>{includeGolf}</strong>
+            </div>
+            <div className="cp-trip-includes__row">
+              <span>{tt("Vuelos y traslados")}</span>
+              <strong>{includeMobility}</strong>
+            </div>
+            <div className="cp-trip-includes__row">
+              <span>{tt("Extras y asistencia")}</span>
+              <strong>{includeExtras}</strong>
+            </div>
           </div>
-          <div className="cp-dash-note">
-            {nextTrip ? (
-              <>
-                <strong>{tripLabel}</strong>
-                <div className="cp-muted" style={{ marginTop: 6 }}>
-                  {tripMeta || "Fechas por definir"}
+        </article>
+
+        <article className="cp-trip-module cp-trip-module--contact cp-dash-span-12">
+          <div className="cp-trip-contact">
+            <div className="cp-trip-contact__main">
+              <div className="cp-trip-module__eyebrow">{tt("Tu equipo Casanova")}</div>
+              <div className="cp-trip-module__title">{agencyName}</div>
+              <div className="cp-trip-module__copy">
+                {tt("Si necesitas ajustar algo, resolver una duda o revisar el viaje con nosotros, aquí tienes acceso directo al equipo que te acompaña.")}
+              </div>
+              <div className="cp-trip-contact__links">
+                {agencyTel ? <a className="cp-trip-contact__link" href={`tel:${agencyTel.replace(/\s+/g, "")}`}>{agencyTel}</a> : null}
+                {agencyEmail ? <a className="cp-trip-contact__link" href={`mailto:${agencyEmail}`}>{agencyEmail}</a> : null}
+              </div>
+            </div>
+
+            <div className="cp-trip-contact__message">
+              <div className="cp-trip-contact__message-head">
+                <span className="cp-trip-contact__message-icon" aria-hidden="true"><IconChatBubble /></span>
+                <span>{tt("Mensajes")}</span>
+              </div>
+              <div className="cp-trip-contact__message-copy">
+                {messageSnippet || tt("Aquí verás los últimos mensajes sobre tu viaje: horarios de salida, pagos o cualquier actualización.")}
+              </div>
+              {messageMeta ? <div className="cp-trip-contact__message-meta">{messageMeta}</div> : null}
+              <button className="cp-btn cp-btn--ghost" onClick={viewMessages}>
+                {tt("Abrir mensajes")}
+              </button>
+            </div>
+          </div>
+        </article>
+
+        {mulligansEnabled ? (
+          <section className="cp-dash-span-12">
+            <div className={`cp-dashboard-loyalty ${tierClass}`}>
+              <div className="cp-dashboard-loyalty__lead">
+                <div className="cp-dashboard-loyalty__eyebrow">{tt("Programa de fidelización")}</div>
+                <div className="cp-dashboard-loyalty__title">{tt("Tus Mulligans")}</div>
+                <div className="cp-dashboard-loyalty__copy">
+                  {hintText || tt("Aquí tienes tu avance y un acceso rápido a los movimientos, sin recargar la portada.")}
                 </div>
-              </>
-            ) : (
-              "Cuando confirmes un viaje, aquí tendrás acceso rápido a todo."
-            )}
-          </div>
-          {nextTrip ? (
-            <button className="cp-btn cp-btn--ghost" onClick={viewTrip}>
-              {tt("Ir al detalle")}
-            </button>
-          ) : null}
-        </section>
-
-        {/* Mulligans con presencia (sin tocar datos) */}
-        <section className={"casanova-mulligans-card casanova-mulligans-card--dash " + tierClass}>
-          <div className="casanova-mulligans-card__top">
-            <div className="casanova-mulligans-card__title cp-card-title--with-icon">
-              <span className="cp-card-title-icon" aria-hidden="true">
-                <IconStarBadge />
-              </span>
-              <span>{tt("Tus Mulligans")}</span>
+              </div>
+              <div className="cp-dashboard-loyalty__stats">
+                <div className="cp-dashboard-loyalty__points">{points.toLocaleString("es-ES")}</div>
+                <div className="cp-dashboard-loyalty__meta">
+                  {tt("Nivel")} {levelLabel} · {tt("Ratio actual")} {multLabel || "—"}
+                </div>
+                <div className="cp-dashboard-loyalty__sub">
+                  {tt("Gasto acumulado")}: {typeof mull?.spend === "number" ? euro(mull.spend) : "—"}
+                </div>
+              </div>
+              <div className="cp-dashboard-loyalty__progress">
+                <span className="cp-dashboard-loyalty__progress-bar" style={{ width: `${progressPct}%` }} />
+              </div>
+              <div className="cp-dashboard-loyalty__actions">
+                {lastSyncLabel ? <span className="cp-dashboard-loyalty__updated">{tt("Actualizado")}: {lastSyncLabel}</span> : <span />}
+                <button className="cp-btn cp-btn--ghost" onClick={() => setParam("view", "mulligans")}>
+                  {tt("Ver movimientos")}
+                </button>
+              </div>
             </div>
-            <div className="casanova-mulligans-card__tier">
-              <span className="casanova-mulligans-badge">{levelLabel}</span>
-            </div>
-          </div>
-
-          <div className="casanova-mulligans-card__big">{points.toLocaleString("es-ES")}</div>
-
-          <div className="casanova-mulligans-card__meta">
-            Gasto acumulado: {typeof mull?.spend === "number" ? euro(mull.spend) : "—"} · Ratio actual: {multLabel ? multLabel : "—"}
-          </div>
-
-          <div className="casanova-progress">
-            <span className="casanova-progress__bar" style={{ width: progressPct + "%" }} />
-          </div>
-
-          {hintText ? <div className="casanova-mulligans-card__hint">{hintText}</div> : null}
-          {lastSyncLabel ? <div className="casanova-mulligans-updated">Última actualización: {lastSyncLabel}</div> : null}
-
-          <button className="cp-btn cp-btn--ghost" style={{ marginTop: 12 }} onClick={() => setParam("view", "mulligans")}>
-            {tt("Ver movimientos")}
-          </button>
-        </section>
-
+          </section>
+        ) : null}
       </div>
     </div>
   );
@@ -2652,12 +3060,14 @@ function pickHeroImageFromTripDetail(detail) {
 function App() {
   const [route, setRoute] = useState(readParams());
   const [dashboard, setDashboard] = useState(null);
+  const [dashboardTripDetail, setDashboardTripDetail] = useState(null);
+  const [dashboardTripDetailLoading, setDashboardTripDetailLoading] = useState(false);
   const [heroImageUrl, setHeroImageUrl] = useState("");
   const [heroMap, setHeroMap] = useState(null);
   const [loadingDash, setLoadingDash] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dashErr, setDashErr] = useState(null);
-  const [showPaymentBanner, setShowPaymentBanner] = useState(false);
+  const [paymentBanner, setPaymentBanner] = useState(null);
   const bannerTimerRef = useRef(null);
   const paymentDismissKey = "casanova_payment_banner_dismissed";
 
@@ -2672,12 +3082,25 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [profileErr, setProfileErr] = useState(null);
   const [toast, setToast] = useState(null);
+  const [theme, setTheme] = useState(() => resolveInitialTheme());
+  const isMulligansEnabled = window.CasanovaPortal?.features?.mulligansEnabled !== false;
+  const visibleNavItems = useMemo(() => getNavItems({ mulligansEnabled: isMulligansEnabled }), [isMulligansEnabled]);
+  const activeView = !isMulligansEnabled && route.view === "mulligans" ? "dashboard" : route.view;
 
   useEffect(() => {
     const onPop = () => setRoute(readParams());
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  useEffect(() => {
+    if (isMulligansEnabled || route.view !== "mulligans") return;
+    setParam("view", "dashboard");
+  }, [isMulligansEnabled, route.view]);
+
+  useEffect(() => {
+    lsSet(LS_KEYS.theme, theme);
+  }, [theme]);
 
   // Persist language preference (WPML):
   // - Backend stores the choice in user_meta via /profile/locale.
@@ -2727,22 +3150,39 @@ function App() {
     const payStatus = String(route.payStatus || "").toLowerCase();
 
     if (payment === "success") {
+      const isPendingConfirmation = payStatus === "checking" || payStatus === "";
+
       // Informative toast for bank transfers (async confirmation).
-      if (method === "bank_transfer" && (payStatus === "checking" || payStatus === "")) {
+      if (method === "bank_transfer" && isPendingConfirmation) {
         notify(tt("Transferencia iniciada. En cuanto el banco la confirme actualizaremos tus pagos."), "info");
       }
 
       // Evitar que se quede "plantificado" si el usuario recarga o navega.
       const dismissed = window.sessionStorage ? window.sessionStorage.getItem(paymentDismissKey) === "1" : false;
       if (!dismissed) {
-        setShowPaymentBanner(true);
+        const bannerConfig = isPendingConfirmation
+          ? {
+              variant: "info",
+              title: tt("Pago pendiente de confirmación"),
+              body:
+                method === "bank_transfer"
+                  ? tt("La transferencia ya se ha iniciado. Actualizaremos tus pagos cuando el banco la confirme en GIAV.")
+                  : tt("Hemos recibido la vuelta del banco. Actualizaremos tus pagos en cuanto GIAV confirme el cobro."),
+            }
+          : {
+              variant: "success",
+              title: t('payment_registered_title', 'Pago registrado'),
+              body: tt("Gracias, procesamos el cobro y actualizamos tus datos."),
+            };
+
+        setPaymentBanner(bannerConfig);
 
         // Auto-hide como red de seguridad (si el usuario no lo cierra).
         if (bannerTimerRef.current) {
           window.clearTimeout(bannerTimerRef.current);
         }
         bannerTimerRef.current = window.setTimeout(() => {
-          setShowPaymentBanner(false);
+          setPaymentBanner(null);
         }, 8_000);
       }
 
@@ -2768,7 +3208,7 @@ function App() {
   }, [route.payment, route.method, route.payStatus]);
 
   function dismissPaymentBanner() {
-    setShowPaymentBanner(false);
+    setPaymentBanner(null);
     try {
       if (window.sessionStorage) window.sessionStorage.setItem(paymentDismissKey, "1");
     } catch {
@@ -2794,9 +3234,19 @@ function App() {
 
       // Reset hero image if next trip changes (image will be re-fetched lazily).
       const nextTripId = dashRes?.next_trip?.id ? String(dashRes.next_trip.id) : "";
-      if (heroImageTripIdRef.current && heroImageTripIdRef.current !== nextTripId) {
+      if (refresh) {
+        heroImageTripIdRef.current = "";
+        setDashboardTripDetail(null);
+        setDashboardTripDetailLoading(Boolean(nextTripId));
         setHeroImageUrl("");
         setHeroMap(null);
+      } else if (heroImageTripIdRef.current && heroImageTripIdRef.current !== nextTripId) {
+        setDashboardTripDetail(null);
+        setDashboardTripDetailLoading(Boolean(nextTripId));
+        setHeroImageUrl("");
+        setHeroMap(null);
+      } else if (!nextTripId) {
+        setDashboardTripDetailLoading(false);
       }
     } catch (e) {
       setDashErr(e);
@@ -2812,14 +3262,17 @@ function App() {
     const nextTripId = dashboard?.next_trip?.id ? String(dashboard.next_trip.id) : "";
     if (!nextTripId) {
       heroImageTripIdRef.current = "";
+      setDashboardTripDetail(null);
+      setDashboardTripDetailLoading(false);
       setHeroImageUrl("");
       setHeroMap(null);
       return;
     }
-    if (heroImageTripIdRef.current === nextTripId && heroImageUrl && heroMap?.url) return;
+    if (heroImageTripIdRef.current === nextTripId && dashboardTripDetail) return;
 
     let alive = true;
     heroImageTripIdRef.current = nextTripId;
+    setDashboardTripDetailLoading(true);
 
     (async () => {
       try {
@@ -2828,6 +3281,7 @@ function App() {
         const qs = params.toString() ? `?${params.toString()}` : "";
         const d = await api(`/trip/${encodeURIComponent(nextTripId)}${qs}`);
         if (!alive) return;
+        setDashboardTripDetail(d && typeof d === "object" ? d : null);
 
         if (d && typeof d === 'object' && d.map && typeof d.map.url === 'string') {
           setHeroMap({ type: d.map.type || 'single', url: d.map.url, hotels: Array.isArray(d.map.hotels) ? d.map.hotels : [] });
@@ -2835,30 +3289,26 @@ function App() {
           setHeroMap(null);
         }
 
-        const pick = (rows) => {
-          if (!Array.isArray(rows)) return "";
-          for (const s of rows) {
-            const url = s?.media?.image_url || "";
-            if (url) return String(url);
-          }
-          return "";
-        };
-
-        const pkgRows = Array.isArray(d?.package?.services) ? d.package.services : [];
-        const extraRows = Array.isArray(d?.extras) ? d.extras : [];
-        const url = pick(pkgRows) || pick(extraRows) || "";
-        if (url) setHeroImageUrl(url);
+        const url = pickHeroImageFromTripDetail(d);
+        setHeroImageUrl(url || "");
       } catch {
         // Silent fail: hero keeps its premium gradients.
+      } finally {
+        if (alive) setDashboardTripDetailLoading(false);
       }
     })();
 
     return () => {
       alive = false;
     };
-  }, [dashboard?.next_trip?.id, route.mock]);
+  }, [dashboard?.next_trip?.id, dashboardTripDetail, route.mock]);
 
   useEffect(() => {
+    heroImageTripIdRef.current = "";
+    setDashboardTripDetail(null);
+    setDashboardTripDetailLoading(false);
+    setHeroImageUrl("");
+    setHeroMap(null);
     loadDashboard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.mock]);
@@ -2952,21 +3402,21 @@ function App() {
     inboxLatestTs > 0 && messagesLastSeenTs >= inboxLatestTs ? 0 : unreadFromServer;
 
   const title = useMemo(() => {
-    if ((route.view === "viajes" || route.view === "trips")) return t('nav_trips', 'Viajes');
-    if (route.view === "trip") return t('nav_trip_detail', 'Detalle del viaje');
-    if (route.view === "inbox") return t('nav_messages', 'Mensajes');
-    if (route.view === "dashboard") return t('nav_dashboard', 'Dashboard');
-    if (route.view === "mulligans") return t('nav_mulligans', 'Mulligans');
-    if (route.view === "profile") return t('menu_profile', 'Mi perfil');
-    if (route.view === "security") return t('menu_security', 'Seguridad');
+    if ((activeView === "viajes" || activeView === "trips")) return t('nav_trips', 'Viajes');
+    if (activeView === "trip") return t('nav_trip_detail', 'Detalle del viaje');
+    if (activeView === "inbox") return t('nav_messages', 'Mensajes');
+    if (activeView === "dashboard") return t('nav_dashboard', 'Dashboard');
+    if (activeView === "mulligans") return t('nav_mulligans', 'Mulligans');
+    if (activeView === "profile") return t('menu_profile', 'Mi perfil');
+    if (activeView === "security") return t('menu_security', 'Seguridad');
     return t('nav_portal', 'Portal');
-  }, [route.view]);
+  }, [activeView]);
 
   const chip = route.mock ? t('mock_mode', 'Modo prueba') : null;
 
   return (
-    <div className="cp-app">
-      <Sidebar view={route.view} unread={unreadCount} />
+    <div className="cp-app" data-theme={theme}>
+      <Sidebar view={activeView} unread={unreadCount} items={visibleNavItems} />
       <main className="cp-main">
         <Topbar
           title={title}
@@ -2977,29 +3427,31 @@ function App() {
           onGo={go}
           onLogout={logout}
           onLocale={setLocale}
+          theme={theme}
+          onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
         />
         {toast ? (
           <div className={`cp-toast is-${toast.variant || 'info'}`}>{toast.message}</div>
         ) : null}
-        {showPaymentBanner ? (
+        {paymentBanner ? (
           <div className="cp-content">
             <Notice
-              variant="success"
-              title={t('payment_registered_title', 'Pago registrado')}
+              variant={paymentBanner.variant || "info"}
+              title={paymentBanner.title}
               className="casanova-notice casanova-notice--payment"
               onClose={dismissPaymentBanner}
               closeLabel="Cerrar"
             >
-              {tt("Gracias, procesamos el cobro y actualizamos tus datos.")}
+              {paymentBanner.body}
             </Notice>
           </div>
         ) : null}
 
         {loadingDash && !dashboard ? (
           <div className="cp-content">
-            <div className="cp-card" style={{ background: "#fff" }}>
-              <div className="cp-card-title">{(route.view === "viajes" || route.view === "trips") ? "Tus viajes" : "Cargando"}</div>
-              {(route.view === "viajes" || route.view === "trips") ? (
+            <div className="cp-card" style={{ background: "var(--surface)" }}>
+              <div className="cp-card-title">{(activeView === "viajes" || activeView === "trips") ? "Tus viajes" : "Cargando"}</div>
+              {(activeView === "viajes" || activeView === "trips") ? (
                 <div className="cp-table-wrap" style={{ marginTop: 14 }}>
                   <TableSkeleton rows={7} cols={8} />
                 </div>
@@ -3014,7 +3466,7 @@ function App() {
               {tt("Ahora mismo no podemos cargar tus datos. Si es urgente, escríbenos y lo revisamos.")}
             </div>
           </div>
-        ) : (route.view === "viajes" || route.view === "trips") ? (
+        ) : (activeView === "viajes" || activeView === "trips") ? (
           <TripsList
             mock={route.mock}
             dashboard={dashboard}
@@ -3024,15 +3476,15 @@ function App() {
               setParam("tab", tab);
             }}
           />
-        ) : route.view === "trip" && route.expediente ? (
-          <TripDetailView mock={route.mock} expediente={route.expediente} dashboard={dashboard} onLatestTs={handleLatestTs} onSeen={markMessagesSeen} />
-        ) : route.view === "inbox" ? (
+        ) : activeView === "trip" && route.expediente ? (
+          <TripDetailView mock={route.mock} expediente={route.expediente} dashboard={dashboard} onLatestTs={handleLatestTs} onSeen={markMessagesSeen} mulligansEnabled={isMulligansEnabled} />
+        ) : activeView === "inbox" ? (
           <InboxView mock={route.mock} inbox={inbox} loading={loadingDash} error={inboxErr} onLatestTs={handleLatestTs} onSeen={markMessagesSeen} />
-        ) : route.view === "dashboard" ? (
-          <DashboardView data={dashboard} heroImageUrl={heroImageUrl} heroMap={heroMap} />
-        ) : route.view === "mulligans" ? (
+        ) : activeView === "dashboard" ? (
+          <DashboardView data={dashboard} heroImageUrl={heroImageUrl} heroMap={heroMap} tripDetail={dashboardTripDetail} tripDetailLoading={dashboardTripDetailLoading} mulligansEnabled={isMulligansEnabled} profile={profile} />
+        ) : activeView === "mulligans" ? (
           <MulligansView data={dashboard} />
-        ) : route.view === "profile" ? (
+        ) : activeView === "profile" ? (
           profile ? (
             <ProfileView profile={profile} onSave={saveProfile} onLocale={setLocale} />
           ) : (
@@ -3042,11 +3494,11 @@ function App() {
                   {profileErr?.message || 'Inténtalo de nuevo más tarde.'}
                 </Notice>
               ) : (
-                <div className="cp-card" style={{ background: "#fff" }}><Skeleton lines={6} /></div>
+                <div className="cp-card" style={{ background: "var(--surface)" }}><Skeleton lines={6} /></div>
               )}
             </div>
           )
-        ) : route.view === "security" ? (
+        ) : activeView === "security" ? (
           <SecurityView onChangePassword={changePassword} />
         ) : (
           <div className="cp-content">

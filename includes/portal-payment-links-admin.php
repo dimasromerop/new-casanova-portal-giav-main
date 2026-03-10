@@ -28,7 +28,7 @@ add_action('admin_post_casanova_create_payment_link', function () {
     }
   }
 
-  $allowed_scopes = ['passenger_share','group_partial','group_total','custom_amount','slot_base','group_base'];
+  $allowed_scopes = ['passenger_share','group_partial','group_total','custom_amount','slot_base'];
   if (!in_array($scope, $allowed_scopes, true)) $scope = 'group_total';
 
   if ($scope === 'group_total') {

@@ -569,20 +569,26 @@ exit;
   }
 
   // URLs callback
-  $url_notify = home_url('/wp-json/casanova/v1/redsys/notify');
+  $url_notify = function_exists('casanova_tpv_notify_url')
+    ? casanova_tpv_notify_url()
+    : home_url('/wp-json/casanova/v1/redsys/notify');
   $token = (string)$intent->token;
 
-  $url_ok = add_query_arg([
-    'action' => 'casanova_tpv_return',
-    'result' => 'ok',
-    'token'  => $token,
-  ], admin_url('admin-post.php'));
+  $url_ok = function_exists('casanova_tpv_return_url')
+    ? casanova_tpv_return_url(true, $token)
+    : add_query_arg([
+      'action' => 'casanova_tpv_return',
+      'result' => 'ok',
+      'token'  => $token,
+    ], admin_url('admin-post.php'));
 
-  $url_ko = add_query_arg([
-    'action' => 'casanova_tpv_return',
-    'result' => 'ko',
-    'token'  => $token,
-  ], admin_url('admin-post.php'));
+  $url_ko = function_exists('casanova_tpv_return_url')
+    ? casanova_tpv_return_url(false, $token)
+    : add_query_arg([
+      'action' => 'casanova_tpv_return',
+      'result' => 'ko',
+      'token'  => $token,
+    ], admin_url('admin-post.php'));
 
   // Amount cents
   $amount_cents = (string)((int) round(((float)$intent->amount) * 100));

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (!defined('ABSPATH')) exit;
 
 /**
@@ -6,8 +6,11 @@ if (!defined('ABSPATH')) exit;
  * Mantiene el enfoque "sin romper": todo es lectura, usa wrappers GIAV existentes.
  */
 function casanova_portal_render_dashboard(int $user_id): string {
+  $mulligans_enabled = function_exists('casanova_portal_mulligans_enabled')
+    ? casanova_portal_mulligans_enabled()
+    : true;
 
-  // Nuevo flujo (API-first): el dashboard deja de calcular datos aquí.
+  // Nuevo flujo (API-first): el dashboard deja de calcular datos aqu?.
   // La lógica vive en Casanova_Dashboard_Service, reutilizable por REST/React.
   if (class_exists('Casanova_Dashboard_Service') && class_exists('Casanova_Dashboard_DTO')) {
     try {
@@ -77,7 +80,7 @@ function casanova_portal_render_dashboard(int $user_id): string {
 
     $next_html  = '<div class="casanova-next">';
     $next_html .= '  <div class="casanova-next-title"><a href="' . esc_url($exp_url) . '">' . esc_html($titulo) . '</a></div>';
-    $next_html .= '  <div class="casanova-next-meta">' . esc_html($codigo ? ($codigo . ' · ') : '') . esc_html($rango) . '</div>';
+    $next_html .= '  <div class="casanova-next-meta">' . esc_html($codigo ? ($codigo . ' ? ') : '') . esc_html($rango) . '</div>';
     if ($estado) $next_html .= '  <div class="casanova-pill">' . esc_html($estado) . '</div>';
     $next_html .= '</div>';
 
@@ -169,13 +172,15 @@ function casanova_portal_render_dashboard(int $user_id): string {
   // Render cards
   $html  = '<div class="casanova-dashboard">';
   $html .= '  <div class="casanova-cards">';
-  $html .= '    <section class="casanova-card">';
-  $html .= '      <div class="casanova-card-h">' . esc_html__('Mulligans', 'casanova-portal') . '</div>';
-  $html .= '      <div class="casanova-card-kpi"><strong>' . esc_html(number_format_i18n($m_points)) . '</strong></div>';
-  $html .= '      <div class="casanova-card-meta">' . esc_html($m_tier ? (sprintf(__('Nivel: %s', 'casanova-portal'), $m_tier)) : ' ') . '</div>';
-  if ($m_last) $html .= '      <div class="casanova-card-meta casanova-muted">' . esc_html__('Última sincronización:', 'casanova-portal') . ' ' . esc_html(date_i18n('d/m/Y H:i', $m_last)) . '</div>';
-  $html .= '      <div class="casanova-card-actions"><a class="casanova-btn" href="' . esc_url(add_query_arg(['view'=>'mulligans'], casanova_portal_base_url())) . '">' . esc_html__('Ver movimientos', 'casanova-portal') . '</a></div>';
-  $html .= '    </section>';
+  if ($mulligans_enabled) {
+    $html .= '    <section class="casanova-card">';
+    $html .= '      <div class="casanova-card-h">' . esc_html__('Mulligans', 'casanova-portal') . '</div>';
+    $html .= '      <div class="casanova-card-kpi"><strong>' . esc_html(number_format_i18n($m_points)) . '</strong></div>';
+    $html .= '      <div class="casanova-card-meta">' . esc_html($m_tier ? (sprintf(__('Nivel: %s', 'casanova-portal'), $m_tier)) : ' ') . '</div>';
+    if ($m_last) $html .= '      <div class="casanova-card-meta casanova-muted">' . esc_html__('Última sincronización:', 'casanova-portal') . ' ' . esc_html(date_i18n('d/m/Y H:i', $m_last)) . '</div>';
+    $html .= '      <div class="casanova-card-actions"><a class="casanova-btn" href="' . esc_url(add_query_arg(['view'=>'mulligans'], casanova_portal_base_url())) . '">' . esc_html__('Ver movimientos', 'casanova-portal') . '</a></div>';
+    $html .= '    </section>';
+  }
 
   $html .= '    <section class="casanova-card">';
   $html .= '      <div class="casanova-card-h">' . esc_html__('Próximo viaje', 'casanova-portal') . '</div>';
@@ -205,6 +210,9 @@ function casanova_portal_render_dashboard(int $user_id): string {
  * @param array $data
  */
 function casanova_portal_render_dashboard_from_data(int $user_id, array $data): string {
+  $mulligans_enabled = function_exists('casanova_portal_mulligans_enabled')
+    ? casanova_portal_mulligans_enabled()
+    : true;
 
   $m = is_array($data['mulligans'] ?? null) ? $data['mulligans'] : [];
   $m_points = (int)($m['points'] ?? 0);
@@ -226,7 +234,7 @@ function casanova_portal_render_dashboard_from_data(int $user_id, array $data): 
 
     $next_html  = '<div class="casanova-next">';
     $next_html .= '  <div class="casanova-next-title">' . ($exp_url ? '<a href="' . esc_url($exp_url) . '">' . esc_html($titulo) . '</a>' : esc_html($titulo)) . '</div>';
-    $next_html .= '  <div class="casanova-next-meta">' . esc_html($codigo ? ($codigo . ' · ') : '') . esc_html($rango) . '</div>';
+    $next_html .= '  <div class="casanova-next-meta">' . esc_html($codigo ? ($codigo . ' ? ') : '') . esc_html($rango) . '</div>';
     if ($estado) $next_html .= '  <div class="casanova-pill">' . esc_html($estado) . '</div>';
     $next_html .= '</div>';
   }
@@ -279,13 +287,15 @@ function casanova_portal_render_dashboard_from_data(int $user_id, array $data): 
   // Render cards (HTML legacy)
   $html  = '<div class="casanova-dashboard">';
   $html .= '  <div class="casanova-cards">';
-  $html .= '    <section class="casanova-card">';
-  $html .= '      <div class="casanova-card-h">' . esc_html__('Mulligans', 'casanova-portal') . '</div>';
-  $html .= '      <div class="casanova-card-kpi"><strong>' . esc_html(number_format_i18n($m_points)) . '</strong></div>';
-  $html .= '      <div class="casanova-card-meta">' . esc_html($m_tier ? (sprintf(__('Nivel: %s', 'casanova-portal'), $m_tier)) : ' ') . '</div>';
-  if ($m_last) $html .= '      <div class="casanova-card-meta casanova-muted">' . esc_html__('Última sincronización:', 'casanova-portal') . ' ' . esc_html(date_i18n('d/m/Y H:i', $m_last)) . '</div>';
-  $html .= '      <div class="casanova-card-actions"><a class="casanova-btn" href="' . esc_url(add_query_arg(['view'=>'mulligans'], casanova_portal_base_url())) . '">' . esc_html__('Ver movimientos', 'casanova-portal') . '</a></div>';
-  $html .= '    </section>';
+  if ($mulligans_enabled) {
+    $html .= '    <section class="casanova-card">';
+    $html .= '      <div class="casanova-card-h">' . esc_html__('Mulligans', 'casanova-portal') . '</div>';
+    $html .= '      <div class="casanova-card-kpi"><strong>' . esc_html(number_format_i18n($m_points)) . '</strong></div>';
+    $html .= '      <div class="casanova-card-meta">' . esc_html($m_tier ? (sprintf(__('Nivel: %s', 'casanova-portal'), $m_tier)) : ' ') . '</div>';
+    if ($m_last) $html .= '      <div class="casanova-card-meta casanova-muted">' . esc_html__('Última sincronización:', 'casanova-portal') . ' ' . esc_html(date_i18n('d/m/Y H:i', $m_last)) . '</div>';
+    $html .= '      <div class="casanova-card-actions"><a class="casanova-btn" href="' . esc_url(add_query_arg(['view'=>'mulligans'], casanova_portal_base_url())) . '">' . esc_html__('Ver movimientos', 'casanova-portal') . '</a></div>';
+    $html .= '    </section>';
+  }
 
   $html .= '    <section class="casanova-card">';
   $html .= '      <div class="casanova-card-h">' . esc_html__('Próximo viaje', 'casanova-portal') . '</div>';
@@ -306,3 +316,4 @@ function casanova_portal_render_dashboard_from_data(int $user_id, array $data): 
 
   return $html;
 }
+

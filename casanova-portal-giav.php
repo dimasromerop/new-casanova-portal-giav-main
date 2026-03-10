@@ -203,6 +203,9 @@ add_action('wp_enqueue_scripts', function () {
 
       // Agency contact (used by the lightweight footer)
       'agency' => (function_exists('casanova_portal_agency_profile') ? casanova_portal_agency_profile() : []),
+      'features' => [
+        'mulligansEnabled' => (function_exists('casanova_portal_mulligans_enabled') ? casanova_portal_mulligans_enabled() : true),
+      ],
 
     ]);
 
@@ -364,5 +367,4 @@ add_action('wp_footer', function () {
   </script>
   <?php
 }, 50);
-
 

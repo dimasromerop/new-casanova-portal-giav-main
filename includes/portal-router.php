@@ -40,6 +40,9 @@ function casanova_portal_i18n_label(string $key, string $label): string {
 
 function casanova_portal_menu_items(): array {
   $raw = get_option('casanova_portal_menu_items', null);
+  $mulligans_enabled = function_exists('casanova_portal_mulligans_enabled')
+    ? casanova_portal_mulligans_enabled()
+    : true;
 
   // Defaults (compatibles con instalaciones previas)
   $defaults = [
@@ -125,6 +128,12 @@ function casanova_portal_menu_items(): array {
   }
 
   if (empty($items)) $items = $defaults;
+
+  if (!$mulligans_enabled) {
+    $items = array_values(array_filter($items, function($item) {
+      return (($item['key'] ?? '') !== 'mulligans');
+    }));
+  }
 
   // Filtra deshabilitados y ordena
   $items = array_values(array_filter($items, fn($x) => !empty($x['enabled'])));

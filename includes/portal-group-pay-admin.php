@@ -11,7 +11,7 @@ add_action('admin_post_casanova_create_group_token', function () {
   $idExpediente = isset($_POST['group_id_expediente']) ? absint($_POST['group_id_expediente']) : 0;
   $idReservaPQ = isset($_POST['group_id_reserva_pq']) ? absint($_POST['group_id_reserva_pq']) : 0;
   $unit_total_raw = isset($_POST['group_unit_total']) ? (string)$_POST['group_unit_total'] : '';
-  $unit_total = (float) str_replace(',', '.', $unit_total_raw);
+  $unit_total = (float) str_replace(',', '.', preg_replace('/[^0-9\,\.]/', '', $unit_total_raw));
   $expires_at = null;
   $exp_raw = isset($_POST['group_expires_at']) ? sanitize_text_field((string)$_POST['group_expires_at']) : '';
   if ($exp_raw !== '') {
@@ -28,7 +28,8 @@ add_action('admin_post_casanova_create_group_token', function () {
     wp_safe_redirect(add_query_arg(['group_error' => 'expediente'], $base));
     exit;
   }
-  if ($unit_total <= 0) {
+
+  if ($unit_total <= 0.0) {
     wp_safe_redirect(add_query_arg(['group_error' => 'unit_total'], $base));
     exit;
   }
@@ -57,3 +58,4 @@ add_action('admin_post_casanova_create_group_token', function () {
   ], $base));
   exit;
 });
+

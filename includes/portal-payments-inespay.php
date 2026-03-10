@@ -84,53 +84,14 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
     $payment_link_scope = (string)($payment_link['scope'] ?? '');
     $billing_dni = (string)($payload['billing_dni'] ?? ($payment_link['billing_dni'] ?? ''));
     $billing_name = trim((string)($payload['billing_name'] ?? ''));
-    $payment_link_meta = [];
-    if ($payment_link_id > 0 && function_exists('casanova_payment_link_get')) {
-      $plink_meta_row = casanova_payment_link_get($payment_link_id);
-      if ($plink_meta_row) {
-        $payment_link_meta = casanova_payment_link_decode_metadata((string)($plink_meta_row->metadata ?? ''));
-      }
-    }
-
-    $billing_email = trim((string)($payment_link_meta['billing_email'] ?? ($payload['billing_email'] ?? '')));
-    $billing_lastname = trim((string)($payment_link_meta['billing_lastname'] ?? ($payload['billing_lastname'] ?? '')));
-    if ($billing_name === '' && !empty($payment_link_meta['billing_name'])) {
-      $billing_name = trim((string)$payment_link_meta['billing_name']);
-    }
-    if ($billing_dni === '' && !empty($payment_link_meta['billing_dni'])) {
-      $billing_dni = (string)$payment_link_meta['billing_dni'];
-    }
-
-    $covers_self = !empty($payment_link_meta['covers_self']);
-    $covers_others = !empty($payment_link_meta['covers_others']);
-    $others_names = trim((string)($payment_link_meta['others_names'] ?? ''));
-    $internal_note = trim((string)($payment_link_meta['internal_note'] ?? ''));
-    $payer_fullname = trim($billing_name . ' ' . $billing_lastname);
-    if ($payer_fullname === '') $payer_fullname = $billing_name;
-
-    $giav_internal_note = sprintf(
-      'Pagador: %s %s (%s). Cubre: %s. Otros: %s. Nota: %s',
-      ($payer_fullname !== '' ? $payer_fullname : 'N/D'),
-      ($billing_dni !== '' ? $billing_dni : 'N/D'),
-      ($billing_email !== '' ? $billing_email : '-'),
-      ($covers_self ? 'si' : 'no'),
-      ($covers_others ? ($others_names !== '' ? $others_names : '-') : 'no'),
-      ($internal_note !== '' ? $internal_note : '-')
-    );
 
     $notes['billing_dni'] = $billing_dni ?: null;
     $notes['billing_name'] = $billing_name ?: null;
-    $notes['billing_email'] = $billing_email ?: null;
-    $notes['covers_self'] = $covers_self;
-    $notes['covers_others'] = $covers_others;
-    $notes['others_names'] = $others_names ?: null;
-    $notes['internal_note'] = $internal_note ?: null;
     $notes['payment_link'] = [
       'id' => $payment_link_id ?: null,
       'token' => $payment_link_token ?: null,
       'scope' => $payment_link_scope ?: null,
     ];
-    $notes['giav_internal_note'] = $giav_internal_note;
 
     $payer_name = 'Portal';
     if (!empty($intent->user_id) && function_exists('get_user_by')) {
@@ -138,13 +99,51 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
       if ($u && !empty($u->display_name)) {
         $payer_name = (string)$u->display_name;
       }
-    } elseif ($payer_fullname !== '') {
-      $payer_name = $payer_fullname;
+    } elseif ($billing_name !== '') {
+      $payer_name = $billing_name;
     }
 
     $concepto = $is_deposit
       ? ('Depósito Inespay ' . (string)($dataReturn['reference'] ?? ''))
       : ('Pago Inespay ' . (string)($dataReturn['reference'] ?? ''));
+
+    // Nota humana para GIAV (pagador + viajeros + nota interna).
+    $plink_meta = [];
+    if ($payment_link_id > 0 && function_exists('casanova_payment_link_get')) {
+      $plink_row = casanova_payment_link_get($payment_link_id);
+      if ($plink_row) {
+        $rawm = (string)($plink_row->metadata ?? '');
+        if ($rawm !== '') {
+          $dec = json_decode($rawm, true);
+          if (is_array($dec)) $plink_meta = $dec;
+        }
+      }
+    }
+    $note_email = (string)($plink_meta['billing_email'] ?? ($payload['billing_email'] ?? ''));
+    $billing_email = trim($note_email);
+    $billing_lastname = trim((string)($plink_meta['billing_lastname'] ?? ($payload['billing_lastname'] ?? '')));
+    if ($billing_name === '' && !empty($plink_meta['billing_name'])) {
+      $billing_name = trim((string)$plink_meta['billing_name']);
+    }
+    if ($billing_dni === '' && !empty($plink_meta['billing_dni'])) {
+      $billing_dni = (string)$plink_meta['billing_dni'];
+    }
+    $note_covers_self = !empty($plink_meta['covers_self']);
+    $note_covers_others = !empty($plink_meta['covers_others']);
+    $note_others = $plink_meta['others_names'] ?? [];
+    if (!is_array($note_others)) $note_others = [];
+    $note_internal = trim((string)($plink_meta['internal_note'] ?? ''));
+
+    $others_txt = '';
+    if ($note_covers_others && !empty($note_others)) {
+      $others_txt = implode(', ', array_map('sanitize_text_field', array_slice($note_others, 0, 20)));
+    }
+    $giav_human_note = 'Pagador: ' . trim($payer_name . ' ' . $billing_dni) . ' (' . $note_email . '). '
+      . 'Cubre: ' . ($note_covers_self ? 'sí' : 'no') . '. '
+      . 'Otros: ' . ($others_txt !== '' ? $others_txt : '-') . '. '
+      . 'Nota: ' . ($note_internal !== '' ? $note_internal : '-');
+
+    $notasInternas = $giav_human_note . ' | ref=' . (string)($dataReturn['reference'] ?? '') . ' payin=' . (string)($dataReturn['singlePayinId'] ?? '');
 
 
     // Resolver pagador real (idCliente) por DNI, para que el cobro quede asignado al que paga.
@@ -180,7 +179,7 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
       'concepto' => $concepto,
       'documento' => (string)($dataReturn['singlePayinId'] ?? ''),
       'pagador' => $payer_name,
-      'notasInternas' => $giav_internal_note,
+      'notasInternas' => $notasInternas,
       'autocompensar' => true,
       'idEntityStage' => null,
     ];

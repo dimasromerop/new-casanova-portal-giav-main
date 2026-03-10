@@ -471,6 +471,10 @@ function casanova_mulligans_get_user(int $user_id): array {
  * Uso: [casanova_mulligans]
  */
 add_shortcode('casanova_mulligans', function ($atts) {
+  if (function_exists('casanova_portal_mulligans_enabled') && !casanova_portal_mulligans_enabled()) {
+    return '';
+  }
+
   if (!is_user_logged_in()) return '<p>' . esc_html__('Debes iniciar sesión.', 'casanova-portal') . '</p>';
 
   $user_id = (int) get_current_user_id();
@@ -594,6 +598,10 @@ function casanova_mulligans_unescape_unicode(string $s): string {
  * Uso: [casanova_mulligans_movimientos limit="10"]
  */
 add_shortcode('casanova_mulligans_movimientos', function($atts){
+  if (function_exists('casanova_portal_mulligans_enabled') && !casanova_portal_mulligans_enabled()) {
+    return '';
+  }
+
   if (!is_user_logged_in()) return '<p>' . esc_html__('Debes iniciar sesión.', 'casanova-portal') . '</p>';
 
   $atts = shortcode_atts(['limit' => 10, 'embedded' => 0], $atts);
