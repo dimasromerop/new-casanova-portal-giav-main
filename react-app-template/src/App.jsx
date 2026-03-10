@@ -3166,8 +3166,8 @@ function App() {
               title: tt("Pago pendiente de confirmación"),
               body:
                 method === "bank_transfer"
-                  ? tt("La transferencia ya se ha iniciado. Actualizaremos tus pagos cuando el banco la confirme en GIAV.")
-                  : tt("Hemos recibido la vuelta del banco. Actualizaremos tus pagos en cuanto GIAV confirme el cobro."),
+                  ? tt("La transferencia ya se ha iniciado. Actualizaremos tus pagos cuando recibamos la confimación del banco.")
+                  : tt("Hemos recibido el pago. Gracias, procesamos el cobro y actualizamos tus datos."),
             }
           : {
               variant: "success",
