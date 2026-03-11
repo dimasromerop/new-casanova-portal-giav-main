@@ -424,9 +424,30 @@ add_action('rest_api_init', function () {
   ]);
 });
 
+if (!function_exists('casanova_is_inespay_return_request')) {
+  function casanova_is_inespay_return_request(): bool {
+    if (!empty(get_query_var('casanova_inespay_return'))) {
+      return true;
+    }
+
+    $request_uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+    if ($request_uri === '') {
+      return false;
+    }
+
+    $request_path = wp_parse_url($request_uri, PHP_URL_PATH);
+    $expected_path = wp_parse_url(home_url('/inespay/return/'), PHP_URL_PATH);
+    if (!is_string($request_path) || !is_string($expected_path) || $request_path === '' || $expected_path === '') {
+      return false;
+    }
+
+    return untrailingslashit($request_path) === untrailingslashit($expected_path);
+  }
+}
+
 // Clean return handler (NO /wp-json). This avoids stacks that cache/harden REST.
 add_action('template_redirect', function () {
-  if (empty(get_query_var('casanova_inespay_return'))) return;
+  if (!casanova_is_inespay_return_request()) return;
 
   $status = isset($_GET['status']) ? sanitize_key((string) $_GET['status']) : 'failed';
   $status = ($status === 'success') ? 'success' : 'failed';
