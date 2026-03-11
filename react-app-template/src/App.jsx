@@ -638,20 +638,30 @@ function getNavItems({ mulligansEnabled = true } = {}) {
 }
 
 /* ===== Shell ===== */
-function Sidebar({ view, unread = 0, items = NAV_ITEMS }) {
+function Sidebar({ view, unread = 0, items = NAV_ITEMS, theme = "light" }) {
+  const agency = window.CasanovaPortal?.agency || {};
+  const branding = window.CasanovaPortal?.branding || {};
+  const agencyName = String(agency.nombre || "Casanova Golf").trim();
+  const lightLogoUrl = String(branding.logoLightUrl || "").trim();
+  const darkLogoUrl = String(branding.logoDarkUrl || "").trim();
+  const logoUrl = theme === "dark"
+    ? (darkLogoUrl || lightLogoUrl)
+    : (lightLogoUrl || darkLogoUrl);
+
   return (
     <aside className="cp-sidebar">
       <div className="cp-brand" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div
-          className="cp-logo"
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: "var(--primary, #0f3d2e)",
-            flex: "0 0 auto",
-          }}
-        />
+        {logoUrl ? (
+          <img
+            className="cp-logo cp-logo--image"
+            src={logoUrl}
+            alt={agencyName}
+            loading="eager"
+            decoding="async"
+          />
+        ) : (
+          <div className="cp-logo cp-logo--placeholder" aria-hidden="true" />
+        )}
         <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
           <div className="cp-brand-title">{tt("Casanova Portal")}</div>
           <div className="cp-brand-sub">{tt("Gestión de Reservas")}</div>
@@ -3416,7 +3426,7 @@ function App() {
 
   return (
     <div className="cp-app" data-theme={theme}>
-      <Sidebar view={activeView} unread={unreadCount} items={visibleNavItems} />
+      <Sidebar view={activeView} unread={unreadCount} items={visibleNavItems} theme={theme} />
       <main className="cp-main">
         <Topbar
           title={title}

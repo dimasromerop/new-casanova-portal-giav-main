@@ -50,6 +50,15 @@ class Casanova_Payments_Controller {
 
   public static function handle(WP_REST_Request $request) {
     casanova_portal_clear_rest_output();
+    $user_id_rl = get_current_user_id();
+    if (function_exists('casanova_rate_limit') && !casanova_rate_limit('payments_intent_' . $user_id_rl, 10, 300)) {
+      return new WP_REST_Response([
+        'ok' => false,
+        'code' => 'rate_limited',
+        'message' => esc_html__('Demasiados intentos de pago. Espera unos minutos.', 'casanova-portal'),
+      ], 429);
+    }
+
     casanova_portal_log('payments.intent.enter', [
       'user_id' => get_current_user_id(),
       'ip' => isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '',

@@ -38,6 +38,16 @@ class Casanova_Messages_Service {
       $expediente = (int) ($dash['next_trip']['id'] ?? 0);
     }
 
+    if ($expediente && function_exists('casanova_user_can_access_expediente')
+        && !casanova_user_can_access_expediente($user_id, $expediente)) {
+      return [
+        'status' => 'ok',
+        'giav'   => ['ok' => true, 'source' => 'live', 'error' => null],
+        'unread' => 0,
+        'items'  => [],
+      ];
+    }
+
     if (!$expediente || !function_exists('casanova_giav_comments_por_expediente')) {
       return [
         'status' => 'ok',

@@ -70,6 +70,10 @@ class Casanova_Expedientes_Controller {
         array_unshift($years, $year);
       }
 
+      if (function_exists('casanova_rest_enable_private_cache')) {
+        casanova_rest_enable_private_cache(60, 300);
+      }
+
       return rest_ensure_response([
         'status' => 'ok',
         'items' => $rows,

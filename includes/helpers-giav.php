@@ -14,17 +14,52 @@ function casanova_giav_base_host(): string {
 /**
  * Comprueba si el usuario actual puede acceder a un expediente GIAV
  */
+function casanova_giav_extract_expediente_id($exp): int {
+  if (!is_object($exp)) return 0;
+
+  foreach (['IdExpediente', 'IDExpediente', 'Id', 'ID', 'Codigo', 'IdExp'] as $k) {
+    if (isset($exp->$k) && $exp->$k !== '') {
+      $id = (int) $exp->$k;
+      if ($id > 0) return $id;
+    }
+  }
+
+  return 0;
+}
+
 function casanova_user_can_access_expediente(int $user_id, int $idExpediente) : bool {
   if (!$user_id || !$idExpediente) return false;
 
   $idClienteUser = (int) get_user_meta($user_id, 'casanova_idcliente', true);
   if (!$idClienteUser) return false;
 
-  $expedientes = casanova_giav_expedientes_por_cliente($idClienteUser);
-    if (!is_array($expedientes)) return false;
+  $cache_key = 'casanova_exp_ids_' . $idClienteUser;
+  $cached_ids = get_transient($cache_key);
+  if (is_array($cached_ids)) {
+    return in_array($idExpediente, array_map('intval', $cached_ids), true);
+  }
 
-  foreach ($expedientes as $exp) {
-    if (!is_object($exp)) continue;
+  $page_size = 100;
+  $max_pages = 5;
+  $ids = [];
+
+  for ($page = 0; $page < $max_pages; $page++) {
+    $expedientes_page = casanova_giav_expedientes_por_cliente($idClienteUser, $page_size, $page * $page_size);
+    if (is_wp_error($expedientes_page) || !is_array($expedientes_page) || empty($expedientes_page)) break;
+
+    foreach ($expedientes_page as $exp) {
+      $id = casanova_giav_extract_expediente_id($exp);
+      if ($id > 0) $ids[] = $id;
+    }
+
+    if (count($expedientes_page) < $page_size) break;
+  }
+
+  $ids = array_values(array_unique(array_map('intval', $ids)));
+  set_transient($cache_key, $ids, 300);
+  return in_array($idExpediente, $ids, true);
+
+  /*
 
     // Intentar extraer el id del expediente con varios nombres posibles
     $id = 0;
@@ -42,6 +77,7 @@ function casanova_user_can_access_expediente(int $user_id, int $idExpediente) : 
   }
 
   return false;
+  */
 }
 
 /**

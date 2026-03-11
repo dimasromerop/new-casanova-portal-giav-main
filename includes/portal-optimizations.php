@@ -148,10 +148,19 @@ function casanova_cache_remember(string $key, int $ttl, callable $fn) {
   }
 
   $tkey = casanova_cache_key($key);
-  $cached = get_transient($tkey);
+  $use_object_cache = function_exists('wp_using_ext_object_cache') && wp_using_ext_object_cache();
 
-  if ($cached !== false) {
-    return $cached;
+  if ($use_object_cache) {
+    $found = false;
+    $cached = wp_cache_get($tkey, 'casanova', false, $found);
+    if ($found) {
+      return $cached;
+    }
+  } else {
+    $cached = get_transient($tkey);
+    if ($cached !== false) {
+      return $cached;
+    }
   }
 
   $value = $fn();
@@ -161,7 +170,11 @@ function casanova_cache_remember(string $key, int $ttl, callable $fn) {
 
   // TTL mínimo defensivo
   $ttl = max(5, (int)$ttl);
-  set_transient($tkey, $value, $ttl);
+  if ($use_object_cache) {
+    wp_cache_set($tkey, $value, 'casanova', $ttl);
+  } else {
+    set_transient($tkey, $value, $ttl);
+  }
 
   return $value;
 }
@@ -169,6 +182,100 @@ function casanova_cache_remember(string $key, int $ttl, callable $fn) {
 /**
  * Invalidaciร caches relevantes para un cliente/expediente tras pagos.
  */
+/**
+ * Rate limiter ligero basado en transients.
+ * Devuelve true si se permite la accion, false si se excede el limite.
+ */
+function casanova_rate_limit(string $key, int $max, int $window): bool {
+  $max = max(1, (int) $max);
+  $window = max(1, (int) $window);
+  $tkey = 'casanova_rl_' . md5($key);
+  $data = get_transient($tkey);
+  $now = time();
+
+  if (!is_array($data)) {
+    set_transient($tkey, ['count' => 1, 'start' => $now], $window);
+    return true;
+  }
+
+  $start = (int) ($data['start'] ?? 0);
+  $count = (int) ($data['count'] ?? 0);
+  $elapsed = ($start > 0) ? ($now - $start) : $window;
+
+  if ($elapsed >= $window) {
+    set_transient($tkey, ['count' => 1, 'start' => $now], $window);
+    return true;
+  }
+
+  if ($count >= $max) {
+    return false;
+  }
+
+  $remaining = max(1, $window - $elapsed);
+  set_transient($tkey, ['count' => $count + 1, 'start' => $start], $remaining);
+
+  return true;
+}
+
+/**
+ * Invalidacià¸£ caches relevantes para un cliente/expediente tras pagos.
+ */
+function casanova_rest_enable_private_cache(int $max_age = 60, int $stale_while_revalidate = 300): void {
+  $GLOBALS['casanova_rest_private_cache'] = [
+    'enabled' => true,
+    'max_age' => max(0, (int) $max_age),
+    'stale_while_revalidate' => max(0, (int) $stale_while_revalidate),
+  ];
+}
+
+function casanova_rest_disable_private_cache(): void {
+  unset($GLOBALS['casanova_rest_private_cache']);
+}
+
+add_filter('rest_post_dispatch', function ($response, $server, $request) {
+  $cfg = $GLOBALS['casanova_rest_private_cache'] ?? null;
+  if (empty($cfg['enabled'])) {
+    return $response;
+  }
+
+  $response = rest_ensure_response($response);
+  if (!($response instanceof WP_REST_Response)) {
+    return $response;
+  }
+
+  $status = (int) $response->get_status();
+  if ($status < 200 || $status >= 300) {
+    return $response;
+  }
+
+  $cache_control = 'private, max-age=' . (int) $cfg['max_age'];
+  $stale_while_revalidate = (int) ($cfg['stale_while_revalidate'] ?? 0);
+  if ($stale_while_revalidate > 0) {
+    $cache_control .= ', stale-while-revalidate=' . $stale_while_revalidate;
+  }
+  $response->header('Cache-Control', $cache_control);
+
+  $headers = $response->get_headers();
+  $vary = isset($headers['Vary']) ? (string) $headers['Vary'] : '';
+  if ($vary === '') {
+    $response->header('Vary', 'Cookie');
+  } elseif (stripos($vary, 'Cookie') === false) {
+    $response->header('Vary', $vary . ', Cookie');
+  }
+
+  return $response;
+}, 20, 3);
+
+add_filter('rest_send_nocache_headers', function ($send) {
+  $cfg = $GLOBALS['casanova_rest_private_cache'] ?? null;
+  return !empty($cfg['enabled']) ? false : $send;
+}, 20);
+
+add_filter('rest_pre_serve_request', function ($served, $result, $request, $server) {
+  casanova_rest_disable_private_cache();
+  return $served;
+}, 100, 4);
+
 function casanova_invalidate_customer_cache(int $user_id, int $idCliente, int $idExpediente = 0): void {
   if (function_exists('casanova_cache_buster_bump')) {
     casanova_cache_buster_bump();
@@ -177,6 +284,7 @@ function casanova_invalidate_customer_cache(int $user_id, int $idCliente, int $i
   if ($idCliente > 0) {
     delete_transient('casanova_dash_v1_' . $idCliente);
     delete_transient('casanova_dashboard_' . $idCliente);
+    delete_transient('casanova_exp_ids_' . $idCliente);
   }
 
   if ($user_id > 0) {

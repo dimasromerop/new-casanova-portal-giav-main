@@ -145,6 +145,23 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
 
     $notasInternas = $giav_human_note . ' | ref=' . (string)($dataReturn['reference'] ?? '') . ' payin=' . (string)($dataReturn['singlePayinId'] ?? '');
 
+    if (function_exists('casanova_payments_record_cobro')) {
+      return casanova_payments_record_cobro($intent, [
+        'id_forma_pago' => $id_forma_pago,
+        'id_oficina' => $id_oficina,
+        'billing_dni' => $billing_dni,
+        'billing_email' => $billing_email,
+        'billing_name' => $billing_name,
+        'billing_lastname' => $billing_lastname,
+        'payment_link_id' => $payment_link_id,
+        'payment_link_scope' => $payment_link_scope,
+        'concepto' => $concepto,
+        'documento' => (string)($dataReturn['singlePayinId'] ?? ''),
+        'payer_name' => $payer_name,
+        'notas_internas' => $notasInternas,
+      ], 'INESPAY');
+    }
+
 
     // Resolver pagador real (idCliente) por DNI, para que el cobro quede asignado al que paga.
     $payer_id_cliente = (int)($intent->id_cliente ?? 0);

@@ -104,10 +104,14 @@ function casanova_handle_invoice_pdf(): void {
  $idExpediente = (int) ($_GET['expediente'] ?? 0);
  $user_id = get_current_user_id();
 
-error_log('[CASANOVA] invoice_pdf: is_user_logged_in=' . (is_user_logged_in() ? '1' : '0'));
-error_log('[CASANOVA] invoice_pdf: user_id=' . $user_id);
-error_log('[CASANOVA] invoice_pdf: casanova_idcliente=' . get_user_meta($user_id, 'casanova_idcliente', true));
-error_log('[CASANOVA] invoice_pdf: REQUEST=' . print_r($_REQUEST, true));
+if (function_exists('casanova_log')) {
+  casanova_log('invoice_pdf', 'download requested', [
+    'logged_in' => is_user_logged_in() ? '1' : '0',
+    'user_id' => $user_id,
+    'expediente' => $idExpediente,
+    'factura' => isset($_GET['factura']) ? (int) $_GET['factura'] : 0,
+  ], 'info');
+}
 
 if (!casanova_user_can_access_expediente($user_id, $idExpediente)) {
   wp_die(esc_html__('No autorizado', 'casanova-portal'), 403);
@@ -162,7 +166,15 @@ if (stripos($raw, '/Fichero.aspx') === 0 || stripos($raw, 'Fichero.aspx') !== fa
 
   $dl = casanova_http_get_binary($file_url);
   if (is_wp_error($dl)) {
-    error_log('[CASANOVA] Error descargando Fichero.aspx: ' . $dl->get_error_message());
+    if (function_exists('casanova_log')) {
+      casanova_log('invoice_pdf', 'error downloading invoice file', [
+        'expediente' => $idExpediente,
+        'factura' => $idFactura,
+        'error' => $dl->get_error_message(),
+      ], 'error');
+    } else {
+      error_log('[CASANOVA] Error descargando Fichero.aspx: ' . $dl->get_error_message());
+    }
     wp_die('No se pudo descargar el PDF desde GIAV.');
   }
 
@@ -189,7 +201,16 @@ if (stripos($raw, '/Fichero.aspx') === 0 || stripos($raw, 'Fichero.aspx') !== fa
 // Validación final: que parezca PDF
 $pos = strpos($bin, '%PDF');
 if ($pos === false) {
-  error_log('[CASANOVA] Descarga factura: contenido no PDF. Head=' . substr($bin, 0, 200));
+  if (function_exists('casanova_log')) {
+    casanova_log('invoice_pdf', 'invalid PDF content returned by GIAV', [
+      'expediente' => $idExpediente,
+      'factura' => $idFactura,
+      'content_type' => $content_type,
+      'content_length' => strlen($bin),
+    ], 'error');
+  } else {
+    error_log('[CASANOVA] Descarga factura: contenido no PDF.');
+  }
   wp_die(esc_html__('GIAV no ha devuelto un PDF válido.', 'casanova-portal'));
 }
 if ($pos > 0) $bin = substr($bin, $pos);

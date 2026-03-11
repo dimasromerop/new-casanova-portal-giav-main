@@ -21,8 +21,24 @@ class Casanova_Messages_Controller {
     ]);
   }
 
-  public static function permissions_check(): bool {
-    return is_user_logged_in();
+  public static function permissions_check(WP_REST_Request $request): bool|WP_Error {
+    if (!is_user_logged_in()) {
+      return false;
+    }
+
+    $expediente = (int) $request->get_param('expediente');
+    if ($expediente > 0 && function_exists('casanova_user_can_access_expediente')) {
+      $user_id = get_current_user_id();
+      if (!casanova_user_can_access_expediente($user_id, $expediente)) {
+        return new WP_Error(
+          'forbidden_expediente',
+          __('No tienes acceso a este expediente.', 'casanova-portal'),
+          ['status' => 403]
+        );
+      }
+    }
+
+    return true;
   }
 
   public static function handle(WP_REST_Request $request) {

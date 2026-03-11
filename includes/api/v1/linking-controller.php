@@ -52,6 +52,14 @@ class Casanova_Linking_Controller {
 
   public static function request_otp(WP_REST_Request $req): WP_REST_Response {
     $user_id = get_current_user_id();
+    if (function_exists('casanova_rate_limit') && !casanova_rate_limit('linking_request_' . $user_id, 5, 900)) {
+      return new WP_REST_Response([
+        'ok'      => false,
+        'code'    => 'rate_limited',
+        'message' => __('Demasiados intentos. Espera unos minutos.', 'casanova-portal'),
+      ], 429);
+    }
+
     $dni = self::normalize_dni((string) $req->get_param('dni'));
 
     if ($dni === '') {
@@ -126,6 +134,14 @@ class Casanova_Linking_Controller {
 
   public static function verify_otp(WP_REST_Request $req): WP_REST_Response {
     $user_id = get_current_user_id();
+    if (function_exists('casanova_rate_limit') && !casanova_rate_limit('linking_verify_' . $user_id, 10, 900)) {
+      return new WP_REST_Response([
+        'ok'      => false,
+        'code'    => 'rate_limited',
+        'message' => __('Demasiados intentos. Espera unos minutos.', 'casanova-portal'),
+      ], 429);
+    }
+
     $dni = self::normalize_dni((string) $req->get_param('dni'));
     $otp = sanitize_text_field((string) $req->get_param('otp'));
     $otp = preg_replace('/\s+/', '', trim($otp));

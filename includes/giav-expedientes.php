@@ -173,9 +173,9 @@ add_shortcode('casanova_expedientes', function($atts) {
   echo '<div class="casanova-portal casanova-expedientes casanova-expedientes--drawer">';
   foreach ($items as $e) {
     $id      = (int) ($e->Id ?? 0);
-    $codigo  = esc_html($e->Codigo ?? '');
-    $titulo  = esc_html($e->Titulo ?? '');
-    $destino = esc_html($e->Destino ?? '');
+    $codigo  = trim((string) ($e->Codigo ?? ''));
+    $titulo  = trim((string) ($e->Titulo ?? ''));
+    $destino = trim((string) ($e->Destino ?? ''));
     $cerrado = !empty($e->Cerrado) ? 'Cerrado' : 'Abierto';
     $state_cls = !empty($e->Cerrado) ? 'is-closed' : 'is-open';
 
@@ -184,6 +184,10 @@ add_shortcode('casanova_expedientes', function($atts) {
     $rango = trim($desde . ($hasta ? ' – ' . $hasta : ''));
 
     $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/area-usuario/');
+    $codigo = esc_html($codigo);
+    $titulo = esc_html($titulo);
+    $destino = esc_html($destino);
+    $rango = esc_html($rango);
     
     $view = 'expedientes';
     $url  = add_query_arg([
@@ -198,7 +202,7 @@ add_shortcode('casanova_expedientes', function($atts) {
     echo '<a class="' . esc_attr($cls) . '" data-casanova-expediente-link href="' . esc_url($url) . '">';
       echo '<div class="casanova-expediente-card__row">';
         echo '<div class="casanova-expediente-card__main">';
-          echo '<div class="casanova-expediente-card__title">' . esc_html($titulo ?: (sprintf(__('Expediente %s', 'casanova-portal'), $codigo))) . '</div>';
+          echo '<div class="casanova-expediente-card__title">' . ($titulo !== '' ? $titulo : sprintf(__('Expediente %s', 'casanova-portal'), $codigo)) . '</div>';
           echo '<div class="casanova-expediente-card__meta">' . $codigo . ($destino ? ' · ' . $destino : '') . ($rango ? ' · ' . $rango : '') . '</div>';
         echo '</div>';
         echo '<div class="casanova-expediente-card__right">';
@@ -336,9 +340,9 @@ add_shortcode('casanova_expediente_detalle', function() {
     return '<p>' . esc_html__('No tienes acceso a este expediente.', 'casanova-portal') . '</p>';
   }
 
-  $codigo  = esc_html($exp->Codigo ?? '');
-  $titulo  = esc_html($exp->Titulo ?? '');
-  $destino = esc_html($exp->Destino ?? '');
+  $codigo  = trim((string) ($exp->Codigo ?? ''));
+  $titulo  = trim((string) ($exp->Titulo ?? ''));
+  $destino = trim((string) ($exp->Destino ?? ''));
   $cerrado = !empty($exp->Cerrado) ? 'Cerrado' : 'Abierto';
 
   $desde = !empty($exp->FechaDesde) ? date_i18n('d/m/Y', strtotime((string)$exp->FechaDesde)) : '';
@@ -352,6 +356,10 @@ add_shortcode('casanova_expediente_detalle', function() {
 
   // Mantenemos el parámetro 'periodo' al volver atrás
   $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/area-usuario/');
+  $codigo = esc_html($codigo);
+  $titulo = esc_html($titulo);
+  $destino = esc_html($destino);
+  $rango = esc_html($rango);
   $backArgs = ['view' => 'expedientes'];
   if (!empty($_GET['periodo'])) $backArgs['periodo'] = (int)$_GET['periodo'];
   

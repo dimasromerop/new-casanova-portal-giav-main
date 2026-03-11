@@ -57,6 +57,9 @@ class Casanova_Trip_Controller {
       if (is_wp_error($data)) {
         return $data;
       }
+      if (!$refresh && (int) $request->get_param('mock') !== 1 && function_exists('casanova_rest_enable_private_cache')) {
+        casanova_rest_enable_private_cache(60, 300);
+      }
       return rest_ensure_response($data);
     } catch (Exception $e) {
       return new WP_REST_Response([

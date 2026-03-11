@@ -82,6 +82,202 @@ if (!function_exists('casanova_payments_calc_deposit_amount')) {
  * SOLO cuando entramos por admin-post.php?action=casanova_pay_expediente
  * ============================================================
  */
+if (!function_exists('casanova_payments_update_slot_allocation')) {
+  function casanova_payments_update_slot_allocation(object $intent, int $payment_link_id, string $payment_link_scope, int $cobro_id): void {
+    if ($payment_link_id <= 0 || $payment_link_scope !== 'slot_base' || !function_exists('casanova_payment_link_get')) {
+      return;
+    }
+
+    $plink = casanova_payment_link_get($payment_link_id);
+    if (!$plink) {
+      return;
+    }
+
+    $meta = [];
+    $raw = (string) ($plink->metadata ?? '');
+    if ($raw !== '') {
+      $decoded = json_decode($raw, true);
+      if (is_array($decoded)) {
+        $meta = $decoded;
+      }
+    }
+
+    $already = isset($meta['slot_allocation']['cobro_id']) && (int) $meta['slot_allocation']['cobro_id'] === $cobro_id;
+    if ($already) {
+      return;
+    }
+
+    if (!function_exists('casanova_group_context_from_reservas') || !function_exists('casanova_ensure_group_slots') || !function_exists('casanova_allocate_payment_to_slots')) {
+      return;
+    }
+
+    $id_reserva_pq = (int) ($meta['id_reserva_pq'] ?? 0);
+    $ctx = casanova_group_context_from_reservas((int) $intent->id_expediente, (int) $intent->id_cliente, $id_reserva_pq ?: null);
+    if (!is_wp_error($ctx)) {
+      casanova_ensure_group_slots(
+        (int) $intent->id_expediente,
+        (int) ($ctx['id_reserva_pq'] ?? $id_reserva_pq),
+        (int) ($ctx['num_pax'] ?? 0),
+        (float) ($ctx['base_total'] ?? ($ctx['base_pending'] ?? 0))
+      );
+    }
+
+    $slot_ids = [];
+    if (!empty($meta['slot_ids']) && is_array($meta['slot_ids'])) {
+      $slot_ids = $meta['slot_ids'];
+    }
+
+    if (!empty($slot_ids) && function_exists('casanova_allocate_payment_to_slot_ids')) {
+      $alloc = casanova_allocate_payment_to_slot_ids($slot_ids, (float) $intent->amount);
+    } else {
+      $alloc = casanova_allocate_payment_to_slots((int) $intent->id_expediente, (float) $intent->amount, $id_reserva_pq);
+    }
+
+    if (function_exists('casanova_payment_link_update') && function_exists('casanova_payment_link_merge_metadata')) {
+      casanova_payment_link_update($payment_link_id, [
+        'metadata' => casanova_payment_link_merge_metadata($plink->metadata ?? null, [
+          'slot_allocation' => [
+            'cobro_id' => $cobro_id,
+            'amount' => (float) $intent->amount,
+            'allocations' => $alloc,
+            'allocated_at' => current_time('mysql'),
+          ],
+        ]),
+      ]);
+    }
+  }
+}
+
+if (!function_exists('casanova_payments_record_cobro')) {
+  function casanova_payments_record_cobro(object $intent, array $provider_data, string $label): array {
+    $result = [
+      'giav_cobro' => null,
+      'already' => false,
+      'inserted' => false,
+      'should_notify' => false,
+    ];
+
+    $billing_dni = (string) ($provider_data['billing_dni'] ?? '');
+    $billing_email = trim((string) ($provider_data['billing_email'] ?? ''));
+    $billing_name = trim((string) ($provider_data['billing_name'] ?? ''));
+    $billing_lastname = trim((string) ($provider_data['billing_lastname'] ?? ''));
+    $payment_link_id = (int) ($provider_data['payment_link_id'] ?? 0);
+    $payment_link_scope = (string) ($provider_data['payment_link_scope'] ?? '');
+    $id_forma_pago = (int) ($provider_data['id_forma_pago'] ?? 0);
+    $id_oficina = (int) ($provider_data['id_oficina'] ?? 0);
+    $concepto = (string) ($provider_data['concepto'] ?? '');
+    $documento = (string) ($provider_data['documento'] ?? '');
+    $payer_name = trim((string) ($provider_data['payer_name'] ?? ''));
+    if ($payer_name === '') {
+      $payer_name = 'Portal';
+    }
+    $notas_internas = (string) ($provider_data['notas_internas'] ?? '');
+
+    $payer_id_cliente = (int) ($intent->id_cliente ?? 0);
+    if ($billing_dni !== '' && function_exists('casanova_giav_cliente_search_por_dni') && function_exists('casanova_giav_extraer_idcliente')) {
+      try {
+        $resp_cli = casanova_giav_cliente_search_por_dni($billing_dni);
+        $idc = casanova_giav_extraer_idcliente($resp_cli);
+        if ($idc !== null && $idc !== '') {
+          $payer_id_cliente = (int) $idc;
+        }
+      } catch (Throwable $e) {
+      }
+    }
+
+    if ($payer_id_cliente <= 0 && $billing_dni !== '' && function_exists('casanova_giav_cliente_create_from_billing')) {
+      $bid = casanova_giav_cliente_create_from_billing([
+        'dni' => $billing_dni,
+        'email' => $billing_email,
+        'nombre' => $billing_name,
+        'apellidos' => $billing_lastname,
+      ]);
+      if (!empty($bid)) {
+        $payer_id_cliente = (int) $bid;
+      }
+    }
+
+    $giav_params = [
+      'idFormaPago' => $id_forma_pago,
+      'idOficina' => ($id_oficina > 0 ? $id_oficina : null),
+      'idExpediente' => (int) $intent->id_expediente,
+      'idCliente' => $payer_id_cliente,
+      'idRelacionPasajeroReserva' => null,
+      'idTipoOperacion' => 'Cobro',
+      'importe' => (double) $intent->amount,
+      'fechaCobro' => current_time('Y-m-d'),
+      'concepto' => $concepto,
+      'documento' => $documento,
+      'pagador' => $payer_name,
+      'notasInternas' => $notas_internas,
+      'autocompensar' => true,
+      'idEntityStage' => null,
+    ];
+    if ($id_oficina <= 0) {
+      unset($giav_params['idOficina']);
+    }
+
+    if (!function_exists('casanova_giav_call')) {
+      error_log('[CASANOVA][' . $label . '][GIAV] casanova_giav_call missing');
+      $result['giav_cobro'] = [
+        'attempted_at' => current_time('mysql'),
+        'ok' => false,
+        'error' => 'casanova_giav_call_missing',
+      ];
+      return $result;
+    }
+
+    error_log('[CASANOVA][' . $label . '][GIAV] Cobro_POST attempt intent_id=' . (int) $intent->id . ' exp=' . (int) $intent->id_expediente . ' cliente=' . (int) $intent->id_cliente . ' importe=' . (string) $intent->amount);
+    $res = casanova_giav_call('Cobro_POST', $giav_params);
+
+    if (is_wp_error($res)) {
+      error_log('[CASANOVA][' . $label . '][GIAV] Cobro_POST ERROR: ' . $res->get_error_message());
+      $result['giav_cobro'] = [
+        'attempted_at' => current_time('mysql'),
+        'ok' => false,
+        'error' => $res->get_error_message(),
+      ];
+      return $result;
+    }
+
+    $cobro_id = 0;
+    if (is_object($res) && isset($res->Cobro_POSTResult)) {
+      $cobro_id = (int) $res->Cobro_POSTResult;
+    } elseif (is_numeric($res)) {
+      $cobro_id = (int) $res;
+    }
+
+    if ($cobro_id > 0) {
+      error_log('[CASANOVA][' . $label . '][GIAV] Cobro_POST OK cobro_id=' . $cobro_id . ' intent_id=' . (int) $intent->id);
+      $result['giav_cobro'] = [
+        'attempted_at' => current_time('mysql'),
+        'inserted_at' => current_time('mysql'),
+        'ok' => true,
+        'cobro_id' => $cobro_id,
+      ];
+      $result['inserted'] = true;
+      $result['should_notify'] = true;
+
+      if ($payment_link_id > 0 && function_exists('casanova_payment_link_mark_paid')) {
+        casanova_payment_link_mark_paid($payment_link_id, $cobro_id, $billing_dni);
+      }
+      casanova_payments_update_slot_allocation($intent, $payment_link_id, $payment_link_scope, $cobro_id);
+
+      return $result;
+    }
+
+    error_log('[CASANOVA][' . $label . '][GIAV] Cobro_POST unexpected response intent_id=' . (int) $intent->id . ' res=' . print_r($res, true));
+    $result['giav_cobro'] = [
+      'attempted_at' => current_time('mysql'),
+      'ok' => false,
+      'error' => 'unexpected_response',
+      'raw' => is_scalar($res) ? (string) $res : null,
+    ];
+
+    return $result;
+  }
+}
+
 add_action('init', function () {
 
   $uri = $_SERVER['REQUEST_URI'] ?? '';

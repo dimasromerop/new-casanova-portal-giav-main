@@ -65,6 +65,9 @@ class Casanova_Dashboard_Controller {
       // Encapsulamos estado para consumers React.
       if (!isset($out['status'])) $out['status'] = 'ok';
       if (!isset($out['giav'])) $out['giav'] = ['ok' => true, 'source' => 'live', 'error' => null];
+      if (!$refresh && !$mock && function_exists('casanova_rest_enable_private_cache')) {
+        casanova_rest_enable_private_cache(60, 300);
+      }
       return rest_ensure_response($out);
     } catch (Throwable $e) {
       // Degradado: capturamos fatales (TypeError, Error, etc.) para evitar 500.

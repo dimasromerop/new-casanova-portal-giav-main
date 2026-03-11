@@ -157,6 +157,10 @@ class Casanova_Profile_Controller {
     $user_id = (int) get_current_user_id();
     if ($user_id <= 0) return new WP_Error('not_logged_in', __('Debes iniciar sesión.', 'casanova-portal'), ['status' => 401]);
 
+    if (function_exists('casanova_rate_limit') && !casanova_rate_limit('password_change_' . $user_id, 5, 900)) {
+      return new WP_Error('rate_limited', __('Demasiados intentos. Espera unos minutos.', 'casanova-portal'), ['status' => 429]);
+    }
+
     $params = $request->get_json_params();
     if (!is_array($params)) $params = [];
 
