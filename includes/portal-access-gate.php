@@ -19,8 +19,8 @@ add_action('template_redirect', function () {
     return;
   }
 
-  $user_id   = get_current_user_id();
-  $idcliente = get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idcliente = casanova_portal_get_effective_client_id($user_id);
   $is_linked = !empty($idcliente);
 
   // --- 2. Usuario vinculado entrando al onboarding ---

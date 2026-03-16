@@ -76,8 +76,8 @@ function casanova_portal_ics_url(int $idExpediente): string {
 function casanova_handle_download_ics() {
   if (!is_user_logged_in()) wp_die(__('No autorizado', 'casanova-portal'), 403);
 
-  $user_id   = get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
   $idExp     = (int) ($_GET['expediente'] ?? 0);
 
   if (!$idCliente || !$idExp) wp_die('Parámetros inválidos', 400);

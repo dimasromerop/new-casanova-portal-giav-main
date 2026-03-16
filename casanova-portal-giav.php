@@ -2,7 +2,7 @@
 /**
  * Plugin Name: New Casanova Portal - GIAV
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
- * Version: 0.30.9
+ * Version: 0.30.10
  * Author: Casanova Golf
  * Text Domain: casanova-portal
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
 // DB / plugin upgrade (runs on normal updates too, not only on activation)
 // -----------------------------------------------------------------------------
 function casanova_portal_giav_current_version(): string {
-  return '0.30.9';
+  return '0.30.10';
 }
 
 // -----------------------------------------------------------------------------
@@ -71,6 +71,7 @@ define('CASANOVA_GIAV_PLUGIN_URL', plugin_dir_url(__FILE__));
 // JS i18n strings (WPML)
 require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-i18n.php';
 require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-logger.php';
+require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-impersonation.php';
 
 if (!function_exists('casanova_portal_clear_rest_output')) {
   function casanova_portal_clear_rest_output(): void {
@@ -87,7 +88,7 @@ if (!function_exists('casanova_portal_get_preferred_lang_url')) {
    */
   function casanova_portal_get_preferred_lang_url(): string {
     if (!is_user_logged_in()) return '';
-    $lang = (string) get_user_meta(get_current_user_id(), 'casanova_portal_lang', true);
+    $lang = (string) get_user_meta(casanova_portal_get_effective_user_id(), 'casanova_portal_lang', true);
     $lang = strtolower(trim($lang));
     if ($lang === '') return '';
 
@@ -198,8 +199,9 @@ add_action('wp_enqueue_scripts', function () {
       'nonce'   => wp_create_nonce('wp_rest'),
       // WPML language context (optional)
       'currentLang' => (defined('ICL_LANGUAGE_CODE') ? ICL_LANGUAGE_CODE : (has_filter('wpml_current_language') ? (string) apply_filters('wpml_current_language', null) : '')),
-      'preferredLang' => (is_user_logged_in() ? (string) get_user_meta(get_current_user_id(), 'casanova_portal_lang', true) : ''),
+      'preferredLang' => (is_user_logged_in() ? (string) get_user_meta(casanova_portal_get_effective_user_id(), 'casanova_portal_lang', true) : ''),
       'preferredRedirectUrl' => (function_exists('casanova_portal_get_preferred_lang_url') ? (string) casanova_portal_get_preferred_lang_url() : ''),
+      'impersonation' => (function_exists('casanova_portal_impersonation_payload') ? casanova_portal_impersonation_payload() : ['active' => false, 'readOnly' => false]),
 
       // Agency contact (used by the lightweight footer)
       'agency' => (function_exists('casanova_portal_agency_profile') ? casanova_portal_agency_profile() : []),
@@ -244,6 +246,7 @@ add_action('plugins_loaded', function () {
 
   // Optimizaciones (cache/log/base URL). Cargado primero para que el resto lo use.
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-optimizations.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-perf.php';
 
   // Security: OTP linking (email)
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-otp.php';

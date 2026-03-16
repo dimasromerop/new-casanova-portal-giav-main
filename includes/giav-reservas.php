@@ -223,16 +223,27 @@ function casanova_calc_pago_expediente(int $idExpediente, int $idCliente, array 
   $reemb_real  = 0.0;
 
   $all = [];
-  $pageIndex = 0;
-  while (true) {
-    $chunk = casanova_giav_cobros_por_expediente($idExpediente, $idCliente, 100, $pageIndex);
-    if (is_wp_error($chunk)) { $chunk = []; break; }
-    if (empty($chunk)) break;
+  $used_cached_history = false;
+  if (function_exists('casanova_giav_cobros_por_expediente_all')) {
+    $all_cached = casanova_giav_cobros_por_expediente_all($idExpediente, $idCliente);
+    if (is_array($all_cached)) {
+      $all = $all_cached;
+      $used_cached_history = true;
+    }
+  }
 
-    $all = array_merge($all, $chunk);
-    if (count($chunk) < 100) break;
-    $pageIndex++;
-    if ($pageIndex > 50) break;
+  if (!$used_cached_history) {
+    $pageIndex = 0;
+    while (true) {
+      $chunk = casanova_giav_cobros_por_expediente($idExpediente, $idCliente, 100, $pageIndex);
+      if (is_wp_error($chunk)) { $chunk = []; break; }
+      if (empty($chunk)) break;
+
+      $all = array_merge($all, $chunk);
+      if (count($chunk) < 100) break;
+      $pageIndex++;
+      if ($pageIndex > 50) break;
+    }
   }
 
   $all = array_values(array_filter($all, function($c) use ($idExpediente){
@@ -368,8 +379,8 @@ function casanova_portal_expediente_context(): array|WP_Error {
 
   if (!is_user_logged_in()) return new WP_Error('auth', esc_html__('Debes iniciar sesión.', 'casanova-portal'));
 
-  $user_id   = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
   if ($idCliente <= 0) return new WP_Error('no_link', 'Tu cuenta no está vinculada todavía.');
 
   $idExpediente = isset($_GET['expediente']) ? (int) $_GET['expediente'] : 0;
@@ -460,16 +471,22 @@ $html .= '</div>';
     $deposit_effective = ($deposit_allowed && ($deposit_amt + 0.01 < (float)$pendiente_real));
 
     $html .= '<div class="casanova-actions">';
+      $is_read_only = function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only();
 
-      if ($deposit_effective) {
+      if ($is_read_only) {
+        $html .= '<span class="casanova-btn casanova-btn--disabled">' . esc_html__('Pago desactivado en vista cliente', 'casanova-portal') . '</span>';
+        $html .= '<span class="casanova-btn casanova-btn--disabled">' . esc_html__('Vista solo lectura', 'casanova-portal') . '</span>';
+      } elseif ($deposit_effective) {
         $url_dep = add_query_arg(['mode' => 'deposit'], $pay_url);
         $html .= '<a class="casanova-btn casanova-btn--dark" href="'.esc_url($url_dep).'">' . sprintf(esc_html__('Pagar depósito (%1$s%%): %2$s', 'casanova-portal'), esc_html(number_format($percent, 2, ',', '.')), esc_html(casanova_fmt_money($deposit_amt))) . '</a>';
       } else {
         $html .= '<span class="casanova-btn casanova-btn--disabled">' . esc_html__('Depósito no disponible', 'casanova-portal') . '</span>';
       }
 
-      $url_full = add_query_arg(['mode' => 'full'], $pay_url);
-      $html .= '<a class="casanova-btn casanova-btn--primary" href="'.esc_url($url_full).'">' . sprintf(esc_html__('Pagar total pendiente: %s', 'casanova-portal'), esc_html(casanova_fmt_money($pendiente_real))) . '</a>';
+      if (!$is_read_only) {
+        $url_full = add_query_arg(['mode' => 'full'], $pay_url);
+        $html .= '<a class="casanova-btn casanova-btn--primary" href="'.esc_url($url_full).'">' . sprintf(esc_html__('Pagar total pendiente: %s', 'casanova-portal'), esc_html(casanova_fmt_money($pendiente_real))) . '</a>';
+      }
 
     $html .= '</div>';
 

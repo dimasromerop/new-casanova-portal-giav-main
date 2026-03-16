@@ -220,6 +220,7 @@ function casanova_portal_render_dashboard_from_data(int $user_id, array $data): 
   $m_last   = (int)($m['last_sync'] ?? 0);
 
   $next = is_array($data['next_trip'] ?? null) ? $data['next_trip'] : null;
+  $has_active_trip = !empty($data['active_trip_exists']) && is_array($next) && !empty($next['id']);
   $pay  = is_array($data['payments'] ?? null) ? $data['payments'] : [];
   $msg  = is_array($data['messages'] ?? null) ? $data['messages'] : [];
 
@@ -297,6 +298,18 @@ function casanova_portal_render_dashboard_from_data(int $user_id, array $data): 
     $html .= '    </section>';
   }
 
+  if (!$has_active_trip) {
+    $html .= '    <section class="casanova-card">';
+    $html .= '      <div class="casanova-card-h">' . esc_html__('Tu viaje', 'casanova-portal') . '</div>';
+    $html .= '      <p><strong>' . esc_html__('Aún no tienes un viaje confirmado.', 'casanova-portal') . '</strong></p>';
+    $html .= '      <p class="casanova-muted">' . esc_html__('Cuando tu reserva esté lista, aquí verás todos los detalles de tu viaje: hotel, campos de golf, pagos y documentación.', 'casanova-portal') . '</p>';
+    $html .= '    </section>';
+    $html .= '  </div>';
+    $html .= '</div>';
+
+    return $html;
+  }
+
   $html .= '    <section class="casanova-card">';
   $html .= '      <div class="casanova-card-h">' . esc_html__('Próximo viaje', 'casanova-portal') . '</div>';
   $html .=        $next_html;
@@ -316,4 +329,3 @@ function casanova_portal_render_dashboard_from_data(int $user_id, array $data): 
 
   return $html;
 }
-

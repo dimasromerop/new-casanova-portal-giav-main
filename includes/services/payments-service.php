@@ -12,6 +12,14 @@ class Casanova_Payments_Service {
    * @return array<string,mixed>|WP_Error
    */
   public static function describe_for_user(int $user_id, int $idCliente, int $idExpediente) {
+    $user_id = function_exists('casanova_portal_resolve_user_id')
+      ? casanova_portal_resolve_user_id($user_id)
+      : $user_id;
+
+    $idCliente = function_exists('casanova_portal_get_effective_client_id')
+      ? casanova_portal_get_effective_client_id($user_id)
+      : $idCliente;
+
     if ($idCliente <= 0) {
       return new WP_Error('payments_no_client', esc_html__('Tu cuenta no está vinculada a un cliente casanova.', 'casanova-portal'));
     }
@@ -76,6 +84,7 @@ class Casanova_Payments_Service {
     }
 
     $can_pay_full = $pending > 0.01;
+    $is_read_only = function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only();
     $payment_options = [
       'can_pay_deposit' => (bool) $deposit_effective,
       'deposit_deadline' => $deadline_iso,
@@ -84,6 +93,12 @@ class Casanova_Payments_Service {
       'deposit_amount' => round($deposit_amount, 2),
       'pending_amount' => round($pending, 2),
     ];
+
+    if ($is_read_only) {
+      $payment_options['can_pay_deposit'] = false;
+      $payment_options['can_pay_full'] = false;
+      $payment_options['recommended'] = null;
+    }
 
     if (!function_exists('casanova_portal_pay_expediente_url')) {
       $pay_url = add_query_arg([
@@ -139,7 +154,7 @@ class Casanova_Payments_Service {
       'paid' => $paid,
       'pending' => $pending,
       'currency' => 'EUR',
-      'can_pay' => $pending > 0.01,
+      'can_pay' => !$is_read_only && $pending > 0.01,
       'pay_url' => $pay_url,
       'history' => self::fetch_cobros_history($idExpediente, $idCliente, $payer_default),
       'expediente_pagado' => $is_paid,
@@ -148,11 +163,11 @@ class Casanova_Payments_Service {
       'payment_methods' => $payment_methods,
       'actions' => [
         'deposit' => [
-          'allowed' => (bool) $payment_options['can_pay_deposit'],
+          'allowed' => !$is_read_only && (bool) $payment_options['can_pay_deposit'],
           'amount' => (float) $payment_options['deposit_amount'],
         ],
         'balance' => [
-          'allowed' => (bool) $payment_options['can_pay_full'],
+          'allowed' => !$is_read_only && (bool) $payment_options['can_pay_full'],
           'amount' => (float) $payment_options['pending_amount'],
         ],
       ],

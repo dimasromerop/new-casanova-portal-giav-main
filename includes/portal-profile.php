@@ -21,9 +21,19 @@ function casanova_portal_trunc_dni(string $dni): string {
   return substr($dni, 0, 2) . str_repeat('•', max(0, $len - 4)) . substr($dni, -2);
 }
 
+function casanova_profile_client_cache_key(int $idCliente): string {
+  return 'casanova_profile_client_' . max(0, $idCliente);
+}
+
 function casanova_giav_cliente_get_by_id(int $idCliente) {
   $id = (int)$idCliente;
   if ($id <= 0) return new WP_Error('bad_id', __('ID de cliente inválido.', 'casanova-portal'));
+
+  $cache_key = casanova_profile_client_cache_key($id);
+  $cached = get_transient($cache_key);
+  if (is_object($cached)) {
+    return $cached;
+  }
 
   $p = new stdClass();
   $p->apikey = defined('CASANOVA_GIAV_APIKEY') ? CASANOVA_GIAV_APIKEY : '';
@@ -47,6 +57,7 @@ function casanova_giav_cliente_get_by_id(int $idCliente) {
     return new WP_Error('giav_empty', __('No se han podido cargar los datos del cliente.', 'casanova-portal'));
   }
 
+  set_transient($cache_key, $c, 5 * MINUTE_IN_SECONDS);
   return $c;
 }
 
@@ -216,6 +227,7 @@ function casanova_giav_cliente_update_direccion(int $idCliente, array $addr): bo
 
   // Invalidate cache (si lo usas)
   delete_transient('casanova_profile_' . get_current_user_id());
+  delete_transient(casanova_profile_client_cache_key($idCliente));
 
   return true;
 }
@@ -229,8 +241,15 @@ function casanova_portal_handle_update_address(): void {
     exit;
   }
 
-  $user_id = (int)get_current_user_id();
-  $idCliente = (int)get_user_meta($user_id, 'casanova_idcliente', true);
+  if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) {
+    $redirect = wp_get_referer();
+    if (!$redirect) $redirect = home_url('/');
+    wp_safe_redirect(add_query_arg(['casanova_profile'=>'error','casanova_notice'=>'address_error'], $redirect));
+    exit;
+  }
+
+  $user_id = (int) casanova_portal_get_effective_user_id();
+  $idCliente = (int) casanova_portal_get_effective_client_id($user_id);
 
   // Redirigimos al referer por defecto
   $redirect = wp_get_referer();
@@ -274,8 +293,8 @@ add_shortcode('casanova_mis_datos', function () {
 
   if (!is_user_logged_in()) return '<p>' . esc_html__('Debes iniciar sesión.', 'casanova-portal') . '</p>';
 
-  $user_id   = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = (int) casanova_portal_get_effective_user_id();
+  $idCliente = (int) casanova_portal_get_effective_client_id($user_id);
   if ($idCliente <= 0) return '<p>' . esc_html__('Tu cuenta no está vinculada todavía.', 'casanova-portal') . '</p>';
 
   $c = casanova_giav_cliente_get_by_id($idCliente);
@@ -296,6 +315,8 @@ add_shortcode('casanova_mis_datos', function () {
   $poblacion = (string)($c->Poblacion ?? '');
   $provincia = (string)($c->Provincia ?? '');
   $pais      = (string)($c->Pais ?? '');
+  $read_only = function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only();
+  $readonly_attr = $read_only ? ' readonly disabled' : '';
 
   $action = admin_url('admin-post.php');
 
@@ -321,6 +342,9 @@ add_shortcode('casanova_mis_datos', function () {
     echo '<div class="casanova-divider"></div>';
     echo '<div class="casanova-subtitle">' . esc_html__('Dirección de facturación', 'casanova-portal') . '</div>';
 
+      if ($read_only) {
+        echo '<div class="casanova-alert casanova-alert--warn"><strong>' . esc_html__('Vista cliente en modo solo lectura.', 'casanova-portal') . '</strong> ' . esc_html__('No se pueden guardar cambios mientras estÃ¡ activa la impersonaciÃ³n.', 'casanova-portal') . '</div>';
+      }
       echo '<form method="post" action="' . esc_url($action) . '" class="casanova-profile-form">';
   echo '<input type="hidden" name="action" value="casanova_update_address">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr(wp_create_nonce('casanova_update_address_' . $idCliente)) . '">';
@@ -328,33 +352,37 @@ add_shortcode('casanova_mis_datos', function () {
   echo '<div class="casanova-kv" style="max-width:560px;">';
 
     echo '<label><strong>' . esc_html__('Dirección', 'casanova-portal') . '</strong><br>';
-      echo '<input type="text" name="direccion" value="' . esc_attr($direccion) . '" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+      echo '<input type="text" name="direccion" value="' . esc_attr($direccion) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
     echo '</label>';
 
     echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
       echo '<label><strong>' . esc_html__('CP', 'casanova-portal') . '</strong><br>';
-        echo '<input type="text" name="codPostal" value="' . esc_attr($codPostal) . '" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+        echo '<input type="text" name="codPostal" value="' . esc_attr($codPostal) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
       echo '</label>';
 
       echo '<label><strong>' . esc_html__('Población', 'casanova-portal') . '</strong><br>';
-        echo '<input type="text" name="poblacion" value="' . esc_attr($poblacion) . '" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+        echo '<input type="text" name="poblacion" value="' . esc_attr($poblacion) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
       echo '</label>';
     echo '</div>';
 
     echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
       echo '<label><strong>' . esc_html__('Provincia', 'casanova-portal') . '</strong><br>';
-        echo '<input type="text" name="provincia" value="' . esc_attr($provincia) . '" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+        echo '<input type="text" name="provincia" value="' . esc_attr($provincia) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
       echo '</label>';
 
       echo '<label><strong>' . esc_html__('País', 'casanova-portal') . '</strong><br>';
-        echo '<input type="text" name="pais" value="' . esc_attr($pais) . '" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+        echo '<input type="text" name="pais" value="' . esc_attr($pais) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
       echo '</label>';
     echo '</div>';
 
   echo '</div>';
 
   echo '<div style="margin-top:12px;">';
-    echo '<button type="submit" class="casanova-btn-submit"><span class="label">' . esc_html__('Guardar dirección', 'casanova-portal') . '</span><span class="spinner" aria-hidden="true"></span></button>';
+    if ($read_only) {
+      echo '<span class="casanova-btn-submit" style="display:inline-flex;opacity:.6;pointer-events:none;"><span class="label">' . esc_html__('Edición desactivada en vista cliente', 'casanova-portal') . '</span></span>';
+    } else {
+      echo '<button type="submit" class="casanova-btn-submit"><span class="label">' . esc_html__('Guardar dirección', 'casanova-portal') . '</span><span class="spinner" aria-hidden="true"></span></button>';
+    }
   echo '</div>';
 
   echo '<div class="casanova-note">' . esc_html__('Por seguridad, el DNI y el email no se pueden modificar desde aquí.', 'casanova-portal') . '</div>';

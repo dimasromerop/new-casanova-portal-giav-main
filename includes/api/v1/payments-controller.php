@@ -103,8 +103,12 @@ class Casanova_Payments_Controller {
       );
     }
 
-    $user_id = get_current_user_id();
-    $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+    $user_id = function_exists('casanova_portal_get_effective_user_id')
+      ? casanova_portal_get_effective_user_id()
+      : get_current_user_id();
+    $idCliente = function_exists('casanova_portal_get_effective_client_id')
+      ? casanova_portal_get_effective_client_id($user_id)
+      : (int) get_user_meta($user_id, 'casanova_idcliente', true);
     if ($idCliente <= 0) {
       return self::error_response(
         esc_html__('Tu cuenta no está vinculada a un cliente.', 'casanova-portal'),

@@ -100,9 +100,13 @@ function casanova_giav_factura_pdf_get(int $idFactura) {
  * Se invoca desde portal-actions.php cuando casanova_action=invoice_pdf.
  */
 function casanova_handle_invoice_pdf(): void {
- $user_id     = get_current_user_id();
+ $user_id     = function_exists('casanova_portal_get_effective_user_id')
+   ? casanova_portal_get_effective_user_id()
+   : get_current_user_id();
  $idExpediente = (int) ($_GET['expediente'] ?? 0);
- $user_id = get_current_user_id();
+ $user_id = function_exists('casanova_portal_get_effective_user_id')
+   ? casanova_portal_get_effective_user_id()
+   : get_current_user_id();
 
 if (function_exists('casanova_log')) {
   casanova_log('invoice_pdf', 'download requested', [
@@ -127,8 +131,12 @@ if (!casanova_user_can_access_expediente($user_id, $idExpediente)) {
     wp_die('Nonce inválido.');
   }
 
-  $user_id   = get_current_user_id();
-  $idCliente = (int)get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = function_exists('casanova_portal_get_effective_user_id')
+    ? casanova_portal_get_effective_user_id()
+    : get_current_user_id();
+  $idCliente = function_exists('casanova_portal_get_effective_client_id')
+    ? casanova_portal_get_effective_client_id($user_id)
+    : (int)get_user_meta($user_id, 'casanova_idcliente', true);
   if ($idCliente <= 0) wp_die(esc_html__('Cuenta no vinculada.', 'casanova-portal'));
 
   // Seguridad: comprobar que esta factura pertenece al expediente y cliente
@@ -241,8 +249,8 @@ add_shortcode('casanova_facturas', function () {
 
   if (!is_user_logged_in()) return '<p>' . esc_html__('Debes iniciar sesión.', 'casanova-portal') . '</p>';
 
-  $user_id   = get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
   if ($idCliente <= 0) return '<p>' . esc_html__('Tu cuenta no está vinculada todavía.', 'casanova-portal') . '</p>';
 
   $idExpediente = isset($_GET['expediente']) ? (int) $_GET['expediente'] : 0;

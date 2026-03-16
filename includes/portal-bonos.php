@@ -187,6 +187,11 @@ function casanova_bonos_for_expediente(int $idCliente, int $idExpediente): array
  * Guarda el primer avistamiento de cada bono por usuario, para badge "Nuevo".
  */
 function casanova_bonos_update_seen(int $user_id, array $available_keys): array {
+  if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) {
+    $existing = get_user_meta($user_id, 'casanova_bonos_seen', true);
+    return is_array($existing) ? $existing : [];
+  }
+
   $seen = get_user_meta($user_id, 'casanova_bonos_seen', true);
   if (!is_array($seen)) $seen = [];
 
@@ -265,8 +270,8 @@ add_shortcode('casanova_bonos', function($atts = []) {
     'show_all_label' => '0',
   ], (array)$atts);
 
-  $user_id = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id = (int) casanova_portal_get_effective_user_id();
+  $idCliente = (int) casanova_portal_get_effective_client_id($user_id);
   if (!$idCliente) return '';
 
   $days = max(1, (int)$atts['days']);

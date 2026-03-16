@@ -87,12 +87,98 @@ function casanova_messages_seen_meta_key(int $idExpediente): string {
   return 'casanova_last_seen_msg_' . (int)$idExpediente;
 }
 
+function casanova_messages_seen_version_key(): string {
+  return 'casanova_messages_seen_version';
+}
+
+function casanova_messages_seen_version(int $user_id): int {
+  if ($user_id <= 0) return 1;
+  $version = (int) get_user_meta($user_id, casanova_messages_seen_version_key(), true);
+  return $version > 0 ? $version : 1;
+}
+
+function casanova_messages_bump_seen_version(int $user_id): int {
+  if ($user_id <= 0) return 1;
+  $version = casanova_messages_seen_version($user_id) + 1;
+  update_user_meta($user_id, casanova_messages_seen_version_key(), $version);
+  return $version;
+}
+
 /** Marca como vistos los mensajes de un expediente hasta $ts (timestamp). */
 function casanova_messages_mark_seen(int $user_id, int $idExpediente, int $ts): void {
   if ($user_id <= 0 || $idExpediente <= 0 || $ts <= 0) return;
+  if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) return;
   $key = casanova_messages_seen_meta_key($idExpediente);
   $cur = (int) get_user_meta($user_id, $key, true);
-  if ($ts > $cur) update_user_meta($user_id, $key, $ts);
+  if ($ts > $cur) {
+    update_user_meta($user_id, $key, $ts);
+    casanova_messages_bump_seen_version($user_id);
+  }
+}
+
+function casanova_messages_mark_seen_for_expediente(int $user_id, int $idExpediente, int $limit = 50): void {
+  if ($user_id <= 0 || $idExpediente <= 0) return;
+
+  $comments = casanova_giav_comments_por_expediente($idExpediente, max(1, (int) $limit), 365);
+  if (is_wp_error($comments) || !is_array($comments) || empty($comments)) return;
+
+  $maxTs = 0;
+  foreach ($comments as $c) {
+    if (!is_object($c)) continue;
+    $ts = strtotime((string) ($c->CreationDate ?? '')) ?: 0;
+    if ($ts > $maxTs) $maxTs = $ts;
+  }
+
+  if ($maxTs > 0) {
+    casanova_messages_mark_seen($user_id, $idExpediente, $maxTs);
+  }
+}
+
+/**
+ * @return array{unread:int,last_message_at:?string,last_message_ts:int,author:string,direction:string,content:string,snippet:string}
+ */
+function casanova_messages_thread_summary_for_expediente(int $user_id, int $idExpediente, int $limit = 30): array {
+  $summary = [
+    'unread' => 0,
+    'last_message_at' => null,
+    'last_message_ts' => 0,
+    'author' => '',
+    'direction' => '',
+    'content' => '',
+    'snippet' => '',
+  ];
+
+  if ($user_id <= 0 || $idExpediente <= 0) return $summary;
+
+  $comments = casanova_giav_comments_por_expediente($idExpediente, max(1, (int) $limit), 365);
+  if (is_wp_error($comments) || !is_array($comments) || empty($comments)) return $summary;
+
+  $seen = (int) get_user_meta($user_id, casanova_messages_seen_meta_key($idExpediente), true);
+  $latest = $comments[0] ?? null;
+
+  foreach ($comments as $c) {
+    if (!is_object($c)) continue;
+    $ts = strtotime((string) ($c->CreationDate ?? '')) ?: 0;
+    if ($ts > $seen) $summary['unread']++;
+  }
+
+  if (!is_object($latest)) return $summary;
+
+  $body = trim((string) ($latest->Body ?? ''));
+  $body = $body !== '' ? wp_strip_all_tags($body) : '';
+  $snippet = $body;
+  if ($snippet !== '' && mb_strlen($snippet, 'UTF-8') > 140) {
+    $snippet = mb_substr($snippet, 0, 140, 'UTF-8') . '...';
+  }
+
+  $summary['last_message_at'] = !empty($latest->CreationDate) ? (string) $latest->CreationDate : null;
+  $summary['last_message_ts'] = $summary['last_message_at'] ? (strtotime((string) $summary['last_message_at']) ?: 0) : 0;
+  $summary['author'] = (string) ($latest->Author ?? $latest->Usuario ?? 'Casanova Golf');
+  $summary['direction'] = 'agency';
+  $summary['content'] = $body;
+  $summary['snippet'] = $snippet;
+
+  return $summary;
 }
 
 /** Cuenta mensajes nuevos (comentarios) por expediente para un usuario. */
@@ -184,8 +270,8 @@ add_shortcode('casanova_mensajes', function($atts){
     'title' => 1,
   ], (array)$atts, 'casanova_mensajes');
 
-  $user_id = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id = (int) casanova_portal_get_effective_user_id();
+  $idCliente = (int) casanova_portal_get_effective_client_id($user_id);
   if ($idCliente <= 0) return '';
 
   $idExp = 0;
@@ -258,8 +344,8 @@ add_shortcode('casanova_card_mensajes', function($atts){
     'cta' => 1,
   ], (array)$atts, 'casanova_card_mensajes');
 
-  $user_id = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id = (int) casanova_portal_get_effective_user_id();
+  $idCliente = (int) casanova_portal_get_effective_client_id($user_id);
   if ($idCliente <= 0) return '';
 
   $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/area-usuario/');

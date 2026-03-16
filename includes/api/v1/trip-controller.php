@@ -39,30 +39,61 @@ class Casanova_Trip_Controller {
 
   public static function handle(WP_REST_Request $request) {
     casanova_portal_clear_rest_output();
+
+    $perf_start = function_exists('casanova_perf_now') ? casanova_perf_now() : microtime(true);
+    $perf_error = null;
+    $response = null;
+    $user_id = function_exists('casanova_portal_get_effective_user_id')
+      ? casanova_portal_get_effective_user_id()
+      : get_current_user_id();
+    $idCliente = function_exists('casanova_portal_get_effective_client_id')
+      ? casanova_portal_get_effective_client_id($user_id)
+      : (int) get_user_meta($user_id, 'casanova_idcliente', true);
+    $id = (int) $request->get_param('id');
+    $perf_context = [
+      'user_id' => (int) $user_id,
+      'idCliente' => (int) $idCliente,
+      'expediente_id' => (int) $id,
+      'mock' => (int) $request->get_param('mock') === 1 ? 1 : 0,
+      'refresh' => (int) $request->get_param('refresh') === 1 ? 1 : 0,
+    ];
+
     try {
-      $user_id = get_current_user_id();
-      $id = (int) $request->get_param('id');
       if ($id <= 0) {
-        return new WP_REST_Response([
+        $response = new WP_REST_Response([
           'status' => 'invalid',
-          'message' => __('Expediente inválido', 'casanova-portal'),
+          'message' => __('Expediente invÃ¡lido', 'casanova-portal'),
         ], 400);
+        return $response;
       }
+
       $refresh = (int) $request->get_param('refresh') === 1;
       if ($refresh && function_exists('casanova_invalidate_customer_cache')) {
-        $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
         casanova_invalidate_customer_cache($user_id, $idCliente, $id);
       }
+
       $data = Casanova_Trip_Service::get_trip_for_user($user_id, $id, $request);
       if (is_wp_error($data)) {
-        return $data;
+        $response = $data;
+        return $response;
       }
+
+      $perf_context['has_trip'] = !empty($data['trip']) ? 1 : 0;
+      $perf_context['has_package'] = !empty($data['package']) ? 1 : 0;
+      $perf_context['extras_count'] = count((array) ($data['extras'] ?? []));
+      $perf_context['invoice_count'] = count((array) ($data['invoices'] ?? []));
+      $perf_context['voucher_count'] = count((array) ($data['vouchers'] ?? []));
+      $perf_context['messages_unread'] = (int) ($data['messages_meta']['unread_count'] ?? 0);
+
       if (!$refresh && (int) $request->get_param('mock') !== 1 && function_exists('casanova_rest_enable_private_cache')) {
         casanova_rest_enable_private_cache(60, 300);
       }
-      return rest_ensure_response($data);
-    } catch (Exception $e) {
-      return new WP_REST_Response([
+
+      $response = rest_ensure_response($data);
+      return $response;
+    } catch (Throwable $e) {
+      $perf_error = $e;
+      $response = new WP_REST_Response([
         'status' => 'degraded',
         'giav'   => ['ok' => false, 'source' => 'live', 'error' => $e->getMessage()],
         'trip'   => null,
@@ -74,6 +105,11 @@ class Casanova_Trip_Controller {
         'vouchers' => [],
         'messages_meta' => ['unread_count' => 0, 'last_message_at' => null],
       ], 200);
+      return $response;
+    } finally {
+      if (function_exists('casanova_perf_observe_rest')) {
+        casanova_perf_observe_rest('trip', $perf_start, $response, $perf_context, $perf_error);
+      }
     }
   }
 }

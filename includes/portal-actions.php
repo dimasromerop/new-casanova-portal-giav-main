@@ -90,8 +90,8 @@ add_action('init', function () {
 function casanova_handle_voucher_html(): void {
   if (!is_user_logged_in()) wp_die(esc_html__('No autorizado', 'casanova-portal'), 403);
 
-  $user_id   = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
 
   // Mejor GET: es un endpoint de enlace, no un formulario
   $idExpediente = (int) ($_GET['expediente'] ?? 0);
@@ -133,8 +133,11 @@ function casanova_handle_voucher_html(): void {
   }
 
   // Cliente
-  $u = wp_get_current_user();
-  $cliente_nombre = trim((string)$u->display_name);
+  $u = function_exists('casanova_portal_get_effective_user') ? casanova_portal_get_effective_user() : wp_get_current_user();
+  $cliente_nombre = $u ? trim((string)$u->display_name) : '';
+  if ($cliente_nombre === '' && function_exists('casanova_portal_impersonation_client_name')) {
+    $cliente_nombre = trim((string) casanova_portal_impersonation_client_name());
+  }
 
   // Proveedor
   $idProveedor = (int)($reserva->IdProveedor ?? 0);
@@ -213,8 +216,8 @@ add_action('admin_post_nopriv_casanova_voucher', 'casanova_handle_voucher_html')
 function casanova_handle_voucher_pdf(): void {
   if (!is_user_logged_in()) wp_die(esc_html__('No autorizado', 'casanova-portal'), 403);
 
-  $user_id = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
 
   $idExpediente = (int) ($_REQUEST['expediente'] ?? 0);
   $idReserva    = (int) ($_REQUEST['reserva'] ?? 0);
@@ -264,8 +267,11 @@ function casanova_handle_voucher_pdf(): void {
   $pasajeros = casanova_giav_pasajeros_para_bono($idReserva, $idExpediente);
 
   // Cliente
-  $u = wp_get_current_user();
-  $cliente_nombre = trim((string)$u->display_name);
+  $u = function_exists('casanova_portal_get_effective_user') ? casanova_portal_get_effective_user() : wp_get_current_user();
+  $cliente_nombre = $u ? trim((string)$u->display_name) : '';
+  if ($cliente_nombre === '' && function_exists('casanova_portal_impersonation_client_name')) {
+    $cliente_nombre = trim((string) casanova_portal_impersonation_client_name());
+  }
 
   // HTML
   $html = casanova_render_voucher_html([
@@ -308,8 +314,8 @@ add_action('admin_post_nopriv_casanova_voucher_pdf', 'casanova_handle_voucher_pd
 function casanova_handle_itinerary_pdf(): void {
   if (!is_user_logged_in()) wp_die(esc_html__('No autorizado', 'casanova-portal'), 403);
 
-  $user_id = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta((int)$user_id, 'casanova_idcliente', true);
+  $user_id = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
   $idExpediente = (int) ($_REQUEST['expediente'] ?? 0);
 
   if (!$idCliente || $idExpediente <= 0) {

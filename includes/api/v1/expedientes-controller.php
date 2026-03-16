@@ -43,8 +43,12 @@ class Casanova_Expedientes_Controller {
   public static function handle(WP_REST_Request $request) {
     casanova_portal_clear_rest_output();
     try {
-      $user_id = get_current_user_id();
-      $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+      $user_id = function_exists('casanova_portal_get_effective_user_id')
+        ? casanova_portal_get_effective_user_id()
+        : get_current_user_id();
+      $idCliente = function_exists('casanova_portal_get_effective_client_id')
+        ? casanova_portal_get_effective_client_id($user_id)
+        : (int) get_user_meta($user_id, 'casanova_idcliente', true);
       if (!$idCliente) {
         return new WP_Error('rest_forbidden', __('Acceso denegado', 'casanova-portal'), ['status' => 403]);
       }

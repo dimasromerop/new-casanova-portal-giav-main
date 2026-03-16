@@ -14,13 +14,18 @@ class Casanova_Messages_Service {
    * @return array<string,mixed>
    */
   public static function get_messages_for_user(int $user_id, WP_REST_Request $request): array {
+    $user_id = function_exists('casanova_portal_resolve_user_id')
+      ? casanova_portal_resolve_user_id($user_id)
+      : $user_id;
 
     $mock = (int) $request->get_param('mock') === 1;
     if ($mock && current_user_can('manage_options')) {
       return self::mock_response($request);
     }
 
-    $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+    $idCliente = function_exists('casanova_portal_get_effective_client_id')
+      ? casanova_portal_get_effective_client_id($user_id)
+      : (int) get_user_meta($user_id, 'casanova_idcliente', true);
     if (!$idCliente) {
       return [
         'status' => 'ok',
@@ -68,11 +73,26 @@ class Casanova_Messages_Service {
       if (is_wp_error($comments) || !is_array($comments)) $comments = [];
 
       $items = [];
+      $seen = function_exists('casanova_messages_seen_meta_key')
+        ? (int) get_user_meta($user_id, casanova_messages_seen_meta_key($expediente), true)
+        : 0;
+      $latest_ts = 0;
+      $unread = 0;
+
       foreach ($comments as $c) {
         if (!is_object($c)) continue;
+        $date = (string) ($c->CreationDate ?? $c->Fecha ?? '');
+        $ts = $date !== '' ? (strtotime($date) ?: 0) : 0;
+        if ($ts > $seen) {
+          $unread++;
+        }
+        if ($ts > $latest_ts) {
+          $latest_ts = $ts;
+        }
+
         $items[] = [
           'id'           => (string) ($c->Id ?? $c->ID ?? $c->IdComment ?? ''),
-          'date'         => (string) ($c->CreationDate ?? $c->Fecha ?? ''),
+          'date'         => $date,
           'author'       => (string) ($c->Author ?? $c->Usuario ?? 'Casanova Golf'),
           'direction'    => 'agency',
           'content'      => (string) ($c->Body ?? ''),
@@ -80,14 +100,10 @@ class Casanova_Messages_Service {
         ];
       }
 
-      $unread = function_exists('casanova_messages_new_count_for_expediente')
-        ? (int) casanova_messages_new_count_for_expediente($user_id, $expediente, 30)
-        : 0;
-
       // mark_seen: solo meta local (no toca GIAV)
       $mark_seen = (int) $request->get_param('mark_seen') === 1;
-      if ($mark_seen && function_exists('casanova_messages_mark_seen_for_expediente')) {
-        casanova_messages_mark_seen_for_expediente($user_id, $expediente);
+      if ($mark_seen && !casanova_portal_is_read_only() && $latest_ts > 0 && function_exists('casanova_messages_mark_seen')) {
+        casanova_messages_mark_seen($user_id, $expediente, $latest_ts);
         $unread = 0;
       }
 

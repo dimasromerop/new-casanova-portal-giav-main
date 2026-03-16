@@ -168,6 +168,108 @@ if (!function_exists('casanova_giav_expediente_search_simple')) {
   }
 }
 
+if (!function_exists('casanova_giav_cliente_search_extract_items')) {
+  /**
+   * Normaliza respuestas de Cliente_SEARCH a una lista de WsCliente.
+   */
+  function casanova_giav_cliente_search_extract_items($resp): array {
+    if (is_wp_error($resp) || !is_object($resp)) {
+      return [];
+    }
+
+    $container = $resp->Cliente_SEARCHResult ?? $resp;
+    $items = casanova_giav_normalize_list($container, 'WsCliente');
+    if (!empty($items)) {
+      return $items;
+    }
+
+    if (is_object($container) && isset($container->WsClientes)) {
+      $items = casanova_giav_normalize_list($container->WsClientes, 'WsCliente');
+      if (!empty($items)) {
+        return $items;
+      }
+    }
+
+    if (is_object($container) && isset($container->WsCliente) && is_object($container->WsCliente)) {
+      return [$container->WsCliente];
+    }
+
+    return [];
+  }
+}
+
+if (!function_exists('casanova_giav_cliente_search_simple')) {
+  /**
+   * Simple Cliente search helper to find GIAV client IDs for support/admin flows.
+   *
+   * Search strategy:
+   * - Exact numeric ID via Cliente_GET.
+   * - Exact DNI/passport via Cliente_SEARCH(documento).
+   * - Fallback by email or name via Cliente_SEARCH.
+   */
+  function casanova_giav_cliente_search_simple(string $q, int $pageSize = 25, int $pageIndex = 0) {
+    $q = trim((string) $q);
+    if ($q === '') {
+      return [];
+    }
+
+    $pageSize = max(1, min(100, (int) $pageSize));
+    $pageIndex = max(0, (int) $pageIndex);
+    $dni_candidate = strtoupper((string) preg_replace('/\s+/', '', $q));
+
+    if (ctype_digit($q) && function_exists('casanova_giav_cliente_get_by_id')) {
+      $exact = casanova_giav_cliente_get_by_id((int) $q);
+      if (!is_wp_error($exact) && is_object($exact)) {
+        return [$exact];
+      }
+      if (is_wp_error($exact) && !in_array($exact->get_error_code(), ['bad_id', 'giav_empty'], true)) {
+        return $exact;
+      }
+    }
+
+    if (
+      preg_match('/^[A-Z0-9-]{5,20}$/', $dni_candidate)
+      && function_exists('casanova_giav_cliente_search_por_dni')
+    ) {
+      $by_dni = casanova_giav_cliente_search_por_dni($dni_candidate);
+      if (is_wp_error($by_dni)) {
+        return $by_dni;
+      }
+
+      $items = casanova_giav_cliente_search_extract_items($by_dni);
+      if (!empty($items)) {
+        return $items;
+      }
+    }
+
+    $is_email = function_exists('is_email') ? (bool) is_email($q) : (bool) filter_var($q, FILTER_VALIDATE_EMAIL);
+
+    $params = new stdClass();
+    $params->apikey = defined('CASANOVA_GIAV_APIKEY') ? CASANOVA_GIAV_APIKEY : '';
+    $params->idsCliente = null;
+    $params->nombre = $is_email ? null : $q;
+    $params->apellidos = null;
+    $params->email = $is_email ? $q : null;
+    $params->documento = null;
+    $params->documentoModo = 'Ambos';
+    $params->documentoExacto = false;
+    $params->rgpdSigned = 'NoAplicar';
+    $params->modoFecha = 'Creacion';
+    $params->fechaHoraDesde = null;
+    $params->fechaHoraHasta = null;
+    $params->incluirDeshabilitados = false;
+    $params->pageSize = $pageSize;
+    $params->pageIndex = $pageIndex;
+
+    $resp = casanova_giav_call('Cliente_SEARCH', $params);
+    if (is_wp_error($resp)) {
+      return $resp;
+    }
+
+    return casanova_giav_cliente_search_extract_items($resp);
+  }
+}
+
 add_action('rest_api_init', function () {
   // List GIAV payment methods (Formas de pago)
   register_rest_route('casanova/v1', '/giav/payment-methods', [

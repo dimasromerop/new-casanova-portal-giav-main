@@ -82,8 +82,8 @@ function casanova_giav_expedientes_por_cliente_uncached(int $idCliente, int $pag
 add_shortcode('casanova_expedientes', function($atts) {
   if (!is_user_logged_in()) return '<p>' . esc_html__('Debes iniciar sesión.', 'casanova-portal') . '</p>';
 
-  $user_id   = get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
 
   if (!$idCliente) {
     return '<p>' . esc_html__('No tienes la cuenta vinculada todavía.', 'casanova-portal') . '</p>';
@@ -220,8 +220,8 @@ add_shortcode('casanova_expedientes', function($atts) {
 add_shortcode('casanova_expediente_header', function() {
   if (!is_user_logged_in()) return '';
 
-  $user_id   = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
 
   $idExp = isset($_GET['expediente']) ? (int)$_GET['expediente'] : 0;
 
@@ -323,8 +323,8 @@ function casanova_giav_expediente_get_uncached(int $idExpediente) {
 add_shortcode('casanova_expediente_detalle', function() {
   if (!is_user_logged_in()) return '<p>' . esc_html__('Debes iniciar sesión.', 'casanova-portal') . '</p>';
 
-  $user_id   = get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
 
   if (!$idCliente) return '<p>' . esc_html__('No tienes la cuenta vinculada todavía.', 'casanova-portal') . '</p>';
 

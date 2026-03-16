@@ -240,8 +240,8 @@ add_shortcode('casanova_portal', function($atts = []) {
     ) . '</p>';
   }
 
-  $user_id = get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
   $view = casanova_portal_get_view();
   $items = casanova_portal_menu_items();
 
@@ -296,7 +296,11 @@ add_shortcode('casanova_portal', function($atts = []) {
   if ($tpl_id > 0) $content = casanova_portal_render_bricks_template($tpl_id);
   if (!$content) $content = casanova_portal_fallback_content($view, $user_id);
 
-  $html  = '<div class="casanova-app">';
+  $html  = '';
+  if (function_exists('casanova_portal_render_impersonation_banner')) {
+    $html .= casanova_portal_render_impersonation_banner();
+  }
+  $html .= '<div class="casanova-app">';
   $html .= '  <aside class="casanova-sidebar" aria-label="' . esc_attr__('Navegación del portal', 'casanova-portal') . '">';
   $html .= '    <div class="casanova-sidebar-inner">';
   $html .= '      <div class="casanova-nav">';

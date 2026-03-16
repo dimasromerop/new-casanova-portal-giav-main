@@ -162,7 +162,7 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
       ], 'INESPAY');
     }
 
-
+    /*
     // Resolver pagador real (idCliente) por DNI, para que el cobro quede asignado al que paga.
     $payer_id_cliente = (int)($intent->id_cliente ?? 0);
     if ($billing_dni !== '' && function_exists('casanova_giav_cliente_search_por_dni') && function_exists('casanova_giav_extraer_idcliente')) {
@@ -298,6 +298,7 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
       'error' => 'unexpected_response',
       'raw' => is_scalar($res) ? (string)$res : null,
     ];
+    */
     return $result;
   }
 }

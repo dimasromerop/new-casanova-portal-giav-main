@@ -417,8 +417,12 @@ function casanova_handle_pay_expediente(): void {
   }
   error_log('[CASANOVA][PAY] B nonce ok');
 
-  $user_id   = (int) get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) {
+    wp_die(casanova_portal_impersonation_message(), 403);
+  }
+
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
 
   error_log('[CASANOVA][PAY] C user_id=' . $user_id . ' idCliente=' . $idCliente);
 

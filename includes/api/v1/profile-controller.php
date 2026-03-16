@@ -4,27 +4,27 @@ if (!defined('ABSPATH')) exit;
 /**
  * REST: Perfil de usuario (portal cliente)
  *
- * Principio: React solo consume REST. Toda la lógica (GIAV + WP) vive aquí.
+ * Principio: React solo consume REST. Toda la lÃ³gica (GIAV + WP) vive aquÃ­.
  */
 class Casanova_Profile_Controller {
 
   /**
    * Devuelve una URL del portal en el idioma WPML indicado.
-   * - Si WPML no está activo, devuelve la base URL tal cual.
-   * - Si WPML está activo, usa su filtro oficial para resolver el permalink.
+   * - Si WPML no estÃ¡ activo, devuelve la base URL tal cual.
+   * - Si WPML estÃ¡ activo, usa su filtro oficial para resolver el permalink.
    */
   private static function wpml_portal_url_for_lang(string $lang): string {
     $base = function_exists('casanova_portal_base_url') ? (string) casanova_portal_base_url() : home_url('/portal-app/');
     $lang = strtolower(trim($lang));
     if ($lang === '') return $base;
 
-    // WPML: usar el filtro oficial si está disponible.
+    // WPML: usar el filtro oficial si estÃ¡ disponible.
     if (has_filter('wpml_permalink')) {
       $u = apply_filters('wpml_permalink', $base, $lang);
       if (is_string($u) && $u !== '') return $u;
     }
 
-    // Fallback (por si WPML está instalado pero el filtro no está accesible en este contexto)
+    // Fallback (por si WPML estÃ¡ instalado pero el filtro no estÃ¡ accesible en este contexto)
     if (defined('ICL_SITEPRESS_VERSION') && function_exists('apply_filters')) {
       $u = apply_filters('wpml_permalink', $base, $lang);
       if (is_string($u) && $u !== '') return $u;
@@ -65,7 +65,9 @@ class Casanova_Profile_Controller {
   }
 
   private static function get_user_idcliente(int $user_id): int {
-    return (int) get_user_meta($user_id, 'casanova_idcliente', true);
+    return function_exists('casanova_portal_get_effective_client_id')
+      ? casanova_portal_get_effective_client_id($user_id)
+      : (int) get_user_meta($user_id, 'casanova_idcliente', true);
   }
 
   private static function map_giav_cliente($c): array {
@@ -90,43 +92,71 @@ class Casanova_Profile_Controller {
   }
 
   public static function get_profile(WP_REST_Request $request) {
-    $user_id = (int) get_current_user_id();
-    if ($user_id <= 0) return new WP_Error('not_logged_in', __('Debes iniciar sesión.', 'casanova-portal'), ['status' => 401]);
+    $auth_user_id = (int) get_current_user_id();
+    if ($auth_user_id <= 0) return new WP_Error('not_logged_in', __('Debes iniciar sesiÃ³n.', 'casanova-portal'), ['status' => 401]);
+
+    $user_id = function_exists('casanova_portal_get_effective_user_id')
+      ? casanova_portal_get_effective_user_id()
+      : $auth_user_id;
 
     $idCliente = self::get_user_idcliente($user_id);
     if ($idCliente <= 0) {
-      return new WP_Error('not_linked', __('Tu cuenta no está vinculada todavía.', 'casanova-portal'), ['status' => 409]);
+      return new WP_Error('not_linked', __('Tu cuenta no estÃ¡ vinculada todavÃ­a.', 'casanova-portal'), ['status' => 409]);
     }
 
     $c = function_exists('casanova_giav_cliente_get_by_id') ? casanova_giav_cliente_get_by_id($idCliente) : null;
     if (is_wp_error($c)) return $c;
 
-    $user = get_userdata($user_id);
-    $locale = (string) get_user_meta($user_id, 'casanova_portal_locale', true);
+    $user = $user_id > 0 ? get_userdata($user_id) : null;
+    $giav = self::map_giav_cliente($c);
+    $locale_user_id = $user instanceof WP_User ? $user_id : $auth_user_id;
+    $locale = (string) get_user_meta($locale_user_id, 'casanova_portal_locale', true);
     if ($locale === '') {
-      $locale = (string) get_user_locale($user_id);
+      $locale = (string) get_user_locale($locale_user_id);
+    }
+    if ($locale === '') {
+      $locale = (string) get_locale();
+    }
+
+    $display_name = $user ? (string)($user->display_name ?? '') : '';
+    if ($display_name === '') {
+      $display_name = trim((string) (($giav['nombre'] ?? '') . ' ' . ($giav['apellidos'] ?? '')));
+    }
+    if ($display_name === '' && function_exists('casanova_portal_impersonation_client_name')) {
+      $display_name = (string) casanova_portal_impersonation_client_name();
+    }
+
+    if (function_exists('casanova_rest_enable_private_cache')) {
+      casanova_rest_enable_private_cache(60, 300);
     }
 
     return [
       'user' => [
         'id' => $user_id,
-        'displayName' => $user ? (string)($user->display_name ?? '') : '',
-        'email' => $user ? (string)($user->user_email ?? '') : '',
-        'avatarUrl' => function_exists('get_avatar_url') ? (string) get_avatar_url($user_id, ['size' => 128]) : '',
+        'displayName' => $display_name,
+        'email' => $user ? (string)($user->user_email ?? '') : (string) ($giav['email'] ?? ''),
+        'avatarUrl' => ($user_id > 0 && function_exists('get_avatar_url')) ? (string) get_avatar_url($user_id, ['size' => 128]) : '',
       ],
-      'giav' => self::map_giav_cliente($c),
+      'giav' => $giav,
       'locale' => $locale,
+      'previewOnly' => function_exists('casanova_portal_is_preview_only') ? casanova_portal_is_preview_only() : false,
       'logoutUrl' => wp_logout_url(home_url('/')),
     ];
   }
 
   public static function update_profile(WP_REST_Request $request) {
-    $user_id = (int) get_current_user_id();
-    if ($user_id <= 0) return new WP_Error('not_logged_in', __('Debes iniciar sesión.', 'casanova-portal'), ['status' => 401]);
+    if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) {
+      return new WP_Error('impersonation_read_only', casanova_portal_impersonation_message(), ['status' => 403]);
+    }
+
+    $user_id = function_exists('casanova_portal_get_effective_user_id')
+      ? casanova_portal_get_effective_user_id()
+      : (int) get_current_user_id();
+    if ($user_id <= 0) return new WP_Error('not_logged_in', __('Debes iniciar sesiÃ³n.', 'casanova-portal'), ['status' => 401]);
 
     $idCliente = self::get_user_idcliente($user_id);
     if ($idCliente <= 0) {
-      return new WP_Error('not_linked', __('Tu cuenta no está vinculada todavía.', 'casanova-portal'), ['status' => 409]);
+      return new WP_Error('not_linked', __('Tu cuenta no estÃ¡ vinculada todavÃ­a.', 'casanova-portal'), ['status' => 409]);
     }
 
     $payload = $request->get_json_params();
@@ -143,7 +173,7 @@ class Casanova_Profile_Controller {
     ];
 
     if (!function_exists('casanova_giav_cliente_update_direccion')) {
-      return new WP_Error('missing_impl', __('No está disponible la actualización de perfil.', 'casanova-portal'), ['status' => 500]);
+      return new WP_Error('missing_impl', __('No estÃ¡ disponible la actualizaciÃ³n de perfil.', 'casanova-portal'), ['status' => 500]);
     }
 
     $r = casanova_giav_cliente_update_direccion($idCliente, $addr);
@@ -154,8 +184,14 @@ class Casanova_Profile_Controller {
   }
 
   public static function change_password(WP_REST_Request $request) {
-    $user_id = (int) get_current_user_id();
-    if ($user_id <= 0) return new WP_Error('not_logged_in', __('Debes iniciar sesión.', 'casanova-portal'), ['status' => 401]);
+    if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) {
+      return new WP_Error('impersonation_read_only', casanova_portal_impersonation_message(), ['status' => 403]);
+    }
+
+    $user_id = function_exists('casanova_portal_get_effective_user_id')
+      ? casanova_portal_get_effective_user_id()
+      : (int) get_current_user_id();
+    if ($user_id <= 0) return new WP_Error('not_logged_in', __('Debes iniciar sesiÃ³n.', 'casanova-portal'), ['status' => 401]);
 
     if (function_exists('casanova_rate_limit') && !casanova_rate_limit('password_change_' . $user_id, 5, 900)) {
       return new WP_Error('rate_limited', __('Demasiados intentos. Espera unos minutos.', 'casanova-portal'), ['status' => 429]);
@@ -169,17 +205,17 @@ class Casanova_Profile_Controller {
     $confirm = (string)($params['confirm'] ?? '');
 
     if ($next === '' || strlen($next) < 8) {
-      return new WP_Error('weak_password', __('La nueva contraseña debe tener al menos 8 caracteres.', 'casanova-portal'), ['status' => 400]);
+      return new WP_Error('weak_password', __('La nueva contraseÃ±a debe tener al menos 8 caracteres.', 'casanova-portal'), ['status' => 400]);
     }
     if ($confirm !== '' && $confirm !== $next) {
-      return new WP_Error('password_mismatch', __('Las contraseñas no coinciden.', 'casanova-portal'), ['status' => 400]);
+      return new WP_Error('password_mismatch', __('Las contraseÃ±as no coinciden.', 'casanova-portal'), ['status' => 400]);
     }
 
     $user = get_userdata($user_id);
     if (!$user) return new WP_Error('user_missing', __('No se ha encontrado el usuario.', 'casanova-portal'), ['status' => 404]);
 
     if ($current === '' || !wp_check_password($current, $user->user_pass, $user_id)) {
-      return new WP_Error('bad_current_password', __('La contraseña actual no es correcta.', 'casanova-portal'), ['status' => 400]);
+      return new WP_Error('bad_current_password', __('La contraseÃ±a actual no es correcta.', 'casanova-portal'), ['status' => 400]);
     }
 
     $updated = wp_update_user([
@@ -188,15 +224,21 @@ class Casanova_Profile_Controller {
     ]);
     if (is_wp_error($updated)) return $updated;
 
-    // Mantener sesión
+    // Mantener sesiÃ³n
     wp_set_auth_cookie($user_id, true);
 
     return ['ok' => true];
   }
 
   public static function update_locale(WP_REST_Request $request) {
-    $user_id = (int) get_current_user_id();
-    if ($user_id <= 0) return new WP_Error('not_logged_in', __('Debes iniciar sesión.', 'casanova-portal'), ['status' => 401]);
+    if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) {
+      return new WP_Error('impersonation_read_only', casanova_portal_impersonation_message(), ['status' => 403]);
+    }
+
+    $user_id = function_exists('casanova_portal_get_effective_user_id')
+      ? casanova_portal_get_effective_user_id()
+      : (int) get_current_user_id();
+    if ($user_id <= 0) return new WP_Error('not_logged_in', __('Debes iniciar sesiÃ³n.', 'casanova-portal'), ['status' => 401]);
 
     $params = $request->get_json_params();
     if (!is_array($params)) $params = [];
@@ -211,7 +253,7 @@ class Casanova_Profile_Controller {
     }
 
     if ($locale === '' && $lang === '') {
-      return new WP_Error('bad_locale', __('Idioma inválido.', 'casanova-portal'), ['status' => 400]);
+      return new WP_Error('bad_locale', __('Idioma invÃ¡lido.', 'casanova-portal'), ['status' => 400]);
     }
 
     // Guardamos preferencia del portal (no toca el locale global del WP).
@@ -222,7 +264,7 @@ class Casanova_Profile_Controller {
       update_user_meta($user_id, 'casanova_portal_lang', $lang);
     }
 
-    // Si WPML está activo, devolvemos una URL en el idioma solicitado para redirigir.
+    // Si WPML estÃ¡ activo, devolvemos una URL en el idioma solicitado para redirigir.
     $wpml_active = ($lang !== '') && (has_filter('wpml_permalink') || defined('ICL_SITEPRESS_VERSION'));
     $redirect = $wpml_active ? self::wpml_portal_url_for_lang($lang) : '';
 

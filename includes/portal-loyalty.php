@@ -324,8 +324,18 @@ function casanova_mulligans_giav_used_movements(int $idCliente, int $field_used 
 function casanova_mulligans_sync_user(int $user_id, bool $force = false): array|WP_Error {
   if ($user_id <= 0) return new WP_Error('no_user', 'Usuario inválido');
 
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id = function_exists('casanova_portal_resolve_user_id')
+    ? casanova_portal_resolve_user_id($user_id)
+    : $user_id;
+
+  $idCliente = function_exists('casanova_portal_get_effective_client_id')
+    ? casanova_portal_get_effective_client_id($user_id)
+    : (int) get_user_meta($user_id, 'casanova_idcliente', true);
   if ($idCliente <= 0) return new WP_Error('no_link', 'Usuario sin idCliente GIAV');
+
+  if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) {
+    return casanova_mulligans_get_user($user_id);
+  }
 
   $last = (int) get_user_meta($user_id, CASANOVA_MULL_META_LAST_SYNC, true);
   $ttl = 12 * HOUR_IN_SECONDS;
@@ -438,6 +448,10 @@ function casanova_mulligans_sync_user(int $user_id, bool $force = false): array|
 }
 
 function casanova_mulligans_get_user(int $user_id): array {
+  $user_id = function_exists('casanova_portal_resolve_user_id')
+    ? casanova_portal_resolve_user_id($user_id)
+    : $user_id;
+
   $spend = (float) get_user_meta($user_id, CASANOVA_MULL_META_SPEND, true);
   $tier = (string) get_user_meta($user_id, CASANOVA_MULL_META_TIER, true);
   $last = (int) get_user_meta($user_id, CASANOVA_MULL_META_LAST_SYNC, true);
@@ -455,7 +469,9 @@ function casanova_mulligans_get_user(int $user_id): array {
 
   return [
     'user_id' => $user_id,
-    'idCliente' => (int) get_user_meta($user_id, 'casanova_idcliente', true),
+    'idCliente' => function_exists('casanova_portal_get_effective_client_id')
+      ? casanova_portal_get_effective_client_id($user_id)
+      : (int) get_user_meta($user_id, 'casanova_idcliente', true),
     'spend' => $spend,
     'tier' => $tier,
     'points' => $balance,
@@ -465,6 +481,88 @@ function casanova_mulligans_get_user(int $user_id): array {
     'last_sync' => $last,
   ];
 }
+
+function casanova_mulligans_schedule_sync_user(int $user_id, bool $force = false, int $delay = 5): bool {
+  $user_id = (int) $user_id;
+  if ($user_id <= 0 || !function_exists('wp_schedule_single_event') || !function_exists('wp_next_scheduled')) {
+    return false;
+  }
+
+  $delay = max(1, (int) $delay);
+  $force_arg = $force ? 1 : 0;
+  $lock_key = 'casanova_mulligans_sync_queued_' . $user_id . '_' . $force_arg;
+
+  if (get_transient($lock_key)) {
+    return false;
+  }
+
+  if (wp_next_scheduled('casanova_mulligans_async_sync_user', [$user_id, $force_arg])) {
+    return false;
+  }
+
+  set_transient($lock_key, 1, max(30, $delay + 30));
+  $scheduled = (bool) wp_schedule_single_event(time() + $delay, 'casanova_mulligans_async_sync_user', [$user_id, $force_arg]);
+  if (!$scheduled) {
+    delete_transient($lock_key);
+  }
+
+  return $scheduled;
+}
+
+add_action('casanova_mulligans_async_sync_user', function (int $user_id, int $force_arg = 0): void {
+  $perf_start = function_exists('casanova_perf_now') ? casanova_perf_now() : microtime(true);
+  $user_id = (int) $user_id;
+  $force_arg = $force_arg ? 1 : 0;
+  delete_transient('casanova_mulligans_sync_queued_' . $user_id . '_' . $force_arg);
+
+  if ($user_id <= 0) {
+    if (function_exists('casanova_perf_measure')) {
+      casanova_perf_measure('mulligans_async_sync', $perf_start, [
+        'user_id' => $user_id,
+        'force' => $force_arg,
+        'status' => 'invalid',
+      ]);
+    }
+    return;
+  }
+
+  $result = casanova_mulligans_sync_user($user_id, (bool) $force_arg);
+  if (is_wp_error($result)) {
+    if (function_exists('casanova_log')) {
+      casanova_log('mulligans', 'Async sync user failed', [
+        'user_id' => $user_id,
+        'force' => $force_arg,
+        'error' => $result->get_error_message(),
+      ], 'error');
+    } else {
+      error_log('[CASANOVA][MULLIGANS] Async sync user ' . $user_id . ' fallo: ' . $result->get_error_message());
+    }
+    if (function_exists('casanova_perf_measure')) {
+      casanova_perf_measure('mulligans_async_sync', $perf_start, [
+        'user_id' => $user_id,
+        'force' => $force_arg,
+      ], $result);
+    }
+    return;
+  }
+
+  $idCliente = function_exists('casanova_portal_get_effective_client_id')
+    ? (int) casanova_portal_get_effective_client_id($user_id)
+    : (int) get_user_meta($user_id, 'casanova_idcliente', true);
+
+  if ($idCliente > 0) {
+    delete_transient('casanova_dash_v3_' . $idCliente);
+  }
+
+  if (function_exists('casanova_perf_measure')) {
+    casanova_perf_measure('mulligans_async_sync', $perf_start, [
+      'user_id' => $user_id,
+      'idCliente' => $idCliente,
+      'force' => $force_arg,
+      'points' => (int) ($result['points'] ?? 0),
+    ], ['status' => 'ok']);
+  }
+}, 10, 2);
 
 /**
  * Shortcode para el portal.
@@ -477,7 +575,7 @@ add_shortcode('casanova_mulligans', function ($atts) {
 
   if (!is_user_logged_in()) return '<p>' . esc_html__('Debes iniciar sesión.', 'casanova-portal') . '</p>';
 
-  $user_id = (int) get_current_user_id();
+  $user_id = (int) casanova_portal_get_effective_user_id();
   $force = isset($_GET['mulligans_sync']) && current_user_can('manage_options');
   $data = casanova_mulligans_sync_user($user_id, (bool)$force);
   if (is_wp_error($data)) {
@@ -608,7 +706,7 @@ add_shortcode('casanova_mulligans_movimientos', function($atts){
   $limit = max(1, min(50, (int)$atts['limit']));
   $embedded = !empty($atts['embedded']);
 
-  $user_id = (int) get_current_user_id();
+  $user_id = (int) casanova_portal_get_effective_user_id();
   $json = (string) get_user_meta($user_id, CASANOVA_MULL_META_LEDGER, true);
   $ledger = $json ? json_decode($json, true) : [];
   if (!is_array($ledger) || empty($ledger)) return '<p>' . esc_html__('No hay movimientos todavía.', 'casanova-portal') . '</p>';

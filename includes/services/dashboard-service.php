@@ -10,22 +10,77 @@ if (!defined('ABSPATH')) exit;
  */
 class Casanova_Dashboard_Service {
 
-  public static function build_for_user(int $user_id, bool $refresh = false): Casanova_Dashboard_DTO {
+  /**
+   * @var array<string,mixed>
+   */
+  private static array $perf_breakdown = [];
 
-    $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  private static function perf_reset(): void {
+    self::$perf_breakdown = [];
+  }
+
+  private static function perf_mark(string $key, float $started_at): void {
+    self::$perf_breakdown[$key] = round(max(0, (microtime(true) - $started_at) * 1000), 2);
+  }
+
+  private static function perf_add(string $key, float $duration_ms): void {
+    $current = isset(self::$perf_breakdown[$key]) ? (float) self::$perf_breakdown[$key] : 0.0;
+    self::$perf_breakdown[$key] = round($current + max(0, $duration_ms), 2);
+  }
+
+  /**
+   * @param mixed $value
+   */
+  private static function perf_set(string $key, $value): void {
+    self::$perf_breakdown[$key] = $value;
+  }
+
+  /**
+   * @return array<string,mixed>
+   */
+  private static function perf_context(): array {
+    return self::$perf_breakdown;
+  }
+
+  public static function build_for_user(int $user_id, bool $refresh = false): Casanova_Dashboard_DTO {
+    $perf_total_start = microtime(true);
+    self::perf_reset();
+
+    $user_id = function_exists('casanova_portal_resolve_user_id')
+      ? casanova_portal_resolve_user_id($user_id)
+      : $user_id;
+
+    $idCliente = function_exists('casanova_portal_get_effective_client_id')
+      ? casanova_portal_get_effective_client_id($user_id)
+      : (int) get_user_meta($user_id, 'casanova_idcliente', true);
 
     // Cache ligero: GIAV manda, WP consume.
     if (!$refresh && $idCliente > 0) {
-      $cache_key = 'casanova_dash_v1_' . $idCliente;
+      $cache_lookup_start = microtime(true);
+      $cache_key = 'casanova_dash_v3_' . $idCliente;
       $cached = get_transient($cache_key);
+      self::perf_mark('cache_lookup_ms', $cache_lookup_start);
       if (is_array($cached) && !empty($cached)) {
+        self::perf_set('cache_hit', 1);
+        self::perf_set('trip_count', count((array) ($cached['trips'] ?? [])));
+        self::perf_set('next_trip_id', (int) ($cached['next_trip']['id'] ?? 0));
+        if (function_exists('casanova_perf_measure')) {
+          casanova_perf_measure('dashboard_breakdown', $perf_total_start, array_merge([
+            'user_id' => $user_id,
+            'idCliente' => $idCliente,
+            'refresh' => $refresh ? 1 : 0,
+          ], self::perf_context()), ['status' => 'ok']);
+        }
         return Casanova_Dashboard_DTO::from_array($cached);
       }
+    } else {
+      self::perf_set('cache_lookup_ms', 0.0);
     }
 
     $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/');
 
     // 1) Mulligans (datos locales)
+    $mulligans_start = microtime(true);
 
     $m_user = function_exists('casanova_mulligans_get_user') ? (array) casanova_mulligans_get_user($user_id) : [];
     $m_points = isset($m_user['points']) ? (int) $m_user['points'] : 0;
@@ -77,24 +132,36 @@ class Casanova_Dashboard_Service {
         $m_progress = 100;
       }
     }
+    self::perf_mark('mulligans_ms', $mulligans_start);
 
 
     // 2) Viajes (GIAV: expedientes)
-    // - Si hay futuros/en curso: mostramos el próximo.
-    // - Si NO hay futuros: mostramos el último viaje con una CTA suave (opinión).
+    // Solo mostramos futuros/en curso. Si no hay viaje activo visible para
+    // el cliente, el dashboard debe entrar en empty state.
+    $trips_start = microtime(true);
     $trips_pack = self::get_trips_for_dashboard($idCliente);
+    self::perf_mark('trips_ms', $trips_start);
     $trips = (array) ($trips_pack['trips'] ?? []);
-    $next  = !empty($trips) ? $trips[0] : (isset($trips_pack['last_trip']) ? $trips_pack['last_trip'] : null);
-    $post_trip = !empty($trips_pack['post_trip']) ? (array) $trips_pack['post_trip'] : null;
+    $next  = !empty($trips) ? $trips[0] : null;
+    $active_trip_exists = is_array($next) && !empty($next['id']);
+    $trip_summary_start = microtime(true);
+    $next_trip_summary = self::get_dashboard_trip_summary($idCliente, $next);
+    self::perf_mark('trip_summary_ms', $trip_summary_start);
 
     // 4) Pagos (sobre próximo viaje)
+    $payments_start = microtime(true);
     $payments = self::get_payments_summary($idCliente, $next);
+    self::perf_mark('payments_ms', $payments_start);
 
     // 5) Mensajes (sobre próximo viaje)
+    $messages_start = microtime(true);
     $messages = self::get_messages_summary($user_id, $idCliente, $next);
+    self::perf_mark('messages_ms', $messages_start);
 
     // 6) Próxima acción (prioriza siguiente viaje si el actual está al día)
+    $next_action_start = microtime(true);
     $next_action = self::get_next_action($idCliente, $next, $trips, $payments);
+    self::perf_mark('next_action_ms', $next_action_start);
 
     $data = [
       'mulligans' => [
@@ -113,42 +180,64 @@ class Casanova_Dashboard_Service {
       ],
       'trips'    => $trips,
       'next_trip' => $next,
-      'post_trip' => $post_trip,
+      'next_trip_summary' => $next_trip_summary,
+      'post_trip' => null,
+      'active_trip_exists' => $active_trip_exists,
       'payments' => $payments,
       'messages' => $messages,
       'next_action' => $next_action,
     ];
 
     if ($idCliente > 0) {
-      set_transient('casanova_dash_v1_' . $idCliente, $data, 60); // TTL corto
+      $cache_store_start = microtime(true);
+      set_transient('casanova_dash_v3_' . $idCliente, $data, 60); // TTL corto
+      self::perf_mark('cache_store_ms', $cache_store_start);
+    }
+
+    self::perf_set('cache_hit', 0);
+    self::perf_set('trip_count', count($trips));
+    self::perf_set('next_trip_id', (int) ($next['id'] ?? 0));
+    self::perf_set('messages_unread', (int) ($messages['unread'] ?? 0));
+    self::perf_set('payments_pending', round((float) ($payments['pending'] ?? 0), 2));
+    self::perf_set('next_action_status', (string) ($next_action['status'] ?? ''));
+
+    if (function_exists('casanova_perf_measure')) {
+      casanova_perf_measure('dashboard_breakdown', $perf_total_start, array_merge([
+        'user_id' => $user_id,
+        'idCliente' => $idCliente,
+        'refresh' => $refresh ? 1 : 0,
+      ], self::perf_context()), ['status' => 'ok']);
     }
 
     return new Casanova_Dashboard_DTO($data);
   }
 
   /**
-   * Devuelve viajes futuros/en curso para el dashboard y, si no existe ninguno,
-   * el último viaje pasado (para mostrar una CTA suave como “dejar una opinión”).
+   * Devuelve solo viajes futuros/en curso para el dashboard.
    *
-   * @return array{trips: array<int,array<string,mixed>>, last_trip: ?array<string,mixed>, post_trip: ?array<string,mixed>}
+   * @return array{trips: array<int,array<string,mixed>>}
    */
   private static function get_trips_for_dashboard(int $idCliente): array {
 
     if (!$idCliente || !function_exists('casanova_giav_expedientes_por_cliente')) {
-      return ['trips' => [], 'last_trip' => null, 'post_trip' => null];
+      return ['trips' => []];
     }
 
     $tz = wp_timezone();
     $today = new DateTimeImmutable('today', $tz);
     $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/');
 
+    $exps_fetch_start = microtime(true);
     $exps = casanova_giav_expedientes_por_cliente($idCliente);
+    self::perf_mark('trips_expedientes_fetch_ms', $exps_fetch_start);
     if (!is_array($exps)) {
-      return ['trips' => [], 'last_trip' => null, 'post_trip' => null];
+      return ['trips' => []];
     }
+    self::perf_set('trips_source_count', count($exps));
 
     $upcoming = [];
-    $past = [];
+    $loop_start = microtime(true);
+    $payments_calc_ms = 0.0;
 
     foreach ($exps as $e) {
       if (!is_object($e)) continue;
@@ -160,11 +249,17 @@ class Casanova_Dashboard_Service {
       $title  = (string) ($e->Titulo ?? $e->Nombre ?? 'Viaje');
       $code   = (string) ($e->Codigo ?? '');
 
-      $ini_raw = $e->FechaDesde ?? $e->Desde ?? $e->FechaInicio ?? $e->FechaInicioViaje ?? null;
-      $fin_raw = $e->FechaHasta ?? $e->Hasta ?? $e->FechaFin ?? $e->FechaFinViaje ?? null;
+      $is_closed = self::bool_from_giav($e->Cerrado ?? null);
+      if ($is_closed) continue;
 
-      $ini_dt = self::dt_from_giav($ini_raw, $tz);
-      $fin_dt = self::dt_from_giav($fin_raw, $tz);
+      $dates = self::resolve_trip_dates($e, $idCliente, $idExp, $tz);
+      $ini_raw = $dates['ini_raw'];
+      $fin_raw = $dates['fin_raw'];
+      $ini_dt = $dates['ini_dt'];
+      $fin_dt = $dates['fin_dt'];
+
+      // Un expediente sin fechas fiables no puede presentarse como "viaje activo".
+      if (!$ini_dt && !$fin_dt) continue;
 
       $ini_iso = $ini_dt ? $ini_dt->format('Y-m-d') : null;
       $fin_iso = $fin_dt ? $fin_dt->format('Y-m-d') : null;
@@ -214,25 +309,6 @@ class Casanova_Dashboard_Service {
             '_wpnonce'        => wp_create_nonce('casanova_download_ics_' . (int)$idExp),
           ], $base);
 
-      $payments = [];
-      $bonuses = [];
-      $calc = self::get_payments_for_expediente($idCliente, $idExp);
-      if (!empty($calc)) {
-        $total = (float) ($calc['total'] ?? 0);
-        $paid = (float) ($calc['paid'] ?? 0);
-        $pending = (float) ($calc['pending'] ?? 0);
-        $is_paid = !empty($calc['is_paid']) || ($pending <= 0.01);
-        $payments = [
-          'total' => $total,
-          'paid' => $paid,
-          'pending' => $pending,
-          'is_paid' => $is_paid,
-        ];
-        $bonuses = [
-          'available' => $is_paid,
-        ];
-      }
-
       $trip = [
         'id'         => $idExp,
         'title'      => $title,
@@ -248,19 +324,25 @@ class Casanova_Dashboard_Service {
         'url'        => $url,
         'days_left'  => $days_left,
         'calendar_url' => $ics_url,
-        'payments'   => $payments,
-        'bonuses'    => $bonuses,
+        // El dashboard solo necesita pagos completos para el prÃ³ximo viaje.
+        // El resto se difiere a la vista detalle / expedientes.
+        'payments'   => [],
+        'bonuses'    => ['available' => null],
         '_flags'     => [
           'is_past' => $is_past,
           'is_active' => $is_active,
+          'is_closed' => $is_closed,
         ],
       ];
 
-      if ($is_past) $past[] = $trip;
-      else $upcoming[] = $trip;
+      if (!$is_past) $upcoming[] = $trip;
     }
 
     // Orden: próximos por fecha de inicio asc (nulos al final)
+    self::perf_mark('trips_loop_ms', $loop_start);
+    self::perf_add('trips_payments_calc_ms', $payments_calc_ms);
+    self::perf_set('trips_payments_mode', 'next_trip_only');
+    $sort_start = microtime(true);
     usort($upcoming, function($a, $b) {
       $ad = $a['date_start'] ?? null;
       $bd = $b['date_start'] ?? null;
@@ -269,32 +351,12 @@ class Casanova_Dashboard_Service {
       if ($bd === null) return -1;
       return strcmp((string)$ad, (string)$bd);
     });
+    self::perf_mark('trips_sort_ms', $sort_start);
     $upcoming = array_slice($upcoming, 0, 10);
+    self::perf_set('trips_upcoming_count', count($upcoming));
+    self::perf_set('trips_payments_deferred_count', count($upcoming));
 
-    // Último viaje pasado: por fecha fin desc (si no, inicio desc)
-    usort($past, function($a, $b) {
-      $ad = $a['date_end'] ?? ($a['date_start'] ?? null);
-      $bd = $b['date_end'] ?? ($b['date_start'] ?? null);
-      if ($ad === $bd) return 0;
-      if ($ad === null) return 1;
-      if ($bd === null) return -1;
-      return strcmp((string)$bd, (string)$ad);
-    });
-    $last = !empty($past) ? $past[0] : null;
-
-    $post_trip = null;
-    if (empty($upcoming) && $last) {
-      $post_trip = [
-        'is_post_trip' => true,
-        'review_url' => 'https://g.page/r/CdwjiFg2KDsTEAE/review',
-      ];
-    }
-
-    return [
-      'trips' => $upcoming,
-      'last_trip' => $last,
-      'post_trip' => $post_trip,
-    ];
+    return ['trips' => $upcoming];
   }
 
   /**
@@ -317,6 +379,111 @@ class Casanova_Dashboard_Service {
     } catch (Throwable $e) {
       return null;
     }
+  }
+
+  /**
+   * Intenta resolver las fechas del expediente y, si no existen, las infiere
+   * desde las reservas asociadas para clasificar bien viajes heredados/importados.
+   *
+   * @return array{ini_raw:mixed,fin_raw:mixed,ini_dt:?DateTimeImmutable,fin_dt:?DateTimeImmutable}
+   */
+  private static function resolve_trip_dates($expediente, int $idCliente, int $idExpediente, DateTimeZone $tz): array {
+    $ini_raw = $expediente->FechaDesde ?? $expediente->Desde ?? $expediente->FechaInicio ?? $expediente->FechaInicioViaje ?? null;
+    $fin_raw = $expediente->FechaHasta ?? $expediente->Hasta ?? $expediente->FechaFin ?? $expediente->FechaFinViaje ?? null;
+
+    $ini_dt = self::dt_from_giav($ini_raw, $tz);
+    $fin_dt = self::dt_from_giav($fin_raw, $tz);
+
+    if ($ini_dt || $fin_dt) {
+      return [
+        'ini_raw' => $ini_raw,
+        'fin_raw' => $fin_raw,
+        'ini_dt' => $ini_dt,
+        'fin_dt' => $fin_dt,
+      ];
+    }
+
+    return self::infer_trip_dates_from_reservas($idCliente, $idExpediente, $tz);
+  }
+
+  /**
+   * @return array{ini_raw:mixed,fin_raw:mixed,ini_dt:?DateTimeImmutable,fin_dt:?DateTimeImmutable}
+   */
+  private static function infer_trip_dates_from_reservas(int $idCliente, int $idExpediente, DateTimeZone $tz): array {
+    static $cache = [];
+
+    $cache_key = $idCliente . ':' . $idExpediente;
+    if (isset($cache[$cache_key])) {
+      return $cache[$cache_key];
+    }
+
+    $empty = [
+      'ini_raw' => null,
+      'fin_raw' => null,
+      'ini_dt' => null,
+      'fin_dt' => null,
+    ];
+
+    if ($idCliente <= 0 || $idExpediente <= 0 || !function_exists('casanova_giav_reservas_por_expediente')) {
+      $cache[$cache_key] = $empty;
+      return $cache[$cache_key];
+    }
+
+    $reservas = casanova_giav_reservas_por_expediente($idExpediente, $idCliente);
+    if (!is_array($reservas) || empty($reservas)) {
+      $cache[$cache_key] = $empty;
+      return $cache[$cache_key];
+    }
+
+    $min_start = null;
+    $min_start_raw = null;
+    $max_end = null;
+    $max_end_raw = null;
+
+    foreach ($reservas as $reserva) {
+      if (!is_object($reserva)) continue;
+
+      $res_ini_raw = $reserva->FechaDesde ?? $reserva->Desde ?? $reserva->FechaInicio ?? $reserva->FechaInicioViaje ?? null;
+      $res_fin_raw = $reserva->FechaHasta ?? $reserva->Hasta ?? $reserva->FechaFin ?? $reserva->FechaFinViaje ?? null;
+
+      $res_ini_dt = self::dt_from_giav($res_ini_raw, $tz);
+      $res_fin_dt = self::dt_from_giav($res_fin_raw, $tz);
+
+      if (!$res_ini_dt && $res_fin_dt) {
+        $res_ini_dt = $res_fin_dt;
+        $res_ini_raw = $res_fin_raw;
+      }
+      if (!$res_fin_dt && $res_ini_dt) {
+        $res_fin_dt = $res_ini_dt;
+        $res_fin_raw = $res_ini_raw;
+      }
+
+      if ($res_ini_dt && ($min_start === null || $res_ini_dt < $min_start)) {
+        $min_start = $res_ini_dt;
+        $min_start_raw = $res_ini_raw;
+      }
+      if ($res_fin_dt && ($max_end === null || $res_fin_dt > $max_end)) {
+        $max_end = $res_fin_dt;
+        $max_end_raw = $res_fin_raw;
+      }
+    }
+
+    $cache[$cache_key] = [
+      'ini_raw' => $min_start_raw,
+      'fin_raw' => $max_end_raw,
+      'ini_dt' => $min_start,
+      'fin_dt' => $max_end,
+    ];
+
+    return $cache[$cache_key];
+  }
+
+  private static function bool_from_giav($value): bool {
+    if (is_bool($value)) return $value;
+    if (is_numeric($value)) return ((int) $value) === 1;
+
+    $normalized = strtolower(trim((string) $value));
+    return in_array($normalized, ['1', 'true', 'yes', 'si', 'sí'], true);
   }
 
   /**
@@ -351,19 +518,54 @@ class Casanova_Dashboard_Service {
   }
 
   /**
-   * @return array<string,float>
+   * @param array<string,mixed>|null $next_trip
+   * @return array<string,mixed>|null
+   */
+  private static function get_dashboard_trip_summary(int $idCliente, ?array $next_trip): ?array {
+    $idExp = (int) ($next_trip['id'] ?? 0);
+    if ($idCliente <= 0 || $idExp <= 0) {
+      return null;
+    }
+
+    if (!class_exists('Casanova_Trip_Service') || !method_exists('Casanova_Trip_Service', 'get_dashboard_summary')) {
+      return null;
+    }
+
+    $summary = Casanova_Trip_Service::get_dashboard_summary($idCliente, $idExp);
+    return is_array($summary) ? $summary : null;
+  }
+
+  /**
+   * @return array<string,mixed>
    */
   private static function get_payments_for_expediente(int $idCliente, int $idExp): array {
-    if ($idCliente <= 0 || $idExp <= 0) return [];
+    static $cache = [];
+
+    $cache_key = $idCliente . ':' . $idExp;
+    if (isset($cache[$cache_key])) {
+      return $cache[$cache_key];
+    }
+
+    if ($idCliente <= 0 || $idExp <= 0) {
+      $cache[$cache_key] = [];
+      return $cache[$cache_key];
+    }
     if (!function_exists('casanova_giav_reservas_por_expediente') || !function_exists('casanova_calc_pago_expediente')) {
-      return [];
+      $cache[$cache_key] = [];
+      return $cache[$cache_key];
     }
 
     $reservas = casanova_giav_reservas_por_expediente($idExp, $idCliente);
-    if (!is_array($reservas)) return [];
+    if (!is_array($reservas)) {
+      $cache[$cache_key] = [];
+      return $cache[$cache_key];
+    }
 
     $p = casanova_calc_pago_expediente($idExp, $idCliente, $reservas);
-    if (!is_array($p)) return [];
+    if (!is_array($p)) {
+      $cache[$cache_key] = [];
+      return $cache[$cache_key];
+    }
 
     $total = (float) ($p['total_objetivo'] ?? 0);
     $paid = (float) ($p['pagado'] ?? ($p['pagado_real'] ?? 0));
@@ -399,13 +601,15 @@ class Casanova_Dashboard_Service {
       'pending_amount' => round($pending, 2),
     ];
 
-    return [
+    $cache[$cache_key] = [
       'total' => $total,
       'paid' => $paid,
       'pending' => $pending,
       'is_paid' => $is_paid,
       'payment_options' => $payment_options,
     ];
+
+    return $cache[$cache_key];
   }
 
 
@@ -414,11 +618,22 @@ class Casanova_Dashboard_Service {
    * @return array<int,array<string,mixed>>
    */
   private static function get_invoices_for_expediente(int $idCliente, int $idExpediente): array {
+    static $cache = [];
+
+    $cache_key = $idCliente . ':' . $idExpediente;
+    if (isset($cache[$cache_key])) {
+      return $cache[$cache_key];
+    }
+
     if ($idCliente <= 0 || $idExpediente <= 0 || !function_exists('casanova_giav_facturas_por_expediente')) {
-      return [];
+      $cache[$cache_key] = [];
+      return $cache[$cache_key];
     }
     $rows = casanova_giav_facturas_por_expediente($idExpediente, $idCliente, 50, 0);
-    if (is_wp_error($rows) || !is_array($rows)) return [];
+    if (is_wp_error($rows) || !is_array($rows)) {
+      $cache[$cache_key] = [];
+      return $cache[$cache_key];
+    }
     $out = [];
     foreach ($rows as $f) {
       if (!is_object($f)) continue;
@@ -444,7 +659,8 @@ class Casanova_Dashboard_Service {
         'download_url' => '', // se rellena en /trip, aquí solo contamos
       ];
     }
-    return $out;
+    $cache[$cache_key] = $out;
+    return $cache[$cache_key];
   }
 
   private static function get_invoices_count_for_expediente(int $idCliente, int $idExpediente): int {
@@ -551,23 +767,17 @@ class Casanova_Dashboard_Service {
       return [];
     }
 
-    if (!function_exists('casanova_giav_comments_por_expediente')) {
+    if (!function_exists('casanova_messages_thread_summary_for_expediente')) {
       return [];
     }
 
-    $unread = function_exists('casanova_messages_new_count_for_expediente')
-      ? (int) casanova_messages_new_count_for_expediente($user_id, $idExp, 30)
-      : 0;
+    $thread = casanova_messages_thread_summary_for_expediente($user_id, $idExp, 30);
+    $unread = (int) ($thread['unread'] ?? 0);
+    $snippet = (string) ($thread['snippet'] ?? '');
+    $last_message_ts = (int) ($thread['last_message_ts'] ?? 0);
+    $when = $last_message_ts ? sprintf(esc_html__('Hace %s', 'casanova-portal'), human_time_diff($last_message_ts, time())) : '';
 
-    $comments = casanova_giav_comments_por_expediente($idExp, 10, 365);
-    if (is_wp_error($comments) || !is_array($comments) || empty($comments)) {
-      $comments = [];
-    }
-
-    $snippet = '';
-    $when = '';
-
-    if (!empty($comments)) {
+    if (false) {
       $latest = $comments[0];
       $b = is_object($latest) ? trim((string) ($latest->Body ?? '')) : '';
       $b = $b !== '' ? wp_strip_all_tags($b) : '';

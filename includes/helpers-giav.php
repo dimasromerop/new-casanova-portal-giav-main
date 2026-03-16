@@ -12,7 +12,7 @@ function casanova_giav_base_host(): string {
 }
 
 /**
- * Comprueba si el usuario actual puede acceder a un expediente GIAV
+ * Extrae el identificador de un expediente GIAV usando claves comunes.
  */
 function casanova_giav_extract_expediente_id($exp): int {
   if (!is_object($exp)) return 0;
@@ -27,10 +27,19 @@ function casanova_giav_extract_expediente_id($exp): int {
   return 0;
 }
 
+/**
+ * Comprueba si el usuario puede acceder a un expediente GIAV.
+ */
 function casanova_user_can_access_expediente(int $user_id, int $idExpediente) : bool {
-  if (!$user_id || !$idExpediente) return false;
+  if (!$idExpediente) return false;
 
-  $idClienteUser = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id = function_exists('casanova_portal_resolve_user_id')
+    ? casanova_portal_resolve_user_id($user_id)
+    : $user_id;
+
+  $idClienteUser = function_exists('casanova_portal_get_effective_client_id')
+    ? casanova_portal_get_effective_client_id($user_id)
+    : (int) get_user_meta($user_id, 'casanova_idcliente', true);
   if (!$idClienteUser) return false;
 
   $cache_key = 'casanova_exp_ids_' . $idClienteUser;

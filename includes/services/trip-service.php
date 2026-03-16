@@ -37,6 +37,9 @@ class Casanova_Trip_Service {
    * @return array<string,mixed>
    */
   public static function get_trip_for_user(int $user_id, int $expediente_id, WP_REST_Request $request): array|WP_Error {
+    $user_id = function_exists('casanova_portal_resolve_user_id')
+      ? casanova_portal_resolve_user_id($user_id)
+      : $user_id;
 
     self::debug_enable($request);
     self::debug_add('expediente_id', $expediente_id);
@@ -47,7 +50,9 @@ class Casanova_Trip_Service {
       return self::mock_response($expediente_id);
     }
 
-    $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+    $idCliente = function_exists('casanova_portal_get_effective_client_id')
+      ? casanova_portal_get_effective_client_id($user_id)
+      : (int) get_user_meta($user_id, 'casanova_idcliente', true);
     if (!$idCliente || !$expediente_id) {
       return self::empty_ok();
     }
@@ -194,6 +199,30 @@ class Casanova_Trip_Service {
   }
 
   /**
+   * Lightweight summary used by the dashboard hero.
+   *
+   * Avoids weather, payments, invoices, passengers and messages so the
+   * dashboard can render without depending on the full /trip payload.
+   *
+   * @return array<string,mixed>
+   */
+  public static function get_dashboard_summary(int $idCliente, int $expediente_id): array {
+    if ($idCliente <= 0 || $expediente_id <= 0) {
+      return self::empty_dashboard_summary();
+    }
+
+    $builder = static function () use ($idCliente, $expediente_id): array {
+      return self::build_dashboard_summary($idCliente, $expediente_id);
+    };
+
+    $summary = function_exists('casanova_cache_remember')
+      ? casanova_cache_remember('dashboard_trip_summary_' . $idCliente . '_' . $expediente_id, 5 * MINUTE_IN_SECONDS, $builder)
+      : $builder();
+
+    return is_array($summary) ? $summary : self::empty_dashboard_summary();
+  }
+
+  /**
    * @return array<string,mixed>
    */
   private static function empty_ok(): array {
@@ -284,6 +313,17 @@ class Casanova_Trip_Service {
   }
 
   /**
+   * @return array{package: array<string,mixed>|null, extras: array<int,array<string,mixed>>, map: array<string,mixed>|null}
+   */
+  private static function empty_dashboard_summary(): array {
+    return [
+      'package' => null,
+      'extras' => [],
+      'map' => null,
+    ];
+  }
+
+  /**
    * @return array<int,array<string,mixed>>
    */
   private static function build_reservas(int $idCliente, int $expediente_id): array {
@@ -299,7 +339,7 @@ class Casanova_Trip_Service {
    * @param array<int,mixed> $reservas
    * @return array{package: array<string,mixed>|null, extras: array<int,array<string,mixed>>}
    */
-  private static function build_package_structure(int $expediente_id, array $reservas): array {
+  private static function build_package_structure(int $expediente_id, array $reservas, bool $lightweight = false): array {
     if (empty($reservas)) {
       return ['package' => null, 'extras' => []];
     }
@@ -335,13 +375,13 @@ class Casanova_Trip_Service {
       }
     }
 
-    $expediente_pagado = self::expediente_pagado($expediente_id);
+    $expediente_pagado = $lightweight ? false : self::expediente_pagado($expediente_id);
     $extras = [];
 
     if (empty($pqs)) {
       foreach ($reservas as $r) {
         if (!is_object($r)) continue;
-        $extras[] = self::normalize_service($r, $expediente_id, false, $expediente_pagado, true);
+        $extras[] = self::normalize_service($r, $expediente_id, false, $expediente_pagado, !$lightweight, $lightweight);
       }
       return ['package' => null, 'extras' => $extras];
     }
@@ -351,23 +391,37 @@ class Casanova_Trip_Service {
       if ($has_parent($r)) continue;
       $tipo = (string) ($r->TipoReserva ?? '');
       if ($tipo === 'PQ') continue;
-      $extras[] = self::normalize_service($r, $expediente_id, false, $expediente_pagado, true);
+      $extras[] = self::normalize_service($r, $expediente_id, false, $expediente_pagado, !$lightweight, $lightweight);
     }
 
     $root = reset($pqs);
     $root_id = (int) ($root->Id ?? 0);
     $kids = $children[$root_id] ?? [];
     $allow_voucher_root = empty($kids) && $expediente_pagado;
-    $pkg = self::normalize_service($root, $expediente_id, true, $allow_voucher_root, true);
+    $pkg = self::normalize_service($root, $expediente_id, true, $allow_voucher_root, !$lightweight, $lightweight);
     $pkg['type'] = 'PQ';
     $pkg['services'] = [];
     foreach ($kids as $kid) {
-      $pkg['services'][] = self::normalize_service($kid, $expediente_id, true, $expediente_pagado, false);
+      $pkg['services'][] = self::normalize_service($kid, $expediente_id, true, $expediente_pagado, false, $lightweight);
     }
 
     return [
       'package' => $pkg,
       'extras' => $extras,
+    ];
+  }
+
+  /**
+   * @return array{package: array<string,mixed>|null, extras: array<int,array<string,mixed>>, map: array<string,mixed>|null}
+   */
+  private static function build_dashboard_summary(int $idCliente, int $expediente_id): array {
+    $reservas = self::build_reservas($idCliente, $expediente_id);
+    $structure = self::build_package_structure($expediente_id, $reservas, true);
+
+    return [
+      'package' => is_array($structure['package'] ?? null) ? $structure['package'] : null,
+      'extras' => isset($structure['extras']) && is_array($structure['extras']) ? array_values($structure['extras']) : [],
+      'map' => self::build_map_from_structure($structure, null),
     ];
   }
 
@@ -1231,7 +1285,7 @@ class Casanova_Trip_Service {
   /**
    * @return array<string,mixed>
    */
-  private static function normalize_service($r, int $expediente_id, bool $included, bool $allow_voucher, bool $show_price = true): array {
+  private static function normalize_service($r, int $expediente_id, bool $included, bool $allow_voucher, bool $show_price = true, bool $lightweight = false): array {
     $m = function_exists('casanova_map_wsreserva') ? casanova_map_wsreserva($r) : [];
     $tipo = strtoupper((string) ($m['tipo'] ?? ($r->TipoReserva ?? '')));
     $code = (string) ($m['codigo'] ?? ($r->Codigo ?? ($r->Id ?? '')));
@@ -1259,11 +1313,13 @@ class Casanova_Trip_Service {
     $date_from = self::normalize_date($r->FechaDesde ?? null);
     $date_to = self::normalize_date($r->FechaHasta ?? null);
 
-    $actions = self::build_actions($allow_voucher);
-    $voucher_urls = $allow_voucher ? self::voucher_urls($expediente_id, $rid) : ['view' => '', 'pdf' => ''];
+    $actions = self::build_actions($lightweight ? false : $allow_voucher);
+    $voucher_urls = (!$lightweight && $allow_voucher) ? self::voucher_urls($expediente_id, $rid) : ['view' => '', 'pdf' => ''];
 
     $semantic_type = self::resolve_semantic_type($tipo, $r);
-    $details = self::map_service_details($semantic_type, $r, $m, $expediente_id, $rid);
+    $details = $lightweight
+      ? self::map_service_details_lightweight($semantic_type, $r, $m)
+      : self::map_service_details($semantic_type, $r, $m, $expediente_id, $rid);
 
     $supplier_id = (int) ($m['id_proveedor'] ?? ($r->IdProveedor ?? 0));
     $product_id  = (int) ($m['id_producto'] ?? ($r->IdProducto ?? 0));
@@ -1301,6 +1357,19 @@ class Casanova_Trip_Service {
     ];
   }
 
+  /**
+   * @param array<string,mixed> $mapped
+   * @return array<string,mixed>
+   */
+  private static function map_service_details_lightweight(string $semantic_type, $r, array $mapped): array {
+    return match ($semantic_type) {
+      'hotel' => self::map_hotel_service_lightweight($r),
+      'golf' => self::map_golf_service($r, $mapped),
+      'flight' => self::map_flight_service_lightweight($r),
+      default => [],
+    };
+  }
+
   private static function resolve_semantic_type(string $giav_type, $r): string {
     $giav_type = strtoupper(trim($giav_type));
     if (function_exists('casanova_is_golf_service') && casanova_is_golf_service($giav_type, $r)) {
@@ -1334,8 +1403,8 @@ class Casanova_Trip_Service {
     $rooms = function_exists('casanova_reserva_room_types_text') ? casanova_reserva_room_types_text($r) : '';
     if ($rooms === '') {
       $rooms = self::pick_first([
-        self::read_prop($r, ['Habitaciones', 'TipoHabitacion', 'TiposHabitacion', 'Distribucion', 'Distribución']),
-        self::read_prop($dx, ['Habitaciones', 'TipoHabitacion', 'TiposHabitacion', 'Distribucion', 'Distribución']),
+        self::read_prop($r, ['Habitaciones', 'TipoHabitacion', 'TiposHabitacion', 'Distribucion']),
+        self::read_prop($dx, ['Habitaciones', 'TipoHabitacion', 'TiposHabitacion', 'Distribucion']),
       ]);
     }
 
@@ -1399,6 +1468,34 @@ class Casanova_Trip_Service {
   }
 
   /**
+   * Lightweight hotel summary for dashboard cards.
+   *
+   * @return array<string,string>
+   */
+  private static function map_hotel_service_lightweight($r): array {
+    $dx = is_object($r) ? ($r->DatosExternos ?? null) : null;
+    $rooms = function_exists('casanova_reserva_room_types_text') ? casanova_reserva_room_types_text($r) : '';
+    if ($rooms === '') {
+      $rooms = self::pick_first([
+        self::read_prop($r, ['Habitaciones', 'TipoHabitacion', 'TiposHabitacion', 'Distribucion', 'Distribución']),
+        self::read_prop($dx, ['Habitaciones', 'TipoHabitacion', 'TiposHabitacion', 'Distribucion', 'Distribución']),
+      ]);
+    }
+
+    return [
+      'rooms' => $rooms,
+      'board' => self::pick_first([
+        self::read_prop($r, ['Regimen', 'Board', 'Regime']),
+        self::read_prop($dx, ['Regimen', 'Board', 'Regime']),
+      ]),
+      'rooming' => self::pick_first([
+        self::read_prop($r, ['Rooming', 'TextoRooming', 'RoomingText']),
+        self::read_prop($dx, ['Rooming', 'TextoRooming', 'RoomingText']),
+      ]),
+    ];
+  }
+
+  /**
    * @param array<string,mixed> $mapped
    * @return array<string,mixed>
    */
@@ -1432,7 +1529,7 @@ class Casanova_Trip_Service {
     ]);
     $route = '';
     if ($origin !== '' || $destination !== '') {
-      $route = trim($origin . ($origin && $destination ? ' → ' : '') . $destination);
+      $route = trim($origin . ($origin && $destination ? ' -> ' : '') . $destination);
     }
 
     // Importante: el "codigo" interno de la reserva (mapped['codigo']) NO es el código de vuelo.
@@ -1488,6 +1585,42 @@ class Casanova_Trip_Service {
         // Separador estable para UI.
         return $parts ? implode(' · ', $parts) : '';
       }, $segments))),
+    ];
+  }
+
+  /**
+   * Lightweight flight summary for dashboard cards.
+   *
+   * @return array<string,string>
+   */
+  private static function map_flight_service_lightweight($r): array {
+    $dx = is_object($r) ? ($r->DatosExternos ?? null) : null;
+
+    $origin = self::pick_first([
+      self::read_prop($r, ['Origen', 'CiudadOrigen', 'AeropuertoOrigen', 'AirportOrigen']),
+      self::read_prop($dx, ['Origen', 'CiudadOrigen', 'AeropuertoOrigen', 'AirportOrigen']),
+    ]);
+    $destination = self::pick_first([
+      self::read_prop($r, ['Destino', 'CiudadDestino', 'AeropuertoDestino', 'AirportDestino']),
+      self::read_prop($dx, ['Destino', 'CiudadDestino', 'AeropuertoDestino', 'AirportDestino']),
+    ]);
+    $route = '';
+    if ($origin !== '' || $destination !== '') {
+      $route = trim($origin . ($origin && $destination ? ' → ' : '') . $destination);
+    }
+
+    $schedule = trim(self::pick_first([
+      self::read_prop($r, ['HoraSalida', 'SalidaHora', 'HoraEmbarque']),
+      self::read_prop($dx, ['HoraSalida', 'SalidaHora', 'HoraEmbarque']),
+    ]));
+
+    return [
+      'route' => $route,
+      'flight_code' => self::pick_first([
+        self::read_prop($r, ['CodigoVuelo', 'Vuelo', 'FlightNumber', 'NumeroVuelo']),
+        self::read_prop($dx, ['CodigoVuelo', 'Vuelo', 'FlightNumber', 'NumeroVuelo']),
+      ]),
+      'schedule' => $schedule,
     ];
   }
 
@@ -1805,8 +1938,12 @@ class Casanova_Trip_Service {
       return false;
     }
 
-    $user_id = get_current_user_id();
-    $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+    $user_id = function_exists('casanova_portal_get_effective_user_id')
+      ? casanova_portal_get_effective_user_id()
+      : get_current_user_id();
+    $idCliente = function_exists('casanova_portal_get_effective_client_id')
+      ? casanova_portal_get_effective_client_id($user_id)
+      : (int) get_user_meta($user_id, 'casanova_idcliente', true);
     if (!$idCliente) return false;
 
     $reservas = casanova_giav_reservas_por_expediente($expediente_id, $idCliente);
@@ -1957,19 +2094,13 @@ class Casanova_Trip_Service {
    * @return array<string,mixed>
    */
   private static function build_messages_meta(int $user_id, int $expediente_id): array {
-    $unread = function_exists('casanova_messages_new_count_for_expediente')
-      ? (int) casanova_messages_new_count_for_expediente($user_id, $expediente_id, 30)
-      : 0;
-
+    $unread = 0;
     $last = null;
-    if (function_exists('casanova_giav_comments_por_expediente')) {
-      $comments = casanova_giav_comments_por_expediente($expediente_id, 1, 365);
-      if (is_array($comments) && !empty($comments)) {
-        $c = $comments[0];
-        if (is_object($c) && !empty($c->CreationDate)) {
-          $last = (string) $c->CreationDate;
-        }
-      }
+
+    if (function_exists('casanova_messages_thread_summary_for_expediente')) {
+      $thread = casanova_messages_thread_summary_for_expediente($user_id, $expediente_id, 30);
+      $unread = (int) ($thread['unread'] ?? 0);
+      $last = !empty($thread['last_message_at']) ? (string) $thread['last_message_at'] : null;
     }
 
     return [

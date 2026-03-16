@@ -90,8 +90,8 @@ add_shortcode('casanova_proximo_viaje', function($atts){
   if ($variant === 'compact') $wrap_class .= ' casanova-nexttrip-card--compact';
   
   if (!is_user_logged_in()) return '';
-  $user_id   = (int)get_current_user_id();
-  $idCliente = (int)get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = (int) casanova_portal_get_effective_user_id();
+  $idCliente = (int) casanova_portal_get_effective_client_id($user_id);
   if (!$idCliente) return '';
   
   $exp = casanova_portal_get_next_trip_expediente($idCliente);
@@ -202,8 +202,8 @@ add_shortcode('casanova_card_pagos', function($atts) {
     'cta'    => 'both', // both|pagar|detalle|none
     'tab'    => '',     // opcional: hash/tab id (ej. "pagos")
   ], (array)$atts);
-  $user_id   = get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
   if (!$idCliente) return '';
   $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/area-usuario/');
   
@@ -308,7 +308,7 @@ add_shortcode('casanova_card_pagos', function($atts) {
   if ($cta === 'both' || $cta === 'detalle') {
     $html .= '    <a class="casanova-btn casanova-btn--ghost" href="' . esc_url($detail_url) . '">' . esc_html__('Ver detalle', 'casanova-portal') . '</a>'; 
   }
-  if (!$is_ok && ($cta === 'both' || $cta === 'pagar')) {
+  if (!$is_ok && ($cta === 'both' || $cta === 'pagar') && !(function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only())) {
     $html .= '    <a class="casanova-btn casanova-btn--primary" href="' . esc_url($detail_url) . '">' . esc_html__('Pagar ahora', 'casanova-portal') . '</a>';
   }
   $html .= '  </div>';
@@ -326,8 +326,8 @@ add_shortcode('casanova_card_proxima_accion', function($atts) {
     'tab_pagos'   => 'pagos',
     'tab_facturas'=> 'facturas',
   ], (array)$atts);
-  $user_id   = get_current_user_id();
-  $idCliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  $user_id   = casanova_portal_get_effective_user_id();
+  $idCliente = casanova_portal_get_effective_client_id($user_id);
   if (!$idCliente) return '';
   $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/area-usuario/');
   
@@ -487,6 +487,14 @@ add_shortcode('casanova_card_proxima_accion', function($atts) {
       if ($total > 0) {
       $html .= '  <div class="casanova-actioncard__sub">' . esc_html__('Pendiente:', 'casanova-portal') . ' <strong>' . esc_html(casanova_fmt_money($pendiente)) . '</strong> · ' . esc_html__('Total:', 'casanova-portal') . ' ' . esc_html(casanova_fmt_money($total)) . '</div>';
       }
+      if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) {
+        $html .= '  <div class="casanova-actioncard__footer">';
+        $html .= '    <span class="casanova-btn casanova-btn--disabled">' . esc_html__('Pago desactivado en vista cliente', 'casanova-portal') . '</span>';
+        $html .= '    <a class="casanova-btn casanova-btn--ghost" href="' . esc_url($url_tab) . '">' . esc_html__('Ver opciones de pago', 'casanova-portal') . '</a>';
+        $html .= '  </div>';
+        $html .= '</article>';
+        return $html;
+      }
       $html .= '  <div class="casanova-actioncard__footer">';
       $html .= '    <a class="casanova-btn casanova-btn--primary" href="' . esc_url($url_dep) . '">' . esc_html__('Pagar depósito', 'casanova-portal') . '</a>'; 
       $html .= '    <a class="casanova-btn casanova-btn--ghost" href="' . esc_url($url_tab) . '">' . esc_html__('Ver opciones de pago', 'casanova-portal') . '</a>'; 
@@ -507,6 +515,14 @@ add_shortcode('casanova_card_proxima_accion', function($atts) {
     ) . '</div>';
     if ($total > 0) {
     $html .= '  <div class="casanova-actioncard__sub">' . esc_html__('Pagado:', 'casanova-portal') . ' <strong>' . esc_html(casanova_fmt_money($pagado)) . '</strong> · Total: ' . esc_html(casanova_fmt_money($total)) . '</div>';
+    }
+    if (function_exists('casanova_portal_is_read_only') && casanova_portal_is_read_only()) {
+      $html .= '  <div class="casanova-actioncard__footer">';
+      $html .= '    <span class="casanova-btn casanova-btn--disabled">' . esc_html__('Pago desactivado en vista cliente', 'casanova-portal') . '</span>';
+      $html .= '    <a class="casanova-btn casanova-btn--ghost" href="' . esc_url($detail_url) . '">' . esc_html__('Ver viaje', 'casanova-portal') . '</a>';
+      $html .= '  </div>';
+      $html .= '</article>';
+      return $html;
     }
     $html .= '  <div class="casanova-actioncard__footer">';
     $html .= '    <a class="casanova-btn casanova-btn--primary" href="' . esc_url($url_tab) . '">' . esc_html__('Pagar ahora', 'casanova-portal') . '</a>';

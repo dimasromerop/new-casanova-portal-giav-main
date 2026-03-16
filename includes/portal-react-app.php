@@ -18,6 +18,13 @@ add_shortcode('casanova_portal_app', function($atts) {
     $cls .= ' ' . sanitize_html_class($atts['class']);
   }
 
-  // Root único para React.
-  return '<div id="casanova-portal-root" class="' . esc_attr($cls) . '"></div>';
+  $html = '';
+  if (function_exists('casanova_portal_render_impersonation_banner')) {
+    $html .= casanova_portal_render_impersonation_banner();
+  }
+
+  // Root unico para React.
+  $html .= '<div id="casanova-portal-root" class="' . esc_attr($cls) . '"></div>';
+
+  return $html;
 });

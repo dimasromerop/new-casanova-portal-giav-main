@@ -133,7 +133,7 @@ function casanova_cache_buster_bump(): int {
 
 function casanova_cache_key(string $key): string {
   $blog_id = function_exists('get_current_blog_id') ? (int)get_current_blog_id() : 1;
-    $buster = function_exists('casanova_cache_buster_get') ? casanova_cache_buster_get() : 1;
+  $buster = function_exists('casanova_cache_buster_get') ? casanova_cache_buster_get() : 1;
   return 'casanova_' . $blog_id . '_' . $buster . '_' . md5($key);
 }
 
@@ -283,6 +283,8 @@ function casanova_invalidate_customer_cache(int $user_id, int $idCliente, int $i
 
   if ($idCliente > 0) {
     delete_transient('casanova_dash_v1_' . $idCliente);
+    delete_transient('casanova_dash_v2_' . $idCliente);
+    delete_transient('casanova_dash_v3_' . $idCliente);
     delete_transient('casanova_dashboard_' . $idCliente);
     delete_transient('casanova_exp_ids_' . $idCliente);
   }

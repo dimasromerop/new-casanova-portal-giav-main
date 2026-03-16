@@ -238,6 +238,7 @@ function casanova_payments_render_settings_page(): void {
 
     // Helper: find GIAV Expediente IDs for deposit overrides (GIAV uses Id, not Codigo).
     $qexp = isset($_GET['giav_expediente_q']) ? sanitize_text_field((string) $_GET['giav_expediente_q']) : '';
+    $qclient = isset($_GET['giav_cliente_q']) ? sanitize_text_field((string) $_GET['giav_cliente_q']) : '';
 
     echo '<hr />';
     echo '<h2>Buscar Expediente en GIAV (para overrides)</h2>';
@@ -293,6 +294,86 @@ function casanova_payments_render_settings_page(): void {
           echo '</form>';
             echo '<p class="description">Copia el <strong>ID (GIAV)</strong> para el override: <code>ID=porcentaje</code>.</p>';
           }
+        }
+      }
+    }
+
+    echo '<hr />';
+    echo '<h2>Buscar Cliente en GIAV</h2>';
+    echo '<p class="description">Util para soporte e impersonacion. Puedes buscar por <strong>ID exacto</strong>, <strong>DNI</strong>, <strong>email</strong> o <strong>nombre</strong> y obtener el <strong>ID de cliente</strong> sin salir del portal.</p>';
+
+    echo '<form method="get" action="">';
+    echo '<input type="hidden" name="page" value="casanova-payments" />';
+    echo '<input type="hidden" name="tab" value="payments" />';
+    echo '<p>';
+    echo '<label for="giav_cliente_q" class="screen-reader-text">Buscar cliente</label>';
+    echo '<input name="giav_cliente_q" id="giav_cliente_q" type="text" class="regular-text" placeholder="ID, DNI, email o nombre" value="' . esc_attr($qclient) . '" /> ';
+    submit_button('Buscar cliente', 'secondary', 'submit', false);
+    echo '</p>';
+    echo '</form>';
+
+    if ($qclient !== '') {
+      if (!function_exists('casanova_giav_cliente_search_simple')) {
+        echo '<div class="notice notice-error"><p>No estÃ¡ disponible la herramienta GIAV (falta <code>casanova_giav_cliente_search_simple</code>).</p></div>';
+      } else {
+        $clients = casanova_giav_cliente_search_simple($qclient, 25, 0);
+        if (is_wp_error($clients)) {
+          echo '<div class="notice notice-error"><p>Error GIAV: ' . esc_html($clients->get_error_message()) . '</p></div>';
+        } elseif (empty($clients)) {
+          echo '<div class="notice notice-warning"><p>No se encontraron clientes para <code>' . esc_html($qclient) . '</code>.</p></div>';
+        } else {
+          echo '<table class="widefat striped" style="max-width: 1200px;">';
+          echo '<thead><tr>';
+          echo '<th>ID (GIAV)</th><th>Cliente</th><th>Email</th><th>Documento</th><th>Portal</th><th>Accion</th>';
+          echo '</tr></thead><tbody>';
+          foreach ($clients as $client) {
+            if (!is_object($client)) {
+              continue;
+            }
+
+            $client_id = (int) ($client->Id ?? $client->idCliente ?? 0);
+            $nombre = trim((string) (($client->Nombre ?? '') . ' ' . ($client->Apellidos ?? '')));
+            if ($nombre === '') {
+              $nombre = trim((string) ($client->Email ?? ''));
+            }
+
+            $email = trim((string) ($client->Email ?? ''));
+            $documento = trim((string) ($client->Documento ?? $client->PasaporteNumero ?? ''));
+            $documento_ui = $documento !== '' && function_exists('casanova_portal_trunc_dni')
+              ? (string) casanova_portal_trunc_dni($documento)
+              : $documento;
+
+            $linked_user = function_exists('casanova_portal_impersonation_find_linked_user')
+              ? casanova_portal_impersonation_find_linked_user($client_id)
+              : null;
+            $linked_user_id = ($linked_user instanceof WP_User) ? (int) $linked_user->ID : 0;
+
+            if ($linked_user_id > 0) {
+              $portal_status = 'WP #' . $linked_user_id . ' (' . (string) $linked_user->user_login . ')';
+            } else {
+              $portal_status = 'Sin usuario WP';
+            }
+
+            $action_html = '<span class="description">Sin accion disponible</span>';
+            if ($client_id > 0) {
+              if ($linked_user_id > 0 && function_exists('casanova_portal_start_impersonation_url')) {
+                $action_html = '<a class="button button-secondary button-small" href="' . esc_url(casanova_portal_start_impersonation_url($linked_user_id)) . '">Ver portal como cliente</a>';
+              } elseif (function_exists('casanova_portal_start_impersonation_client_preview_url')) {
+                $action_html = '<a class="button button-secondary button-small" href="' . esc_url(casanova_portal_start_impersonation_client_preview_url($client_id)) . '">Previsualizar portal</a>';
+              }
+            }
+
+            echo '<tr>';
+            echo '<td><code>' . $client_id . '</code></td>';
+            echo '<td>' . esc_html($nombre !== '' ? $nombre : ('Cliente GIAV #' . $client_id)) . '</td>';
+            echo '<td>' . esc_html($email) . '</td>';
+            echo '<td>' . esc_html($documento_ui) . '</td>';
+            echo '<td>' . esc_html($portal_status) . '</td>';
+            echo '<td>' . $action_html . '</td>';
+            echo '</tr>';
+          }
+          echo '</tbody></table>';
+          echo '<p class="description">Puedes copiar el <strong>ID (GIAV)</strong> o entrar directamente al portal/previsualizacion desde aqui.</p>';
         }
       }
     }
