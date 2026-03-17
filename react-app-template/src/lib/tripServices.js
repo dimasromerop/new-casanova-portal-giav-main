@@ -18,6 +18,21 @@ export function serviceDetailPayload(service) {
   return {};
 }
 
+function normalizeTransportToken(value) {
+  const clean = String(value || "").trim();
+  if (!clean) return "";
+  return clean
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function isGenericTransportLabel(value) {
+  const token = normalizeTransportToken(value);
+  return token === "nacional" || token === "unioneuropea" || token === "restomundo" || token === "restodelmundo";
+}
+
 export function serviceSemanticType(service) {
   const semantic = String(service?.semantic_type || "").trim().toLowerCase();
   if (semantic) return semantic;
@@ -29,6 +44,8 @@ export function serviceSemanticType(service) {
   if (type === "TR") return "transfer";
   if (type === "AV") return "flight";
   if (type === "OT") {
+    const subtype = String(service?.subtype || service?.detail?.subtype || detailPayload?.subtype || "").trim().toLowerCase();
+    if (subtype.includes("traslado")) return "transfer";
     if (detailPayload.players !== undefined && detailPayload.players !== null && detailPayload.players !== "") return "golf";
     if (detailPayload.route || detailPayload.flight_code || detailPayload.schedule) return "flight";
     if (Array.isArray(detailPayload.segments) && detailPayload.segments.length) return "flight";
@@ -76,11 +93,25 @@ export function flightSummary(service) {
   const segments = uniqueStrings(Array.isArray(details.segments) ? details.segments : []);
   if (segments.length) return compactList(segments, 1);
 
+  const route = String(details.route || "").trim();
   const parts = [
     String(details.flight_code || "").trim(),
-    String(details.route || "").trim(),
+    !isGenericTransportLabel(route) ? route : "",
   ].filter(Boolean);
   if (parts.length) return parts.join(" · ");
 
-  return String(service?.title || "").trim();
+  const schedule = String(details.schedule || "").trim();
+  if (schedule) return schedule;
+
+  return "";
+}
+
+export function transferSummary(service) {
+  const details = serviceDetailPayload(service);
+  const route = String(details.route || "").trim();
+  if (route) return route;
+
+  const provider = String(details.provider || "").trim();
+  const title = String(service?.title || "").trim();
+  return title || provider;
 }

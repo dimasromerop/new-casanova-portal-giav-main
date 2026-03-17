@@ -1288,6 +1288,7 @@ class Casanova_Trip_Service {
   private static function normalize_service($r, int $expediente_id, bool $included, bool $allow_voucher, bool $show_price = true, bool $lightweight = false): array {
     $m = function_exists('casanova_map_wsreserva') ? casanova_map_wsreserva($r) : [];
     $tipo = strtoupper((string) ($m['tipo'] ?? ($r->TipoReserva ?? '')));
+    $subtype = trim((string) ($m['subtipo'] ?? ($r->SubtipoOtros ?? '')));
     $code = (string) ($m['codigo'] ?? ($r->Codigo ?? ($r->Id ?? '')));
     $title = (string) ($m['descripcion'] ?? ($r->Descripcion ?? 'Servicio'));
     $rid = (int) ($r->Id ?? 0);
@@ -1331,6 +1332,7 @@ class Casanova_Trip_Service {
       'code' => $code,
       'type' => $tipo !== '' ? $tipo : 'OT',
       'giav_type' => $tipo !== '' ? $tipo : 'OT',
+      'subtype' => $subtype,
       'semantic_type' => $semantic_type,
       'title' => $title,
       // Optional GIAV identifiers (used for destination resolution, mapping, debugging).
@@ -1349,6 +1351,7 @@ class Casanova_Trip_Service {
       'detail' => [
         'code' => $code,
         'type' => (string) ($r->TipoReserva ?? ''),
+        'subtype' => $subtype,
         'dates' => $dates,
         'locator' => (string) ($r->Localizador ?? ''),
         'bonus_text' => trim((string) ($r->TextoBono ?? '')),
@@ -1366,6 +1369,7 @@ class Casanova_Trip_Service {
       'hotel' => self::map_hotel_service_lightweight($r),
       'golf' => self::map_golf_service($r, $mapped),
       'flight' => self::map_flight_service_lightweight($r),
+      'transfer' => self::map_transfer_service_lightweight($r, $mapped),
       default => [],
     };
   }
@@ -1375,9 +1379,13 @@ class Casanova_Trip_Service {
     if (function_exists('casanova_is_golf_service') && casanova_is_golf_service($giav_type, $r)) {
       return 'golf';
     }
+    if (self::is_transfer_service($giav_type, $r)) {
+      return 'transfer';
+    }
     return match ($giav_type) {
       'HT' => 'hotel',
       'AV' => 'flight',
+      'TR' => 'transfer',
       default => 'other',
     };
   }
@@ -1391,6 +1399,7 @@ class Casanova_Trip_Service {
       'hotel' => self::map_hotel_service($r, $expediente_id, $id_reserva),
       'golf' => self::map_golf_service($r, $mapped),
       'flight' => self::map_flight_service($r, $mapped),
+      'transfer' => self::map_transfer_service($r, $mapped),
       default => [],
     };
   }
@@ -1519,14 +1528,8 @@ class Casanova_Trip_Service {
   private static function map_flight_service($r, array $mapped): array {
     $dx = is_object($r) ? ($r->DatosExternos ?? null) : null;
 
-    $origin = self::pick_first([
-      self::read_prop($r, ['Origen', 'CiudadOrigen', 'AeropuertoOrigen', 'AirportOrigen']),
-      self::read_prop($dx, ['Origen', 'CiudadOrigen', 'AeropuertoOrigen', 'AirportOrigen']),
-    ]);
-    $destination = self::pick_first([
-      self::read_prop($r, ['Destino', 'CiudadDestino', 'AeropuertoDestino', 'AirportDestino']),
-      self::read_prop($dx, ['Destino', 'CiudadDestino', 'AeropuertoDestino', 'AirportDestino']),
-    ]);
+    $origin = self::read_transport_location($r, $dx, ['Origen', 'CiudadOrigen', 'AeropuertoOrigen', 'AirportOrigen']);
+    $destination = self::read_transport_location($r, $dx, ['Destino', 'CiudadDestino', 'AeropuertoDestino', 'AirportDestino']);
     $route = '';
     if ($origin !== '' || $destination !== '') {
       $route = trim($origin . ($origin && $destination ? ' -> ' : '') . $destination);
@@ -1596,14 +1599,8 @@ class Casanova_Trip_Service {
   private static function map_flight_service_lightweight($r): array {
     $dx = is_object($r) ? ($r->DatosExternos ?? null) : null;
 
-    $origin = self::pick_first([
-      self::read_prop($r, ['Origen', 'CiudadOrigen', 'AeropuertoOrigen', 'AirportOrigen']),
-      self::read_prop($dx, ['Origen', 'CiudadOrigen', 'AeropuertoOrigen', 'AirportOrigen']),
-    ]);
-    $destination = self::pick_first([
-      self::read_prop($r, ['Destino', 'CiudadDestino', 'AeropuertoDestino', 'AirportDestino']),
-      self::read_prop($dx, ['Destino', 'CiudadDestino', 'AeropuertoDestino', 'AirportDestino']),
-    ]);
+    $origin = self::read_transport_location($r, $dx, ['Origen', 'CiudadOrigen', 'AeropuertoOrigen', 'AirportOrigen']);
+    $destination = self::read_transport_location($r, $dx, ['Destino', 'CiudadDestino', 'AeropuertoDestino', 'AirportDestino']);
     $route = '';
     if ($origin !== '' || $destination !== '') {
       $route = trim($origin . ($origin && $destination ? ' → ' : '') . $destination);
@@ -1622,6 +1619,42 @@ class Casanova_Trip_Service {
       ]),
       'schedule' => $schedule,
     ];
+  }
+
+  /**
+   * @param array<string,mixed> $mapped
+   * @return array<string,string>
+   */
+  private static function map_transfer_service($r, array $mapped): array {
+    $dx = is_object($r) ? ($r->DatosExternos ?? null) : null;
+
+    $origin = self::read_transport_location($r, $dx, ['Origen', 'CiudadOrigen', 'AeropuertoOrigen', 'AirportOrigen', 'LugarSalida']);
+    $destination = self::read_transport_location($r, $dx, ['Destino', 'CiudadDestino', 'AeropuertoDestino', 'AirportDestino', 'LugarLlegada']);
+    $route = '';
+    if ($origin !== '' || $destination !== '') {
+      $route = trim($origin . ($origin && $destination ? ' → ' : '') . $destination);
+    }
+
+    return [
+      'route' => $route,
+      'schedule' => trim(self::pick_first([
+        self::read_prop($r, ['HoraSalida', 'SalidaHora', 'HoraRecogida', 'PickupTime']),
+        self::read_prop($dx, ['HoraSalida', 'SalidaHora', 'HoraRecogida', 'PickupTime']),
+      ])),
+      'passengers' => self::build_passengers_summary($r, $mapped),
+      'provider' => self::pick_first([
+        self::read_prop($dx, ['NombreProveedor']),
+        self::read_prop($r, ['Proveedor']),
+      ]),
+    ];
+  }
+
+  /**
+   * @param array<string,mixed> $mapped
+   * @return array<string,string>
+   */
+  private static function map_transfer_service_lightweight($r, array $mapped): array {
+    return self::map_transfer_service($r, $mapped);
   }
 
   /**
@@ -1774,6 +1807,53 @@ class Casanova_Trip_Service {
     }
 
     return $segments;
+  }
+
+  private static function is_transfer_service(string $giav_type, $r): bool {
+    $giav_type = strtoupper(trim($giav_type));
+    if ($giav_type === 'TR') return true;
+    if ($giav_type !== 'OT' || !is_object($r)) return false;
+
+    $subtype = self::normalize_transport_token((string) ($r->SubtipoOtros ?? ''));
+    if (in_array($subtype, ['traslado', 'traslados'], true)) {
+      return true;
+    }
+
+    $description = self::normalize_transport_token((string) ($r->Descripcion ?? ''));
+    return $description !== '' && (
+      str_contains($description, 'traslado') ||
+      str_contains($description, 'traslados') ||
+      str_contains($description, 'transfer')
+    );
+  }
+
+  private static function read_transport_location($r, $dx, array $keys): string {
+    return self::sanitize_transport_location(self::pick_first([
+      self::read_prop($r, $keys),
+      self::read_prop($dx, $keys),
+    ]));
+  }
+
+  private static function sanitize_transport_location($value): string {
+    $value = trim((string) $value);
+    if ($value === '') return '';
+
+    $token = self::normalize_transport_token($value);
+    if (in_array($token, ['nacional', 'unioneuropea', 'restomundo', 'restodelmundo'], true)) {
+      return '';
+    }
+
+    return $value;
+  }
+
+  private static function normalize_transport_token(string $value): string {
+    $value = trim($value);
+    if ($value === '') return '';
+    if (function_exists('remove_accents')) {
+      $value = remove_accents($value);
+    }
+    $value = strtolower($value);
+    return (string) preg_replace('/[^a-z0-9]+/', '', $value);
   }
 
   /**

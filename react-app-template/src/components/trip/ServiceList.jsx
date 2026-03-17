@@ -44,7 +44,7 @@ export function ServiceItem({ service, indent = false }) {
   const detailPayload = detail.details || service.details || {};
   const segments = Array.isArray(detailPayload.segments) ? detailPayload.segments : [];
 
-  const shouldShowRow = (expectedType) => !semanticType || semanticType === expectedType;
+  const shouldShowRow = (...expectedTypes) => !semanticType || expectedTypes.includes(semanticType);
   const extraDetailRows = [
     {
       key: "rooms",
@@ -74,7 +74,7 @@ export function ServiceItem({ service, indent = false }) {
       key: "route",
       label: "Trayecto",
       value: detailPayload.route,
-      show: shouldShowRow("flight"),
+      show: shouldShowRow("flight", "transfer"),
     },
     {
       key: "flight_code",
@@ -86,13 +86,19 @@ export function ServiceItem({ service, indent = false }) {
       key: "schedule",
       label: "Horario",
       value: detailPayload.schedule,
-      show: shouldShowRow("flight"),
+      show: shouldShowRow("flight", "transfer"),
     },
     {
       key: "passengers",
       label: "Pasajeros",
       value: detailPayload.passengers,
-      show: shouldShowRow("flight"),
+      show: shouldShowRow("flight", "transfer"),
+    },
+    {
+      key: "provider",
+      label: "Proveedor",
+      value: detailPayload.provider,
+      show: shouldShowRow("transfer"),
     },
   ].filter((row) => row.show && row.value !== undefined && row.value !== null && String(row.value).trim() !== "");
 

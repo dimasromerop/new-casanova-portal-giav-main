@@ -4,7 +4,7 @@ import { t, tt } from "../../i18n/t.js";
 import { EmptyState } from "../ui.jsx";
 import { euro, formatDateES, formatTierLabel, formatTimestamp, normalizeTripDates } from "../../lib/formatters.js";
 import { setParam } from "../../lib/params.js";
-import { compactList, countNightsBetween, flightSummary, serviceSemanticType, uniqueStrings } from "../../lib/tripServices.js";
+import { compactList, countNightsBetween, flightSummary, serviceSemanticType, transferSummary, uniqueStrings } from "../../lib/tripServices.js";
 
 function firstNameFromProfile(profile) {
   const giavName = String(profile?.giav?.nombre || "").trim();
@@ -169,24 +169,26 @@ export default function DashboardView({
   const hotelTitles = uniqueStrings(hotelServices.map((service) => service?.title));
   const golfTitles = uniqueStrings(golfServices.map((service) => service?.title));
   const flightTitles = uniqueStrings(flightServices.map((service) => flightSummary(service)));
-  const transferTitles = uniqueStrings(transferServices.map((service) => service?.title));
+  const transferTitles = uniqueStrings(transferServices.map((service) => transferSummary(service)));
   const otherTitles = uniqueStrings(otherServices.map((service) => service?.title));
   const primaryHotel = hotelTitles[0] || "";
   const hotelCount = hotelTitles.length;
   const golfCount = golfServices.length;
-  const flightCount = flightServices.length;
-  const transferCount = transferServices.length;
+  const hasFlightSummary = flightTitles.length > 0;
+  const hasTransferSummary = transferTitles.length > 0;
+  const flightCount = hasFlightSummary ? flightServices.length : 0;
+  const transferCount = hasTransferSummary ? transferServices.length : 0;
   const extrasCount = otherServices.length;
   const nights = countNightsBetween(tripDates.start, tripDates.end);
   const nightsLabel = nights ? `${nights} ${nights === 1 ? tt("noche") : tt("noches")}` : "";
   const golfLabel = golfCount ? `${golfCount} ${golfCount === 1 ? tt("ronda de golf") : tt("rondas de golf")}` : "";
-  const flightLabel = flightCount
+  const flightLabel = hasFlightSummary
     ? (flightServices.every((service) => service?.included !== false) ? tt("vuelos incluidos") : tt("vuelos previstos"))
     : "";
-  const transferLabel = transferCount
+  const transferLabel = hasTransferSummary
     ? (transferServices.every((service) => service?.included !== false) ? tt("traslados incluidos") : tt("traslados previstos"))
     : "";
-  const mobilityLabel = flightCount && transferCount
+  const mobilityLabel = hasFlightSummary && hasTransferSummary
     ? (
         flightServices.every((service) => service?.included !== false) &&
         transferServices.every((service) => service?.included !== false)
@@ -209,16 +211,16 @@ export default function DashboardView({
   const hotelGlanceNote = hotelNamesLabel || tt("Estancia por confirmar");
   const golfGlanceValue = golfLabel || tt("Rondas de golf por confirmar");
   const golfGlanceNote = golfNamesLabel || tt("Campos por confirmar");
-  const logisticsValue = flightCount
+  const logisticsValue = hasFlightSummary
     ? compactList(flightTitles, 1)
-    : (transferCount
+    : (hasTransferSummary
       ? compactList(transferTitles, 1)
       : (extrasCount ? compactList(otherTitles, 1) : tt("Sin extras destacados")));
-  const logisticsNote = flightCount && transferCount
+  const logisticsNote = hasFlightSummary && hasTransferSummary
     ? mobilityLabel
-    : (flightCount
+    : (hasFlightSummary
       ? flightLabel
-      : (transferCount
+      : (hasTransferSummary
         ? transferLabel
         : (extrasCount ? tt("Servicios del viaje") : tt("Se completará cuando quede confirmado"))));
   const milestoneHeadline = action?.title || (actionStatus === "pending"
@@ -232,7 +234,7 @@ export default function DashboardView({
   const includeGolf = golfCount
     ? `${golfLabel}${golfTitles.length ? ` · ${compactList(golfTitles, 2)}` : ""}`
     : tt("Rondas de golf por confirmar");
-  const includeMobility = [flightCount ? compactList(flightTitles, 1) : "", transferCount ? compactList(transferTitles, 1) : ""]
+  const includeMobility = [hasFlightSummary ? compactList(flightTitles, 1) : "", hasTransferSummary ? compactList(transferTitles, 1) : ""]
     .filter(Boolean)
     .join(" · ")
     || (extrasCount ? compactList(otherTitles, 1) : tt("Los vuelos y traslados aparecerán aquí cuando estén definidos"));
