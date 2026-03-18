@@ -149,7 +149,7 @@ function casanova_portal_render_dashboard(int $user_id): string {
           }
         }
         if ($exp_label !== '') {
-          $msg_html .= '<div class="casanova-muted" style="margin-top:2px;">' .
+          $msg_html .= '<div class="casanova-muted casanova-dashboard-message__trip">' .
             sprintf(esc_html__('Viaje: %s', 'casanova-portal'), esc_html($exp_label)) .
           '</div>';
         }
@@ -158,10 +158,10 @@ function casanova_portal_render_dashboard(int $user_id): string {
           $msg_html .= '<div class="casanova-pill">' . sprintf(esc_html__('%s nuevos', 'casanova-portal'), esc_html(number_format_i18n($n_new))) . '</div>';
         }
         if ($b !== '') {
-          $msg_html .= '<div class="casanova-muted" style="margin-top:8px;">' . esc_html($b) . '</div>';
+          $msg_html .= '<div class="casanova-muted casanova-dashboard-message__body">' . esc_html($b) . '</div>';
         }
         if ($when !== '') {
-          $msg_html .= '<div class="casanova-card-meta casanova-muted" style="margin-top:6px;">' . esc_html($when) . '</div>';
+          $msg_html .= '<div class="casanova-card-meta casanova-muted casanova-dashboard-message__meta">' . esc_html($when) . '</div>';
         }
       }
       $msg_url = add_query_arg(['view' => 'mensajes', 'expediente' => $idExpMsg], casanova_portal_base_url());
@@ -269,16 +269,16 @@ function casanova_portal_render_dashboard_from_data(int $user_id, array $data): 
     $url       = (string)($msg['url'] ?? '');
 
     if ($exp_label !== '') {
-      $msg_html .= '<div class="casanova-muted" style="margin-top:2px;">' . sprintf(esc_html__('Viaje: %s', 'casanova-portal'), esc_html($exp_label)) . '</div>';
+      $msg_html .= '<div class="casanova-muted casanova-dashboard-message__trip">' . sprintf(esc_html__('Viaje: %s', 'casanova-portal'), esc_html($exp_label)) . '</div>';
     }
     if ($unread > 0) {
       $msg_html .= '<div class="casanova-pill">' . sprintf(esc_html__('%s nuevos', 'casanova-portal'), esc_html(number_format_i18n($unread))) . '</div>';
     }
     if ($snippet !== '') {
-      $msg_html .= '<div class="casanova-muted" style="margin-top:8px;">' . esc_html($snippet) . '</div>';
+      $msg_html .= '<div class="casanova-muted casanova-dashboard-message__body">' . esc_html($snippet) . '</div>';
     }
     if ($when !== '') {
-      $msg_html .= '<div class="casanova-card-meta casanova-muted" style="margin-top:6px;">' . esc_html($when) . '</div>';
+      $msg_html .= '<div class="casanova-card-meta casanova-muted casanova-dashboard-message__meta">' . esc_html($when) . '</div>';
     }
     if ($url) {
       $msg_html .= '<div class="casanova-card-actions"><a class="casanova-btn" href="' . esc_url($url) . '">' . esc_html__('Ver mensajes', 'casanova-portal') . '</a></div>';

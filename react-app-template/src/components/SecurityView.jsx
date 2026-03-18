@@ -12,13 +12,13 @@ export default function SecurityView({ onChangePassword, readOnly = false, readO
 
   return (
     <div className="cp-content">
-      <div className="cp-card" style={{ background: "var(--surface)" }}>
+      <div className="cp-card">
         <div className="cp-card-title">{tt("Cambiar contraseña")}</div>
-        <div className="cp-help" style={{ marginTop: -6, marginBottom: 18 }}>
+        <div className="cp-help cp-help--tight">
           {tt("Tu contraseña es tu llave digital. No la compartas, aunque a los humanos les encante hacerlo.")}
         </div>
         {readOnly ? (
-          <div style={{ marginBottom: 18 }}>
+          <div className="cp-mb-18">
             <Notice variant="warn" title={tt("Cambio de contraseña desactivado")}>
               {lockedMessage} {tt("Puedes revisar esta sección, pero no cambiar la contraseña del cliente.")}
             </Notice>

@@ -142,6 +142,6 @@
     }
   } catch (ex) {
     // fallback ultra simple
-    el.innerHTML = '<pre style="white-space:pre-wrap">React mount error: ' + String(ex) + '</pre>';
+    el.innerHTML = '<pre class="cg-react-error">React mount error: ' + String(ex) + '</pre>';
   }
 })();

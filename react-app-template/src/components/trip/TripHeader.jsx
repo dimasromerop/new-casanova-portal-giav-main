@@ -72,7 +72,7 @@ export default function TripHeader({ trip, map, weather, itineraryUrl }) {
   const range = normalizeTripDates(trip);
 
   return (
-    <div className="cp-card cp-trip-header" style={{ marginTop: 14 }}>
+    <div className="cp-card cp-trip-header cp-mt-14">
       <div className="cp-card-header cp-trip-header__card-header">
         <div className="cp-trip-header__summary">
           <div className="cp-card-title cp-trip-header__title">

@@ -558,21 +558,17 @@ function casanova_handle_pay_expediente(): void {
     $exp_codigo = trim((string)($exp_meta['codigo'] ?? ''));
     $exp_label  = trim((string)($exp_meta['label'] ?? ''));
 
-    header('Content-Type: text/html; charset=' . get_bloginfo('charset'));
-echo '<div style="max-width:720px;margin:24px auto;padding:18px;border:1px solid #e5e5e5;border-radius:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">';
-
-if (defined('CASANOVA_AGENCY_LOGO_URL') && CASANOVA_AGENCY_LOGO_URL) {
-  echo '<div style="margin:0 0 14px;"><img src="' . esc_url(CASANOVA_AGENCY_LOGO_URL) . '" alt="" style="max-height:44px;width:auto;"/></div>';
-}
-
-echo '<h2 style="margin:0 0 10px;">' . esc_html__('Pago de expediente', 'casanova-portal') . '</h2>';
+    casanova_portal_render_public_document_start(__('Pago de expediente', 'casanova-portal'));
+echo '<section class="casanova-public-page">';
+echo casanova_portal_public_logo_html();
+echo '<h2 class="casanova-public-page__title">' . esc_html__('Pago de expediente', 'casanova-portal') . '</h2>';
 
 $viaje_label = esc_html((string) $exp_label);
 $codigo_html = '';
 if ($exp_titulo && $exp_codigo) {
-  $codigo_html = ' <span style="color:#666;">(' . esc_html((string) $exp_codigo) . ')</span>';
+  $codigo_html = ' <span class="casanova-public-page__code">(' . esc_html((string) $exp_codigo) . ')</span>';
 }
-echo '<p style="margin:0 0 14px;">' . wp_kses_post(
+echo '<p class="casanova-public-page__trip">' . wp_kses_post(
   sprintf(
     /* translators: %1$s is the trip/expediente label (title), %2$s is the human code in parentheses (may be empty). */
     __('Viaje: <strong>%1$s</strong>%2$s', 'casanova-portal'),
@@ -581,10 +577,10 @@ echo '<p style="margin:0 0 14px;">' . wp_kses_post(
   )
 ) . '</p>';
 
-echo '<div style="background:#fafafa;border:1px solid #eee;border-radius:8px;padding:12px;margin:0 0 14px;">';
+echo '<div class="casanova-public-page__summary">';
 
 $pendiente_html = '<strong>' . esc_html(number_format($total_pend, 2, ',', '.')) . ' €</strong>';
-echo '<div>' . wp_kses_post(
+echo '<div class="casanova-public-page__summary-line">' . wp_kses_post(
   sprintf(
     /* translators: %s is a formatted amount like "<strong>1.234,56 €</strong>" */
     __('Pendiente: %s', 'casanova-portal'),
@@ -593,7 +589,7 @@ echo '<div>' . wp_kses_post(
 ) . '</div>';
 
 if ($pagado_now > 0.01) {
-  echo '<div style="margin-top:6px;">' . esc_html(
+  echo '<div class="casanova-public-page__summary-line">' . esc_html(
     sprintf(
       /* translators: %s is a formatted amount like "1.234,56 €" */
       __('Pagado: %s €', 'casanova-portal'),
@@ -603,7 +599,7 @@ if ($pagado_now > 0.01) {
 }
 
 if ($deadline_txt) {
-  echo '<div style="margin-top:6px;">' . esc_html(
+  echo '<div class="casanova-public-page__summary-line">' . esc_html(
     sprintf(
       /* translators: %s is a date text like "23/12/2025" */
       __('Fecha límite: %s', 'casanova-portal'),
@@ -614,14 +610,14 @@ if ($deadline_txt) {
 
 echo '</div>';
 
-echo '<form method="post" action="' . esc_url($action_url) . '">';
+echo '<form method="post" action="' . esc_url($action_url) . '" class="casanova-public-form">';
 echo '<input type="hidden" name="action" value="casanova_pay_expediente" />';
 echo '<input type="hidden" name="expediente" value="' . (int) $idExpediente . '" />';
 echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
 
 if ($deposit_effective) {
-  echo '<label style="display:block;margin:10px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-  echo '<input type="radio" name="mode" value="deposit" ' . ($checked_deposit ? 'checked' : '') . ' style="margin-right:8px;" />';
+  echo '<label class="casanova-public-choice">';
+  echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="deposit" ' . ($checked_deposit ? 'checked' : '') . ' />';
 
   $deposit_amount_html = '<strong>' . esc_html(number_format($deposit_amt, 2, ',', '.')) . ' €</strong>';
   echo wp_kses_post(
@@ -635,16 +631,16 @@ if ($deposit_effective) {
 
   echo '</label>';
 } else {
-  echo '<label style="display:block;margin:10px 0;padding:10px;border:1px solid #eee;border-radius:8px;opacity:.55;cursor:not-allowed;">';
-  echo '<input type="radio" name="mode" value="deposit" disabled style="margin-right:8px;" />';
+  echo '<label class="casanova-public-choice casanova-public-choice--disabled">';
+  echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="deposit" disabled />';
 
   echo esc_html__('Depósito no disponible', 'casanova-portal');
 
   echo '</label>';
 }
 
-echo '<label style="display:block;margin:10px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-echo '<input type="radio" name="mode" value="full" ' . ($checked_full ? 'checked' : '') . ' style="margin-right:8px;" />';
+echo '<label class="casanova-public-choice">';
+echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="full" ' . ($checked_full ? 'checked' : '') . ' />';
 
 $amount_html = '<strong>' . esc_html(number_format($total_pend, 2, ',', '.')) . ' €</strong>';
 echo wp_kses_post(
@@ -657,17 +653,18 @@ echo wp_kses_post(
 
 echo '</label>';
 
-echo '<button type="submit" style="margin-top:10px;padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer;">'
+echo '<button type="submit" class="casanova-public-button">'
   . esc_html__('Continuar al pago', 'casanova-portal')
   . '</button>';
 
 echo '</form>';
 
-echo '<p style="margin:14px 0 0;font-size:12px;color:#777;">'
+echo '<p class="casanova-public-page__footer">'
   . esc_html__('Si tienes dudas, contacta con la agencia antes de pagar.', 'casanova-portal')
   . '</p>';
 
-echo '</div>';
+echo '</section>';
+casanova_portal_render_public_document_end();
 exit;
 
   }

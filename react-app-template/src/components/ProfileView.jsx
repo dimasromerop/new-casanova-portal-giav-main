@@ -35,10 +35,10 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
 
   return (
     <div className="cp-content">
-      <div className="cp-card" style={{ background: "var(--surface)" }}>
+      <div className="cp-card">
         <div className="cp-card-title">{tt("Información personal")}</div>
         {readOnly ? (
-          <div style={{ marginTop: 14 }}>
+          <div className="cp-mt-14">
             <Notice variant="warn" title={tt("Edición desactivada")}>
               {lockedMessage} {tt("Puedes consultar los datos del cliente, pero no modificarlos desde esta vista.")}
             </Notice>
@@ -162,16 +162,15 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
         </div>
       </div>
 
-      <div className="cp-card" style={{ background: "var(--surface)" }}>
+      <div className="cp-card">
         <div className="cp-card-title">{t("portal_language", "Idioma del portal")}</div>
         <section className="cp-form-section cp-form-section--compact">
           <Field label={tt("Idioma")} htmlFor="profile-locale" help={tt("Esto solo afecta al portal.")} readOnly={readOnly}>
             <select
               id="profile-locale"
-              className="cp-input"
+              className="cp-input cp-input--narrow"
               value={locale}
               onChange={(event) => onLocale(event.target.value)}
-              style={{ maxWidth: 280 }}
               disabled={readOnly}
               aria-disabled={readOnly ? "true" : undefined}
             >

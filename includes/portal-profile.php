@@ -332,7 +332,7 @@ add_shortcode('casanova_mis_datos', function () {
       echo '<div class="casanova-alert casanova-alert--warn"><strong>' . esc_html__('No se pudo actualizar la dirección.', 'casanova-portal') . '</strong> ' . esc_html__('Si persiste, lo revisamos.', 'casanova-portal') . '</div>';
     }
 
-    echo '<div class="casanova-kv" style="margin-bottom:12px;">';
+    echo '<div class="casanova-kv casanova-kv--summary">';
       if ($nombre !== '' || $apellidos !== '') echo '<div><strong>' . esc_html__('Nombre', 'casanova-portal') . ':</strong> ' . esc_html(trim($nombre . ' ' . $apellidos)) . '</div>';
       if ($email !== '') echo '<div><strong>' . esc_html__('Email', 'casanova-portal') . ':</strong> ' . esc_html($email) . '</div>';
       if ($telefono !== '') echo '<div><strong>' . esc_html__('Teléfono', 'casanova-portal') . ':</strong> ' . esc_html($telefono) . '</div>';
@@ -349,37 +349,37 @@ add_shortcode('casanova_mis_datos', function () {
   echo '<input type="hidden" name="action" value="casanova_update_address">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr(wp_create_nonce('casanova_update_address_' . $idCliente)) . '">';
 
-  echo '<div class="casanova-kv" style="max-width:560px;">';
+  echo '<div class="casanova-kv casanova-kv--form">';
 
     echo '<label><strong>' . esc_html__('Dirección', 'casanova-portal') . '</strong><br>';
-      echo '<input type="text" name="direccion" value="' . esc_attr($direccion) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+      echo '<input type="text" name="direccion" value="' . esc_attr($direccion) . '"' . $readonly_attr . ' class="casanova-field-control">';
     echo '</label>';
 
-    echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+    echo '<div class="casanova-form-grid casanova-form-grid--two">';
       echo '<label><strong>' . esc_html__('CP', 'casanova-portal') . '</strong><br>';
-        echo '<input type="text" name="codPostal" value="' . esc_attr($codPostal) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+        echo '<input type="text" name="codPostal" value="' . esc_attr($codPostal) . '"' . $readonly_attr . ' class="casanova-field-control">';
       echo '</label>';
 
       echo '<label><strong>' . esc_html__('Población', 'casanova-portal') . '</strong><br>';
-        echo '<input type="text" name="poblacion" value="' . esc_attr($poblacion) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+        echo '<input type="text" name="poblacion" value="' . esc_attr($poblacion) . '"' . $readonly_attr . ' class="casanova-field-control">';
       echo '</label>';
     echo '</div>';
 
-    echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+    echo '<div class="casanova-form-grid casanova-form-grid--two">';
       echo '<label><strong>' . esc_html__('Provincia', 'casanova-portal') . '</strong><br>';
-        echo '<input type="text" name="provincia" value="' . esc_attr($provincia) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+        echo '<input type="text" name="provincia" value="' . esc_attr($provincia) . '"' . $readonly_attr . ' class="casanova-field-control">';
       echo '</label>';
 
       echo '<label><strong>' . esc_html__('País', 'casanova-portal') . '</strong><br>';
-        echo '<input type="text" name="pais" value="' . esc_attr($pais) . '"' . $readonly_attr . ' style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;">';
+        echo '<input type="text" name="pais" value="' . esc_attr($pais) . '"' . $readonly_attr . ' class="casanova-field-control">';
       echo '</label>';
     echo '</div>';
 
   echo '</div>';
 
-  echo '<div style="margin-top:12px;">';
+  echo '<div class="casanova-actions--top">';
     if ($read_only) {
-      echo '<span class="casanova-btn-submit" style="display:inline-flex;opacity:.6;pointer-events:none;"><span class="label">' . esc_html__('Edición desactivada en vista cliente', 'casanova-portal') . '</span></span>';
+      echo '<span class="casanova-btn-submit casanova-btn-submit--disabled"><span class="label">' . esc_html__('Edición desactivada en vista cliente', 'casanova-portal') . '</span></span>';
     } else {
       echo '<button type="submit" class="casanova-btn-submit"><span class="label">' . esc_html__('Guardar dirección', 'casanova-portal') . '</span><span class="spinner" aria-hidden="true"></span></button>';
     }

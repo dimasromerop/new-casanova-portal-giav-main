@@ -225,7 +225,11 @@ function TripCard({ trip, onOpen }) {
           aria-valuemax={100}
           aria-valuenow={Math.round(financials.progressPct)}
         >
-          <span className="cp-trip-card__progress-bar" style={{ width: `${financials.progressPct}%` }} />
+          <progress
+            className="cp-progress-meter cp-progress-meter--trip-card"
+            value={financials.progressPct}
+            max={100}
+          />
         </div>
 
         <div className="cp-trip-card__payment-meta">

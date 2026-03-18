@@ -552,7 +552,12 @@ export default function DashboardView({
                 </div>
               </div>
               <div className="cp-trip-finance__meter">
-                <span className="cp-trip-finance__meter-bar" style={{ width: `${paymentProgress}%` }} />
+                <progress
+                  className="cp-progress-meter cp-progress-meter--finance"
+                  value={paymentProgress}
+                  max={100}
+                  aria-label={tt("Progreso de pago")}
+                />
               </div>
               <div className="cp-trip-module__meta">
                 {isPaid ? tt("Todo el viaje está liquidado.") : `Has pagado ${paidLabel} de ${totalLabel}.`}
@@ -601,7 +606,7 @@ export default function DashboardView({
           </>
         ) : (
           <section className="cp-dash-span-12">
-            <div className="cp-card" style={{ background: "var(--surface)" }}>
+            <div className="cp-card">
               <EmptyState title={emptyStateTitle} icon="🧳">
                 {emptyStateBody}
               </EmptyState>
@@ -684,7 +689,12 @@ export default function DashboardView({
                 </div>
               </div>
               <div className="cp-dashboard-loyalty__progress">
-                <span className="cp-dashboard-loyalty__progress-bar" style={{ width: `${loyaltyProgressPct}%` }} />
+                <progress
+                  className="cp-progress-meter cp-progress-meter--loyalty"
+                  value={loyaltyProgressPct}
+                  max={100}
+                  aria-label={tt("Progreso de Mulligans")}
+                />
               </div>
               <div className="cp-dashboard-loyalty__hint">{loyaltyHint}</div>
               <div className="cp-dashboard-loyalty__actions">

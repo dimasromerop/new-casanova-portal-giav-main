@@ -140,7 +140,7 @@ add_shortcode('casanova_proximo_viaje', function($atts){
   $headline = $titulo !== '' ? $titulo : ($codigo !== '' ? (sprintf(__('Expediente %s', 'casanova-portal'), $codigo)) : (sprintf(__('Expediente %s', 'casanova-portal'), $idExp)));
   
   // Icono SVG
-  $icon_cal = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:4px;position:relative;top:-1px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+  $icon_cal = '<svg class="casanova-nexttrip-card__icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
 
   // --- Render Legacy (simple text) ---
   if ($variant === 'legacy') {
@@ -151,9 +151,9 @@ add_shortcode('casanova_proximo_viaje', function($atts){
     $simple .= '<div class="casanova-nexttrip-legacy__title">' . esc_html($titulo) . '</div>';
     $simple .= '<div class="casanova-nexttrip-legacy__meta">' . esc_html($date_line) . ' · ' . esc_html($days_text) . '</div>';
     $simple .= '<div class="casanova-nexttrip-legacy__money">Total: ' . esc_html(casanova_fmt_money($total)) . ' · Pendiente: ' . esc_html(casanova_fmt_money($pendiente)) . '</div>';
-    $simple .= '<div style="margin-top:10px; display:flex; gap:10px; align-items:center;">';
+    $simple .= '<div class="casanova-nexttrip-legacy__actions">';
     $simple .= '  <a class="casanova-nexttrip-legacy__link" href="' . esc_url($detail_url) . '">' . esc_html__('Ver detalle', 'casanova-portal') . '</a>'; 
-    $simple .= '  <a class="casanova-nexttrip-legacy__link" href="' . esc_url($ics_url) . '" style="color:#666;">' . esc_html__('Añadir a calendario', 'casanova-portal') . '</a>'; 
+    $simple .= '  <a class="casanova-nexttrip-legacy__link casanova-nexttrip-legacy__link--muted" href="' . esc_url($ics_url) . '">' . esc_html__('Añadir a calendario', 'casanova-portal') . '</a>';
     $simple .= '</div>';
     $simple .= '</div>';
     return $simple;
@@ -181,9 +181,9 @@ add_shortcode('casanova_proximo_viaje', function($atts){
   $html .= '  </div>';
   
   $html .= '  <div class="casanova-nexttrip-card__cta">';
-  $html .= '    <div style="display:flex; gap:8px;">';
+  $html .= '    <div class="casanova-nexttrip-card__actions">';
   $html .= '      <a class="casanova-btn casanova-btn--primary" href="' . esc_url($detail_url) . '">' . esc_html__('Ver detalle', 'casanova-portal') . '</a>'; 
-  $html .= '      <a class="casanova-btn casanova-btn--ghost" href="' . esc_url($ics_url) . '" title="' . esc_attr__('Añadir a calendario', 'casanova-portal') . '" style="padding:10px 12px;">' . $icon_cal . esc_html__('Calendario', 'casanova-portal') . '</a>';
+  $html .= '      <a class="casanova-btn casanova-btn--ghost casanova-btn--icon" href="' . esc_url($ics_url) . '" title="' . esc_attr__('Añadir a calendario', 'casanova-portal') . '">' . $icon_cal . esc_html__('Calendario', 'casanova-portal') . '</a>';
   $html .= '    </div>';
   $html .= '    <span class="casanova-nexttrip-card__hint">'. esc_html__('Pagado', 'casanova-portal') .': ' . esc_html(casanova_fmt_money($pagado)) . '</span>';
   $html .= '  </div>';
@@ -296,9 +296,7 @@ add_shortcode('casanova_card_pagos', function($atts) {
   $html .= '      <div class="casanova-paycard__value">' . esc_html(casanova_fmt_money($total)) . '</div>';
   $html .= '    </div>';
   $html .= '  </div>';
-  $html .= '  <div class="casanova-paycard__bar" role="progressbar" aria-valuenow="' . esc_attr((string)$progress) . '" aria-valuemin="0" aria-valuemax="100">';
-  $html .= '    <div class="casanova-paycard__barFill" style="width:' . esc_attr((string)$progress) . '%"></div>';
-  $html .= '  </div>';
+  $html .= '  <progress class="casanova-paycard__progress" value="' . esc_attr((string)$progress) . '" max="100" aria-label="' . esc_attr__('Progreso de pago', 'casanova-portal') . '"></progress>';
   $html .= '  <div class="casanova-paycard__meta">' . sprintf(
     esc_html__('Has pagado %1$s de %2$s', 'casanova-portal'),
     casanova_fmt_money($pagado),

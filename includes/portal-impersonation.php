@@ -523,20 +523,20 @@ if (!function_exists('casanova_portal_render_impersonation_admin_page')) {
         ? __('Previsualizacion GIAV activa: %s', 'casanova-portal')
         : __('Vista cliente activa: %s', 'casanova-portal');
 
-      echo '<div class="notice notice-warning" style="padding:12px 16px;">';
-      echo '<p style="margin:0 0 10px;"><strong>' . esc_html(sprintf($active_label, $active_name !== '' ? $active_name : __('Cliente', 'casanova-portal'))) . '</strong></p>';
+      echo '<div class="notice notice-warning casanova-admin-notice">';
+      echo '<p><strong>' . esc_html(sprintf($active_label, $active_name !== '' ? $active_name : __('Cliente', 'casanova-portal'))) . '</strong></p>';
       if ($active_preview_only) {
-        echo '<p style="margin:0 0 10px;">' . esc_html__('Este cliente existe en GIAV, pero todavia no tiene usuario WordPress vinculado. La vista previa usa directamente su contexto de cliente.', 'casanova-portal') . '</p>';
+        echo '<p>' . esc_html__('Este cliente existe en GIAV, pero todavia no tiene usuario WordPress vinculado. La vista previa usa directamente su contexto de cliente.', 'casanova-portal') . '</p>';
       }
-      echo '<p style="margin:0;"><a class="button button-secondary" href="' . esc_url($stop_url) . '">' . esc_html__('Salir de vista cliente', 'casanova-portal') . '</a></p>';
+      echo '<p><a class="button button-secondary" href="' . esc_url($stop_url) . '">' . esc_html__('Salir de vista cliente', 'casanova-portal') . '</a></p>';
       echo '</div>';
     }
 
-    echo '<form method="get" style="margin:18px 0 20px;">';
+    echo '<form method="get" class="casanova-admin-inline-form casanova-admin-inline-form--wide">';
     echo '<input type="hidden" name="page" value="casanova-portal-impersonation">';
-    echo '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">';
+    echo '<div class="casanova-admin-inline-controls">';
     echo '<label class="screen-reader-text" for="casanova-portal-impersonation-search">' . esc_html__('Buscar cliente', 'casanova-portal') . '</label>';
-    echo '<input type="search" id="casanova-portal-impersonation-search" name="s" class="regular-text" style="min-width:320px;" value="' . esc_attr($search) . '" placeholder="' . esc_attr__('Nombre, email, usuario, WP ID, GIAV ID o DNI exacto', 'casanova-portal') . '">';
+    echo '<input type="search" id="casanova-portal-impersonation-search" name="s" class="regular-text casanova-admin-control--search" value="' . esc_attr($search) . '" placeholder="' . esc_attr__('Nombre, email, usuario, WP ID, GIAV ID o DNI exacto', 'casanova-portal') . '">';
     submit_button(__('Buscar cliente', 'casanova-portal'), 'primary', '', false);
     echo '<a class="button button-secondary" href="' . esc_url($admin_page_url) . '">' . esc_html__('Limpiar', 'casanova-portal') . '</a>';
     echo '</div>';
@@ -553,14 +553,14 @@ if (!function_exists('casanova_portal_render_impersonation_admin_page')) {
       $preview_is_active = ($active_client_id > 0 && $active_client_id === $preview_client_id);
       $preview_notice_class = $preview_only ? 'notice notice-info' : 'notice notice-success';
 
-      echo '<div class="' . esc_attr($preview_notice_class) . '" style="padding:12px 16px;margin-bottom:18px;">';
-      echo '<p style="margin:0 0 10px;"><strong>' . esc_html($preview_name !== '' ? $preview_name : sprintf(__('Cliente GIAV #%d', 'casanova-portal'), $preview_client_id)) . '</strong></p>';
+      echo '<div class="' . esc_attr($preview_notice_class . ' casanova-admin-notice casanova-admin-notice--spaced') . '">';
+      echo '<p><strong>' . esc_html($preview_name !== '' ? $preview_name : sprintf(__('Cliente GIAV #%d', 'casanova-portal'), $preview_client_id)) . '</strong></p>';
       if ($preview_only) {
-        echo '<p style="margin:0 0 10px;">' . esc_html__('Cliente encontrado en GIAV sin usuario WordPress vinculado. Puedes abrir una previsualizacion de su portal en modo solo lectura antes de darle acceso.', 'casanova-portal') . '</p>';
+        echo '<p>' . esc_html__('Cliente encontrado en GIAV sin usuario WordPress vinculado. Puedes abrir una previsualizacion de su portal en modo solo lectura antes de darle acceso.', 'casanova-portal') . '</p>';
       } else {
-        echo '<p style="margin:0 0 10px;">' . esc_html__('Cliente encontrado en GIAV y ya vinculado al portal. Puedes abrir su portal directamente desde aqui.', 'casanova-portal') . '</p>';
+        echo '<p>' . esc_html__('Cliente encontrado en GIAV y ya vinculado al portal. Puedes abrir su portal directamente desde aqui.', 'casanova-portal') . '</p>';
       }
-      echo '<p style="margin:0 0 10px;">';
+      echo '<p>';
       echo esc_html(sprintf(__('GIAV #%d', 'casanova-portal'), $preview_client_id));
       if ($preview_user_id > 0) {
         echo ' - ' . esc_html(sprintf(__('WP #%d', 'casanova-portal'), $preview_user_id));
@@ -572,10 +572,10 @@ if (!function_exists('casanova_portal_render_impersonation_admin_page')) {
         echo ' - ' . esc_html($preview_user_login);
       }
       echo '</p>';
-      echo '<p style="margin:0;">';
+      echo '<p>';
       echo '<a class="button button-primary" href="' . esc_url($preview_start_url) . '">' . esc_html__('Ver portal como cliente', 'casanova-portal') . '</a>';
       if ($preview_is_active) {
-        echo ' <span class="description" style="margin-left:8px;">' . esc_html__('Cliente visto ahora mismo', 'casanova-portal') . '</span>';
+        echo ' <span class="description casanova-admin-description--inline">' . esc_html__('Cliente visto ahora mismo', 'casanova-portal') . '</span>';
       }
       echo '</p>';
       echo '</div>';
@@ -629,7 +629,7 @@ if (!function_exists('casanova_portal_render_impersonation_admin_page')) {
     echo '</table>';
 
     if ($search === '') {
-      echo '<p class="description" style="margin-top:10px;">' . esc_html__('Mostrando clientes recientes con portal activo. Usa el buscador para afinar la seleccion o introduce un GIAV ID/DNI exacto para previsualizar clientes sin acceso web.', 'casanova-portal') . '</p>';
+      echo '<p class="description casanova-admin-description--top">' . esc_html__('Mostrando clientes recientes con portal activo. Usa el buscador para afinar la seleccion o introduce un GIAV ID/DNI exacto para previsualizar clientes sin acceso web.', 'casanova-portal') . '</p>';
     }
 
     echo '</div>';
@@ -678,9 +678,7 @@ if (!function_exists('casanova_portal_render_impersonation_banner')) {
     );
 
     $exit_url = (string) ($payload['exitUrl'] ?? '');
-    $style = 'display:flex;gap:12px;align-items:center;justify-content:space-between;margin:0 0 20px;';
-
-    $html  = '<div class="casanova-alert casanova-alert--warn casanova-impersonation-banner" style="' . esc_attr($style) . '">';
+    $html  = '<div class="casanova-alert casanova-alert--warn casanova-impersonation-banner">';
     $html .= '<strong>' . esc_html($title) . '</strong>';
     if ($exit_url !== '') {
       $html .= '<a class="casanova-btn casanova-btn--ghost" href="' . esc_url($exit_url) . '">' . esc_html__('Salir de vista cliente', 'casanova-portal') . '</a>';

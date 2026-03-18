@@ -1,0 +1,222 @@
+.casanova-admin-lead{
+  max-width:920px;
+  margin-bottom:18px;
+}
+
+.casanova-admin-legacy-tabs{
+  display:none !important;
+}
+
+.casanova-admin-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:16px;
+  margin:20px 0 8px;
+  max-width:1100px;
+}
+
+.casanova-admin-card{
+  background:#fff;
+  border:1px solid #dcdcde;
+  border-radius:12px;
+  padding:18px;
+  box-shadow:0 1px 2px rgba(16,24,40,.04);
+}
+
+.casanova-admin-card h2{
+  margin:0 0 8px;
+  font-size:16px;
+  line-height:1.35;
+}
+
+.casanova-admin-card p{
+  margin:0 0 14px;
+  color:#50575e;
+}
+
+.casanova-admin-card--narrow{
+  max-width:820px;
+  margin-top:18px;
+}
+
+.casanova-admin-note{
+  max-width:1100px;
+  margin-top:8px;
+}
+
+.casanova-admin-toggle-label{
+  display:block;
+  margin:10px 0 8px;
+}
+
+.casanova-admin-table--1100{
+  max-width:1100px;
+}
+
+.casanova-admin-table--1200{
+  max-width:1200px;
+}
+
+.casanova-admin-col--view{
+  width:110px;
+}
+
+.casanova-admin-col--label{
+  width:180px;
+}
+
+.casanova-admin-col--icon{
+  width:140px;
+}
+
+.casanova-admin-col--order{
+  width:90px;
+}
+
+.casanova-admin-col--preserve{
+  width:140px;
+}
+
+.casanova-admin-col--enabled{
+  width:90px;
+}
+
+.casanova-admin-col--actions{
+  width:70px;
+}
+
+.casanova-admin-col--check{
+  width:26px;
+}
+
+.casanova-admin-col--id{
+  width:80px;
+}
+
+.casanova-admin-col--shortcode{
+  width:240px;
+}
+
+.casanova-admin-col--examples{
+  width:420px;
+}
+
+.casanova-admin-checklist-label{
+  display:block;
+}
+
+.casanova-admin-cell--center{
+  text-align:center;
+}
+
+.casanova-admin-stack--xs{
+  margin:8px 0;
+}
+
+.casanova-admin-stack--sm{
+  margin:10px 0;
+}
+
+.casanova-admin-stack--md{
+  margin:12px 0;
+}
+
+.casanova-admin-stack--lg{
+  margin-top:14px;
+}
+
+.casanova-admin-inline-form{
+  margin:12px 0;
+}
+
+.casanova-admin-inline-form--wide{
+  margin:18px 0 20px;
+}
+
+.casanova-admin-inline-controls{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.casanova-admin-control--search{
+  min-width:320px;
+}
+
+.casanova-admin-control--number-sm{
+  min-width:160px;
+}
+
+.casanova-admin-control--number-md{
+  min-width:180px;
+}
+
+.casanova-admin-inline-option{
+  margin-left:10px;
+}
+
+.casanova-admin-description--top{
+  margin-top:10px;
+}
+
+.casanova-admin-description--inline{
+  margin-left:8px;
+}
+
+.casanova-admin-help-list{
+  max-width:1100px;
+  list-style:disc;
+  margin-left:20px;
+}
+
+.casanova-admin-notice{
+  padding:12px 16px;
+}
+
+.casanova-admin-notice--spaced{
+  margin-bottom:18px;
+}
+
+.casanova-admin-notice > p{
+  margin:0 0 10px;
+}
+
+.casanova-admin-notice > p:last-child{
+  margin-bottom:0;
+}
+
+.casanova-menu-table th,
+.casanova-menu-table td{
+  vertical-align:top;
+}
+
+.casanova-menu-table input[type="text"]{
+  width:100%;
+}
+
+.casanova-menu-table .small{
+  width:90px;
+}
+
+.casanova-menu-actions{
+  margin-top:10px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.casanova-menu-hint{
+  color:#666;
+}
+
+@media (max-width: 782px){
+  .casanova-admin-inline-option{
+    margin-left:0;
+  }
+
+  .casanova-menu-actions{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}

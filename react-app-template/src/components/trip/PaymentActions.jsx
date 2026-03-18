@@ -87,7 +87,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
 
   if (readOnly) {
     return (
-      <div style={{ marginTop: 20 }}>
+      <div className="cp-mt-20">
         <Notice variant="warn" title={tt("Pagos desactivados")}>
           {lockedMessage} {tt("Puedes revisar el estado de pagos, pero no iniciar cobros desde esta vista.")}
         </Notice>
@@ -96,7 +96,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
   }
 
   return (
-    <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="cp-mt-20 cp-stack-10">
       <div className="cp-pay-section">
         <div className="cp-pay-section__label">{tt("Elige método de pago")}</div>
         <div className="cp-pay-methods" role="tablist" aria-label={tt("Método de pago")}>
@@ -168,7 +168,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
           ) : null}
 
           {!hasActions && !isPaidLocal ? (
-            <div className="cp-meta" style={{ alignSelf: "center" }}>
+            <div className="cp-meta cp-self-center">
               {tt("Aún no hay pagos disponibles para este viaje.")}
             </div>
           ) : null}

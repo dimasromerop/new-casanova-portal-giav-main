@@ -223,7 +223,7 @@ export function Sidebar({ view, unread = 0, items = [], theme = "light" }) {
 
   return (
     <aside className="cp-sidebar">
-      <div className="cp-brand" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="cp-brand cp-brand--spaced">
         {logoUrl ? (
           <img
             className="cp-logo cp-logo--image"
@@ -235,7 +235,7 @@ export function Sidebar({ view, unread = 0, items = [], theme = "light" }) {
         ) : (
           <div className="cp-logo cp-logo--placeholder" aria-hidden="true" />
         )}
-        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
+        <div className="cp-brand-copy">
           <div className="cp-brand-title">{tt("Casanova Portal")}</div>
           <div className="cp-brand-sub">{tt("Gestión de Reservas")}</div>
         </div>
@@ -266,7 +266,7 @@ export function Sidebar({ view, unread = 0, items = [], theme = "light" }) {
         })}
       </nav>
 
-      <div style={{ marginTop: "auto" }} />
+      <div className="cp-sidebar-spacer" />
     </aside>
   );
 }

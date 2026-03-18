@@ -130,18 +130,18 @@ add_shortcode('casanova_expedientes', function($atts) {
   ob_start();
   
   // Barra de herramientas (Filtro)
-  echo '<div class="casanova-toolbar" style="margin-bottom:20px; display:flex; align-items:center; justify-content:flex-end;">';
-    echo '<form method="get" class="casanova-filter-form" style="display:flex; align-items:center; gap:10px;">';
+  echo '<div class="casanova-toolbar">';
+    echo '<form method="get" class="casanova-filter-form">';
       echo '<input type="hidden" name="view" value="expedientes">';
       
       // CAMBIO: Eliminamos el input hidden de "expediente".
       // Al cambiar de año (submit del form), la URL se limpiará de ?expediente=...
       // y se mostrará solo el listado del año seleccionado, sin detalle activo.
       
-      echo '<label for="periodo-select" style="font-weight:600; font-size:14px;">' . esc_html__('Año:', 'casanova-portal') . '</label>';
+      echo '<label for="periodo-select" class="casanova-filter-form__label">' . esc_html__('Año:', 'casanova-portal') . '</label>';
       
       // Select sin onchange (manejado por JS portal.js para el overlay)
-      echo '<select name="periodo" id="periodo-select" style="padding:6px 30px 6px 12px; border-radius:8px; border:1px solid #ddd; font-weight:600;">';
+      echo '<select name="periodo" id="periodo-select" class="casanova-filter-form__select">';
         foreach ($years as $y) {
           echo '<option value="' . esc_attr($y) . '" ' . selected($selected_year, $y, false) . '>' . esc_html($y) . '</option>';
         }
@@ -155,7 +155,7 @@ add_shortcode('casanova_expedientes', function($atts) {
   }
 
   if (empty($items)) {
-    echo '<div class="casanova-card casanova-card--empty"><div class="casanova-card__body" style="text-align:center; padding:40px;">';
+    echo '<div class="casanova-card casanova-card--empty"><div class="casanova-card__body casanova-card__body--empty">';
     echo '<div class="casanova-muted">' . sprintf(esc_html__('No hay viajes registrados en %s.', 'casanova-portal'), $selected_year) . '</div>';
     echo '</div></div>';
     return ob_get_clean();

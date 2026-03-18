@@ -73,7 +73,7 @@ export default function MessagesTimeline({ expediente, mock, onLatestTs, onSeen 
   }
 
   return (
-    <div className="cp-timeline" style={{ marginTop: 14 }}>
+    <div className="cp-timeline cp-mt-14">
       {items.map((message) => (
         <div key={message.id} className="cp-msg">
           <div className="cp-msg-head">

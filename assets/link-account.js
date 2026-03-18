@@ -10,11 +10,16 @@
   }
 
   function show(el) {
-    if (el) el.style.display = "";
+    if (el) el.classList.remove("casanova-link-account__form--hidden", "casanova-link-account__alert--hidden");
   }
 
   function hide(el) {
-    if (el) el.style.display = "none";
+    if (!el) return;
+    if (el.hasAttribute("data-casanova-linking-alert")) {
+      el.classList.add("casanova-link-account__alert--hidden");
+      return;
+    }
+    el.classList.add("casanova-link-account__form--hidden");
   }
 
   function setBusy(btn, busy) {

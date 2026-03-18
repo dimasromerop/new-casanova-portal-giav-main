@@ -356,14 +356,14 @@ function MulligansView({ data }) {
             />
           ))}
         </div>
-        <div style={{ marginTop: 14 }}>
+        <div className="cp-mt-14">
           <Notice variant="info" title={tt("Cómo funciona")}>
             Los beneficios se activan con una reserva real. Si un año no viajas, mantienes tu nivel, pero no se “dispara” el beneficio.
           </Notice>
         </div>
       </div>
 
-      <div className="cp-card" style={{ marginTop: 14 }}>
+      <div className="cp-card cp-mt-14">
         <div className="cp-card-title">{tt("Histórico")}</div>
         <div className="cp-card-sub">{tt("Movimientos recientes (ganados, bonus y canjes).")}</div>
 
@@ -952,10 +952,10 @@ function App() {
 
         {loadingDash && !dashboard ? (
           <div className="cp-content">
-            <div className="cp-card" style={{ background: "var(--surface)" }}>
+            <div className="cp-card">
               <div className="cp-card-title">{(activeView === "viajes" || activeView === "trips") ? "Tus viajes" : "Cargando"}</div>
               {(activeView === "viajes" || activeView === "trips") ? (
-                <div className="cp-table-wrap" style={{ marginTop: 14 }}>
+                <div className="cp-table-wrap cp-mt-14">
                   <TableSkeleton rows={7} cols={8} />
                 </div>
               ) : (
@@ -1032,7 +1032,7 @@ function App() {
                   {profileErr?.message || 'Inténtalo de nuevo más tarde.'}
                 </Notice>
               ) : (
-                <div className="cp-card" style={{ background: "var(--surface)" }}><Skeleton lines={6} /></div>
+                <div className="cp-card"><Skeleton lines={6} /></div>
               )}
             </div>
           )

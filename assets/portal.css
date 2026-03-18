@@ -65,6 +65,14 @@
 .casanova-alert{ padding:10px 12px; border-radius:12px; margin-top:12px; margin-bottom:12px; border:1px solid; }
 .casanova-alert--ok{ background:#e8f7ee; color:#167a3f; border-color:#bfe9cf; }
 .casanova-alert--warn{ background:#fff7e6; color:#8a5a00; border-color:#ffe0a6; }
+.casanova-impersonation-banner{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  margin:0 0 20px;
+}
 .casanova-note{ margin-top:10px; opacity:.75; font-size:.9em; }
 
 .casanova-section-title{ font-weight:900; margin-bottom:10px; }
@@ -1076,3 +1084,452 @@
 .casanova-msgcard__body{margin-top:10px;line-height:1.35;}
 .casanova-msgcard__meta{margin-top:6px;font-size:12px;opacity:.75;}
 .casanova-msgcard__cta{margin-top:12px;}
+
+/* ===== Cleanup: shared actions, forms and public pages ===== */
+.casanova-hidden{display:none !important;}
+
+.casanova-inline-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.casanova-action-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:34px;
+  padding:6px 10px;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  background:#fff;
+  color:#111;
+  text-decoration:none;
+  font-size:.9em;
+  line-height:1;
+  white-space:nowrap;
+}
+
+.casanova-action-btn--disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+
+.casanova-badge--status-ok{
+  border-color:#bfe9cf;
+  background:#e8f7ee;
+  color:#167a3f;
+}
+
+.casanova-badge--status-warn{
+  border-color:#ffe0a6;
+  background:#fff7e6;
+  color:#8a5a00;
+}
+
+.casanova-badge--status-bad{
+  border-color:#f7b7b7;
+  background:#fdecec;
+  color:#a11919;
+}
+
+.casanova-badge--status-neutral{
+  border-color:#e5e7eb;
+  background:#f3f4f6;
+  color:#374151;
+}
+
+.casanova-toolbar{
+  margin-bottom:20px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+
+.casanova-filter-form{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.casanova-filter-form__label{
+  font-weight:600;
+  font-size:14px;
+}
+
+.casanova-filter-form__select{
+  padding:6px 30px 6px 12px;
+  border:1px solid #ddd;
+  border-radius:8px;
+  background:#fff;
+  font-weight:600;
+}
+
+.casanova-card__body--empty{
+  padding:40px;
+  text-align:center;
+}
+
+.casanova-nexttrip-legacy__actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.casanova-nexttrip-legacy__link--muted{
+  color:#666;
+}
+
+.casanova-nexttrip-card__actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.casanova-btn--icon{
+  padding:10px 12px;
+}
+
+.casanova-nexttrip-card__icon{
+  width:14px;
+  height:14px;
+  margin-right:4px;
+  position:relative;
+  top:-1px;
+  flex:0 0 auto;
+}
+
+.casanova-dashboard-message__trip{
+  margin-top:2px;
+}
+
+.casanova-dashboard-message__body{
+  margin-top:8px;
+}
+
+.casanova-dashboard-message__meta{
+  margin-top:6px;
+}
+
+.casanova-kv--summary{
+  margin-bottom:12px;
+}
+
+.casanova-kv--form{
+  max-width:560px;
+}
+
+.casanova-form-grid{
+  display:grid;
+  gap:10px;
+}
+
+.casanova-form-grid--two{
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 640px){
+  .casanova-form-grid--two{
+    grid-template-columns:1fr;
+  }
+}
+
+.casanova-field-control{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  background:#fff;
+}
+
+.casanova-actions--top{
+  margin-top:12px;
+}
+
+.casanova-btn-submit--disabled{
+  display:inline-flex;
+  opacity:.6;
+  pointer-events:none;
+}
+
+progress.casanova-progress,
+progress.casanova-paycard__progress{
+  width:100%;
+  height:10px;
+  border:none;
+  border-radius:999px;
+  overflow:hidden;
+  appearance:none;
+  background:rgba(0,0,0,.08);
+}
+
+progress.casanova-progress::-webkit-progress-bar,
+progress.casanova-paycard__progress::-webkit-progress-bar{
+  background:rgba(0,0,0,.08);
+  border-radius:999px;
+}
+
+progress.casanova-progress::-moz-progress-bar,
+progress.casanova-paycard__progress::-moz-progress-bar{
+  border-radius:999px;
+}
+
+.casanova-mulligans-card progress.casanova-progress::-webkit-progress-value,
+.casanova-mulligans-card progress.casanova-progress::-moz-progress-bar{
+  background:var(--tier-color);
+}
+
+progress.casanova-paycard__progress::-webkit-progress-value,
+progress.casanova-paycard__progress::-moz-progress-bar{
+  background:#0f766e;
+}
+
+body.casanova-public-body{
+  margin:0;
+  background:#f5f1eb;
+  color:#111;
+  font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.casanova-public-shell{
+  max-width:840px;
+  margin:0 auto;
+  padding:24px 16px;
+}
+
+.casanova-public-page{
+  max-width:760px;
+  margin:0 auto;
+  padding:18px;
+  border:1px solid #e5e5e5;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 10px 30px rgba(0,0,0,.05);
+}
+
+.casanova-public-page--error{
+  border-color:#f0c2c2;
+  background:#fff7f7;
+}
+
+.casanova-public-page__logo{
+  margin:0 0 14px;
+}
+
+.casanova-public-page__logo img{
+  width:auto;
+  max-height:44px;
+}
+
+.casanova-public-page__title{
+  margin:0 0 10px;
+  font-size:28px;
+  line-height:1.1;
+}
+
+.casanova-public-page__intro{
+  margin:0 0 14px;
+  color:#555;
+  line-height:1.55;
+}
+
+.casanova-public-page__trip{
+  margin:0 0 14px;
+}
+
+.casanova-public-page__code{
+  color:#666;
+}
+
+.casanova-public-page__summary,
+.casanova-public-page__notice,
+.casanova-public-page__success-panel{
+  margin:0 0 14px;
+  padding:12px;
+  border:1px solid #eee;
+  border-radius:10px;
+  background:#fafafa;
+}
+
+.casanova-public-page__notice{
+  line-height:1.6;
+}
+
+.casanova-public-page__notice--success{
+  border-color:#c6f6d5;
+  background:#f0fff4;
+}
+
+.casanova-public-page__notice--error{
+  border-color:#f0c2c2;
+  background:#fff7f7;
+}
+
+.casanova-public-page__notice--info{
+  border-color:#d6d6ff;
+  background:#f7f7ff;
+}
+
+.casanova-public-page__summary-line + .casanova-public-page__summary-line{
+  margin-top:6px;
+}
+
+.casanova-public-form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.casanova-public-form__grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+@media (max-width: 640px){
+  .casanova-public-form__grid{
+    grid-template-columns:1fr;
+  }
+}
+
+.casanova-public-field{
+  display:block;
+}
+
+.casanova-public-field__label,
+.casanova-public-section-label{
+  display:block;
+  margin:10px 0 6px;
+  font-weight:600;
+}
+
+.casanova-public-field__control{
+  width:100%;
+  padding:10px;
+  border:1px solid #ddd;
+  border-radius:8px;
+  background:#fff;
+}
+
+.casanova-public-field__hint{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  color:#666;
+  line-height:1.5;
+}
+
+.casanova-public-choice{
+  display:block;
+  margin:10px 0;
+  padding:10px;
+  border:1px solid #ddd;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.casanova-public-choice--compact{
+  margin:6px 0;
+}
+
+.casanova-public-choice--disabled{
+  border-color:#eee;
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+.casanova-public-choice__control{
+  margin-right:8px;
+}
+
+.casanova-public-choice__hint{
+  display:block;
+  margin:4px 0 0 24px;
+  color:#666;
+  font-size:12px;
+  line-height:1.45;
+}
+
+.casanova-public-choice-group{
+  margin:0;
+}
+
+.casanova-public-choice-group .casanova-public-choice{
+  margin:0;
+}
+
+.casanova-public-page__disclosure{
+  margin:0 0 14px;
+  padding:12px;
+  border:1px solid #eee;
+  border-radius:10px;
+  background:#fff;
+}
+
+.casanova-public-page__disclosure-summary{
+  font-weight:600;
+  cursor:pointer;
+}
+
+.casanova-public-page__disclosure-text{
+  margin-top:10px;
+  color:#555;
+  line-height:1.6;
+}
+
+.casanova-public-page__method-note{
+  margin-top:8px;
+  padding:10px 12px;
+  border:1px solid #eee;
+  border-radius:8px;
+  background:#fafafa;
+  color:#555;
+  font-size:12px;
+  line-height:1.5;
+}
+
+.casanova-public-page__actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.casanova-public-page__footer{
+  margin:14px 0 0;
+  font-size:12px;
+  color:#777;
+}
+
+.casanova-public-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:42px;
+  padding:10px 14px;
+  border:0;
+  border-radius:8px;
+  background:#111;
+  color:#fff;
+  font-weight:700;
+  text-decoration:none;
+  cursor:pointer;
+}
+
+.casanova-public-button--ghost{
+  border:1px solid #111;
+  background:#fff;
+  color:#111;
+}
+
+.casanova-public-link{
+  display:inline-block;
+  margin-top:8px;
+  color:#111;
+  text-decoration:underline;
+}

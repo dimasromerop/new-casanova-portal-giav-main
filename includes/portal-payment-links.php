@@ -714,20 +714,16 @@ function casanova_handle_payment_link_request(string $token): void {
   $checked_full = !$checked_deposit;
   $transfer_note = __('El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
 
-  header('Content-Type: text/html; charset=' . get_bloginfo('charset'));
-  echo '<div style="max-width:720px;margin:24px auto;padding:18px;border:1px solid #e5e5e5;border-radius:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">';
-
-  if (defined('CASANOVA_AGENCY_LOGO_URL') && CASANOVA_AGENCY_LOGO_URL) {
-    echo '<div style="margin:0 0 14px;"><img src="' . esc_url(CASANOVA_AGENCY_LOGO_URL) . '" alt="" style="max-height:44px;width:auto;"/></div>';
-  }
-
-  echo '<h2 style="margin:0 0 10px;">' . esc_html__('Pago seguro', 'casanova-portal') . '</h2>';
+  casanova_portal_render_public_document_start(__('Pago seguro', 'casanova-portal'));
+  echo '<section class="casanova-public-page">';
+  echo casanova_portal_public_logo_html();
+  echo '<h2 class="casanova-public-page__title">' . esc_html__('Pago seguro', 'casanova-portal') . '</h2>';
 
   $codigo_html = '';
   if ($exp_codigo !== '') {
-    $codigo_html = ' <span style="color:#666;">(' . esc_html($exp_codigo) . ')</span>';
+    $codigo_html = ' <span class="casanova-public-page__code">(' . esc_html($exp_codigo) . ')</span>';
   }
-  echo '<p style="margin:0 0 14px;">' . wp_kses_post(
+  echo '<p class="casanova-public-page__trip">' . wp_kses_post(
     sprintf(
       __('Viaje: <strong>%1$s</strong>%2$s', 'casanova-portal'),
       esc_html($exp_label),
@@ -735,10 +731,10 @@ function casanova_handle_payment_link_request(string $token): void {
     )
   ) . '</p>';
 
-  echo '<div style="background:#fafafa;border:1px solid #eee;border-radius:8px;padding:12px;margin:0 0 14px;">';
+  echo '<div class="casanova-public-page__summary">';
 
   $pendiente_html = '<strong>' . esc_html(number_format($pending, 2, ',', '.')) . ' EUR</strong>';
-  echo '<div>' . wp_kses_post(
+  echo '<div class="casanova-public-page__summary-line">' . wp_kses_post(
     sprintf(
       __('Pendiente total: %s', 'casanova-portal'),
       $pendiente_html
@@ -746,7 +742,7 @@ function casanova_handle_payment_link_request(string $token): void {
   ) . '</div>';
 
   if ($deadline_txt !== '') {
-    echo '<div style="margin-top:6px;">' . esc_html(
+    echo '<div class="casanova-public-page__summary-line">' . esc_html(
       sprintf(
         __('Fecha limite: %s', 'casanova-portal'),
         $deadline_txt
@@ -756,39 +752,48 @@ function casanova_handle_payment_link_request(string $token): void {
 
   echo '</div>';
 
-  echo '<form method="post" action="' . esc_url(casanova_payment_link_url((string)$link->token)) . '">';
+  echo '<form class="casanova-public-form" method="post" action="' . esc_url(casanova_payment_link_url((string)$link->token)) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
 
-  echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Nombre', 'casanova-portal') . '</label>';
-  echo '<input type="text" name="billing_name" required value="' . esc_attr($prefill_name) . '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
+  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombre', 'casanova-portal') . '</span>';
+  echo '<input class="casanova-public-field__control" type="text" name="billing_name" required value="' . esc_attr($prefill_name) . '" />';
+  echo '</label>';
 
-  echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Apellidos', 'casanova-portal') . '</label>';
-  echo '<input type="text" name="billing_lastname" required value="' . esc_attr($prefill_lastname) . '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
+  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Apellidos', 'casanova-portal') . '</span>';
+  echo '<input class="casanova-public-field__control" type="text" name="billing_lastname" required value="' . esc_attr($prefill_lastname) . '" />';
+  echo '</label>';
 
-  echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('DNI / NIF (obligatorio)', 'casanova-portal') . '</label>';
-  echo '<input type="text" name="billing_dni" required value="' . esc_attr($prefill_dni) . '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />';
+  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('DNI / NIF (obligatorio)', 'casanova-portal') . '</span>';
+  echo '<input class="casanova-public-field__control" type="text" name="billing_dni" required value="' . esc_attr($prefill_dni) . '" />';
+  echo '</label>';
 
-  echo '<div style="margin:14px 0 6px;font-weight:600;">' . esc_html__('Metodo de pago', 'casanova-portal') . '</div>';
+  echo '<div class="casanova-public-section-label">' . esc_html__('Metodo de pago', 'casanova-portal') . '</div>';
   if ($inespay_enabled) {
     $card_checked = ($prefill_method === 'bank_transfer') ? '' : 'checked';
     $bank_checked = ($prefill_method === 'bank_transfer') ? 'checked' : '';
-    echo '<label style="display:block;margin:6px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-    echo '<input type="radio" name="method" value="card" ' . $card_checked . ' style="margin-right:8px;" />' . esc_html__('Tarjeta', 'casanova-portal');
-    echo '<span style="display:block;margin-left:24px;margin-top:4px;font-size:12px;color:#666;">' . esc_html__('Pago inmediato y seguro.', 'casanova-portal') . '</span>';
+    echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
+    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
+    echo '<input class="casanova-public-choice__control" type="radio" name="method" value="card" ' . $card_checked . ' />' . esc_html__('Tarjeta', 'casanova-portal');
+    echo '<span class="casanova-public-choice__hint">' . esc_html__('Pago inmediato y seguro.', 'casanova-portal') . '</span>';
     echo '</label>';
-    echo '<label style="display:block;margin:6px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-    echo '<input type="radio" name="method" value="bank_transfer" ' . $bank_checked . ' style="margin-right:8px;" />' . esc_html__('Transferencia bancaria online', 'casanova-portal');
-    echo '<span style="display:block;margin-left:24px;margin-top:4px;font-size:12px;color:#666;">' . esc_html__('PSD2 · Sin recargo.', 'casanova-portal') . '</span>';
+    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
+    echo '<input class="casanova-public-choice__control" type="radio" name="method" value="bank_transfer" ' . $bank_checked . ' />' . esc_html__('Transferencia bancaria online', 'casanova-portal');
+    echo '<span class="casanova-public-choice__hint">' . esc_html__('PSD2 · Sin recargo.', 'casanova-portal') . '</span>';
     echo '</label>';
-    echo '<div id="casanova-method-note" style="' . (($prefill_method === 'bank_transfer') ? '' : 'display:none;') . 'margin-top:8px;padding:10px 12px;border:1px solid #eee;border-radius:8px;background:#fafafa;color:#555;font-size:12px;line-height:1.5;">' . esc_html($transfer_note) . '</div>';
+    echo '</div>';
+    $note_class = 'casanova-public-page__method-note';
+    if ($prefill_method !== 'bank_transfer') {
+      $note_class .= ' casanova-hidden';
+    }
+    echo '<div id="casanova-method-note" class="' . esc_attr($note_class) . '">' . esc_html($transfer_note) . '</div>';
   } else {
     echo '<input type="hidden" name="method" value="card" />';
-    echo '<div style="margin:6px 0 12px;color:#666;">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
+    echo '<div class="casanova-public-field__hint">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
   }
 
   if ($deposit_effective) {
-    echo '<label style="display:block;margin:12px 0 10px;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-    echo '<input type="radio" name="mode" value="deposit" ' . ($checked_deposit ? 'checked' : '') . ' style="margin-right:8px;" />';
+    echo '<label class="casanova-public-choice">';
+    echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="deposit" ' . ($checked_deposit ? 'checked' : '') . ' />';
     $deposit_amount_html = '<strong>' . esc_html(number_format($deposit_amount, 2, ',', '.')) . ' EUR</strong>';
     echo wp_kses_post(
       sprintf(
@@ -801,8 +806,8 @@ function casanova_handle_payment_link_request(string $token): void {
     echo '<input type="hidden" name="mode" value="full" />';
   }
 
-  echo '<label style="display:block;margin:10px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-  echo '<input type="radio" name="mode" value="full" ' . ($checked_full ? 'checked' : '') . ' style="margin-right:8px;" />';
+  echo '<label class="casanova-public-choice">';
+  echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="full" ' . ($checked_full ? 'checked' : '') . ' />';
   $amount_html = '<strong>' . esc_html(number_format($authorized, 2, ',', '.')) . ' EUR</strong>';
   echo wp_kses_post(
     sprintf(
@@ -812,9 +817,9 @@ function casanova_handle_payment_link_request(string $token): void {
   );
   echo '</label>';
 
-  echo '<button type="submit" style="margin-top:10px;padding:10px 14px;border:0;border-radius:8px;background:#111;color:#fff;cursor:pointer;">'
-    . esc_html__('Continuar al pago', 'casanova-portal')
-    . '</button>';
+  echo '<div class="casanova-public-page__actions">';
+  echo '<button class="casanova-public-button" type="submit">' . esc_html__('Continuar al pago', 'casanova-portal') . '</button>';
+  echo '</div>';
 
   echo '</form>';
   if ($inespay_enabled) {
@@ -826,7 +831,7 @@ function casanova_handle_payment_link_request(string $token): void {
         function update(){
           let method = "card";
           Array.prototype.forEach.call(inputs, function(i){ if (i.checked) method = i.value; });
-          note.style.display = (method === "bank_transfer") ? "block" : "none";
+          note.classList.toggle("casanova-hidden", method !== "bank_transfer");
         }
         Array.prototype.forEach.call(inputs, function(i){ i.addEventListener("change", update); });
         update();
@@ -834,42 +839,41 @@ function casanova_handle_payment_link_request(string $token): void {
     </script>';
   }
 
-  echo '<p style="margin:14px 0 0;font-size:12px;color:#777;">'
+  echo '<p class="casanova-public-page__footer">'
     . esc_html__('Si tienes dudas, contacta con la agencia antes de pagar.', 'casanova-portal')
     . '</p>';
 
-  echo '</div>';
+  echo '</section>';
+  casanova_portal_render_public_document_end();
   exit;
 }
 
 function casanova_render_payment_link_success($link): void {
-  header('Content-Type: text/html; charset=' . get_bloginfo('charset'));
-  echo '<div style="max-width:720px;margin:24px auto;padding:18px;border:1px solid #e5e5e5;border-radius:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">';
-
-  if (defined('CASANOVA_AGENCY_LOGO_URL') && CASANOVA_AGENCY_LOGO_URL) {
-    echo '<div style="margin:0 0 14px;"><img src="' . esc_url(CASANOVA_AGENCY_LOGO_URL) . '" alt="" style="max-height:44px;width:auto;"/></div>';
-  }
-
-  echo '<h2 style="margin:0 0 10px;">' . esc_html__('Pago registrado correctamente', 'casanova-portal') . '</h2>';
-  echo '<p style="margin:0 0 16px;">' . esc_html__('Gracias. Hemos recibido tu pago.', 'casanova-portal') . '</p>';
+  casanova_portal_render_public_document_start(__('Pago registrado correctamente', 'casanova-portal'));
+  echo '<section class="casanova-public-page">';
+  echo casanova_portal_public_logo_html();
+  echo '<h2 class="casanova-public-page__title">' . esc_html__('Pago registrado correctamente', 'casanova-portal') . '</h2>';
+  echo '<p class="casanova-public-page__intro">' . esc_html__('Gracias. Hemos recibido tu pago.', 'casanova-portal') . '</p>';
 
   $link_account_url = function_exists('site_url') ? site_url('/login/') : home_url('/');
-  echo '<div style="padding:12px;border:1px solid #eee;border-radius:8px;background:#fafafa;">';
+  echo '<div class="casanova-public-page__success-panel">';
   echo '<strong>' . esc_html__('Quieres acceder a tus documentos y facturas?', 'casanova-portal') . '</strong><br />';
-  echo '<a href="' . esc_url($link_account_url) . '" style="display:inline-block;margin-top:8px;color:#111;text-decoration:underline;">'
+  echo '<a class="casanova-public-link" href="' . esc_url($link_account_url) . '">'
     . esc_html__('Crear o vincular mi cuenta', 'casanova-portal')
     . '</a>';
   echo '</div>';
 
-  echo '</div>';
+  echo '</section>';
+  casanova_portal_render_public_document_end();
 }
 
 function casanova_render_payment_link_error(string $message): void {
-  header('Content-Type: text/html; charset=' . get_bloginfo('charset'));
-  echo '<div style="max-width:640px;margin:24px auto;padding:18px;border:1px solid #f0c2c2;border-radius:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#fff7f7;">';
-  echo '<h2 style="margin:0 0 10px;">' . esc_html__('No se pudo completar el pago', 'casanova-portal') . '</h2>';
-  echo '<p style="margin:0;">' . esc_html($message) . '</p>';
-  echo '</div>';
+  casanova_portal_render_public_document_start(__('No se pudo completar el pago', 'casanova-portal'));
+  echo '<section class="casanova-public-page casanova-public-page--error">';
+  echo '<h2 class="casanova-public-page__title">' . esc_html__('No se pudo completar el pago', 'casanova-portal') . '</h2>';
+  echo '<div class="casanova-public-page__notice casanova-public-page__notice--error">' . esc_html($message) . '</div>';
+  echo '</section>';
+  casanova_portal_render_public_document_end();
 }
 
 

@@ -22,3 +22,4 @@
 .cp-footer-label{font-weight:800;color:var(--text);opacity:.85}
 .cp-footer-link{color:var(--accent);font-weight:800;text-decoration:none}
 .cp-footer-link:hover{text-decoration:underline}
+.cg-react-error{white-space:pre-wrap}

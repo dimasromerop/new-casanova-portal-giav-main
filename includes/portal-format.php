@@ -20,16 +20,76 @@ function casanova_fmt_money($amount, string $currency = '€'): string {
   return number_format($n, 2, ',', '.') . ' ' . $currency;
 }
 
+function casanova_portal_asset_path(string $relative_path): string {
+  return CASANOVA_GIAV_PLUGIN_PATH . ltrim($relative_path, '/\\');
+}
+
+function casanova_portal_asset_url(string $relative_path): string {
+  return CASANOVA_GIAV_PLUGIN_URL . ltrim($relative_path, '/\\');
+}
+
+function casanova_portal_asset_version(string $relative_path): string {
+  $path = casanova_portal_asset_path($relative_path);
+  return file_exists($path) ? (string) filemtime($path) : casanova_portal_giav_current_version();
+}
+
+function casanova_portal_render_public_document_start(string $title, array $styles = ['assets/portal.css']): void {
+  header('Content-Type: text/html; charset=' . get_bloginfo('charset'));
+
+  echo '<!doctype html>';
+  echo '<html lang="' . esc_attr(get_bloginfo('language')) . '">';
+  echo '<head>';
+  echo '<meta charset="' . esc_attr(get_bloginfo('charset')) . '" />';
+  echo '<meta name="viewport" content="width=device-width, initial-scale=1" />';
+  echo '<title>' . esc_html($title) . '</title>';
+
+  foreach ($styles as $style) {
+    $href = add_query_arg(
+      'ver',
+      rawurlencode(casanova_portal_asset_version($style)),
+      casanova_portal_asset_url($style)
+    );
+    echo '<link rel="stylesheet" href="' . esc_url($href) . '" />';
+  }
+
+  echo '</head>';
+  echo '<body class="casanova-public-body">';
+  echo '<main class="casanova-public-shell">';
+}
+
+function casanova_portal_render_public_document_end(): void {
+  echo '</main>';
+  echo '</body>';
+  echo '</html>';
+}
+
+function casanova_portal_public_logo_html(): string {
+  if (!defined('CASANOVA_AGENCY_LOGO_URL') || !CASANOVA_AGENCY_LOGO_URL) {
+    return '';
+  }
+
+  return '<div class="casanova-public-page__logo"><img src="' . esc_url(CASANOVA_AGENCY_LOGO_URL) . '" alt="" /></div>';
+}
+
+function casanova_portal_action_button_html(?string $href, string $label, bool $disabled = false): string {
+  $class = 'casanova-action-btn';
+  if ($disabled) {
+    return '<span class="' . esc_attr($class . ' casanova-action-btn--disabled') . '">' . esc_html($label) . '</span>';
+  }
+
+  return '<a class="' . esc_attr($class) . '" href="' . esc_url($href) . '">' . esc_html($label) . '</a>';
+}
+
 function casanova_badge(string $text, string $type = 'neutral'): string {
   $map = [
-    'ok' => 'background:#e8f7ee;color:#167a3f;border:1px solid #bfe9cf;',
-    'warn' => 'background:#fff7e6;color:#8a5a00;border:1px solid #ffe0a6;',
-    'bad' => 'background:#fdecec;color:#a11919;border:1px solid #f7b7b7;',
-    'neutral' => 'background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;',
+    'ok' => 'casanova-badge--status-ok',
+    'warn' => 'casanova-badge--status-warn',
+    'bad' => 'casanova-badge--status-bad',
+    'neutral' => 'casanova-badge--status-neutral',
   ];
-  $style = $map[$type] ?? $map['neutral'];
+  $variant = $map[$type] ?? $map['neutral'];
 
-  return '<span style="display:inline-block;padding:4px 8px;border-radius:999px;font-size:.85em;line-height:1;white-space:nowrap;' . esc_attr($style) . '">' . esc_html($text) . '</span>';
+  return '<span class="' . esc_attr('casanova-badge ' . $variant) . '">' . esc_html($text) . '</span>';
 }
 
 function casanova_badge_from_mapped_estado(array $m): string {
@@ -54,12 +114,6 @@ function casanova_reserva_actions_html($r, int $idExpediente, bool $expediente_p
   if ($idReserva === '') $idReserva = (string)($r->Codigo ?? '');
   if ($idReserva === '') return '';
 
-  $btn = function(?string $href, string $label, bool $disabled = false) {
-    $style = 'display:inline-block;padding:6px 10px;border:1px solid #e5e7eb;border-radius:10px;text-decoration:none;font-size:.9em;line-height:1;white-space:nowrap;';
-    if ($disabled) return '<span style="' . esc_attr($style) . 'opacity:.45;cursor:not-allowed;">' . esc_html($label) . '</span>';
-    return '<a href="' . esc_url($href) . '" style="' . esc_attr($style) . '">' . esc_html($label) . '</a>';
-  };
-
   $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/area-usuario/');
   $view = add_query_arg(['expediente' => $idExpediente, 'reserva' => (int)$idReserva], $base);
 
@@ -79,15 +133,15 @@ function casanova_reserva_actions_html($r, int $idExpediente, bool $expediente_p
 ], admin_url('admin-post.php'));
 
 
-  $out = '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-  $out .= $btn($view, esc_html__('Ver', 'casanova-portal'));
+  $out = '<div class="casanova-inline-actions">';
+  $out .= casanova_portal_action_button_html($view, esc_html__('Ver', 'casanova-portal'));
 
  if (!$expediente_pagado) {
-  $out .= $btn(null, esc_html__('Ver bono', 'casanova-portal'), true);
-  $out .= $btn(null, esc_html__('PDF', 'casanova-portal'), true);
+  $out .= casanova_portal_action_button_html(null, esc_html__('Ver bono', 'casanova-portal'), true);
+  $out .= casanova_portal_action_button_html(null, esc_html__('PDF', 'casanova-portal'), true);
 } else {
-  $out .= $btn($voucher_preview_url, esc_html__('Ver bono', 'casanova-portal'));
-  $out .= $btn($voucher_pdf_url, esc_html__('PDF', 'casanova-portal'));
+  $out .= casanova_portal_action_button_html($voucher_preview_url, esc_html__('Ver bono', 'casanova-portal'));
+  $out .= casanova_portal_action_button_html($voucher_pdf_url, esc_html__('PDF', 'casanova-portal'));
 }
 
   $out .= '</div>';
@@ -123,21 +177,11 @@ function casanova_bono_servicio_btn($r, int $idExpediente, bool $expediente_paga
   $idReserva = (int)($r->Id ?? 0);
   if ($idReserva <= 0) return '';
 
-  $style = 'display:inline-block;padding:6px 10px;border:1px solid #e5e7eb;border-radius:10px;text-decoration:none;font-size:.9em;line-height:1;white-space:nowrap;';
-  $wrap  = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;';
-
-  $btn = function(?string $href, string $label, bool $disabled = false) use ($style) {
-    if ($disabled) {
-      return '<span style="' . esc_attr($style) . 'opacity:.45;cursor:not-allowed;">' . esc_html($label) . '</span>';
-    }
-    return '<a href="' . esc_url($href) . '" style="' . esc_attr($style) . '">' . esc_html($label) . '</a>';
-  };
-
   // Gate principal: pago a nivel expediente
   if (!$expediente_pagado) {
-    return '<div style="' . esc_attr($wrap) . '">'
-      . $btn(null, esc_html__('Ver bono', 'casanova-portal'), true)
-      . $btn(null, esc_html__('PDF', 'casanova-portal'), true)
+    return '<div class="casanova-inline-actions">'
+      . casanova_portal_action_button_html(null, esc_html__('Ver bono', 'casanova-portal'), true)
+      . casanova_portal_action_button_html(null, esc_html__('PDF', 'casanova-portal'), true)
       . '</div>';
   }
 
@@ -145,9 +189,9 @@ function casanova_bono_servicio_btn($r, int $idExpediente, bool $expediente_paga
   // lo dejamos solo como deshabilitado (sin romper tu lógica anterior).
   $pend = (float)($r->Pendiente ?? 0);
   if ($pend > 0.01) {
-    return '<div style="' . esc_attr($wrap) . '">'
-      . $btn(null, esc_html__('Ver bono', 'casanova-portal'), true)
-      . $btn(null, esc_html__('PDF', 'casanova-portal'), true)
+    return '<div class="casanova-inline-actions">'
+      . casanova_portal_action_button_html(null, esc_html__('Ver bono', 'casanova-portal'), true)
+      . casanova_portal_action_button_html(null, esc_html__('PDF', 'casanova-portal'), true)
       . '</div>';
   }
 
@@ -160,7 +204,7 @@ function casanova_bono_servicio_btn($r, int $idExpediente, bool $expediente_paga
       'reserva'   => $idReserva,
       '_wpnonce'  => wp_create_nonce('casanova_voucher_' . $idExpediente . '_' . $idReserva),
     ], admin_url('admin-post.php'));
-// PDF
+  // PDF
   $pdf_url = function_exists('casanova_portal_voucher_url')
     ? casanova_portal_voucher_url($idExpediente, $idReserva, 'pdf')
     : add_query_arg([
@@ -169,19 +213,17 @@ function casanova_bono_servicio_btn($r, int $idExpediente, bool $expediente_paga
       'reserva'   => $idReserva,
       '_wpnonce'  => wp_create_nonce('casanova_voucher_' . $idExpediente . '_' . $idReserva),
     ], admin_url('admin-post.php'));
-return '<div style="' . esc_attr($wrap) . '">'
-    . $btn($preview_url, esc_html__('Ver bono', 'casanova-portal'))
-    . $btn($pdf_url, esc_html__('PDF', 'casanova-portal'))
+  return '<div class="casanova-inline-actions">'
+    . casanova_portal_action_button_html($preview_url, esc_html__('Ver bono', 'casanova-portal'))
+    . casanova_portal_action_button_html($pdf_url, esc_html__('PDF', 'casanova-portal'))
     . '</div>';
 }
 
 
 
 function casanova_pagar_expediente_btn(int $idExpediente, bool $expediente_pagado, float $total_pend): string {
-  $style = 'display:inline-block;padding:6px 10px;border:1px solid #e5e7eb;border-radius:10px;text-decoration:none;font-size:.9em;line-height:1;white-space:nowrap;';
-
   if ($expediente_pagado) {
-    return '<span style="' . esc_attr($style) . 'opacity:.45;cursor:not-allowed;">' . esc_html__('Pagado', 'casanova-portal') . '</span>';
+    return '<span class="casanova-action-btn casanova-action-btn--disabled">' . esc_html__('Pagado', 'casanova-portal') . '</span>';
   }
 
   // Iniciar pago desde frontend (evita bloqueos a /wp-admin/ para no-admin)
@@ -195,7 +237,7 @@ function casanova_pagar_expediente_btn(int $idExpediente, bool $expediente_pagad
     ], admin_url('admin-post.php'));
   }
 
-  return '<a href="' . esc_url($url) . '" style="' . esc_attr($style) . '">' . esc_html__('Pagar', 'casanova-portal') . '</a>';
+  return casanova_portal_action_button_html($url, esc_html__('Pagar', 'casanova-portal'));
 }
 
 function casanova_pdf_logo_data_uri(): string {

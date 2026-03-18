@@ -191,7 +191,7 @@ export default function TripDetailView({
 
       <div className="cp-trip-detail__body">
         {loading ? (
-          <div className="cp-card" style={{ background: "var(--surface)" }}>
+          <div className="cp-card">
             <div className="cp-card-title">{tt("Cargando expediente")}</div>
             <Skeleton lines={8} />
           </div>
@@ -205,7 +205,7 @@ export default function TripDetailView({
             <div className="cp-card-sub">{tt("Servicios y planificación del viaje")}</div>
 
             {!hasServices ? (
-              <div style={{ marginTop: 10 }} className="cp-meta">
+              <div className="cp-meta cp-mt-10">
                 {tt("No hay servicios disponibles ahora mismo.")}
               </div>
             ) : (
@@ -239,7 +239,7 @@ export default function TripDetailView({
             <div className="cp-card-sub">{tt("Estado de pagos del viaje")}</div>
 
             {!payments ? (
-              <div style={{ marginTop: 10 }} className="cp-meta">{tt("Aún no hay pagos asociados a este viaje.")}</div>
+              <div className="cp-meta cp-mt-10">{tt("Aún no hay pagos asociados a este viaje.")}</div>
             ) : (
               <>
                 <div className="cp-kpi-card-grid">
@@ -262,7 +262,7 @@ export default function TripDetailView({
                   readOnlyMessage={readOnlyMessage}
                 />
                 {isPaid ? (
-                  <div style={{ marginTop: 12 }}>
+                  <div className="cp-mt-12">
                     <div className="cp-pill cp-pill--success">{tt("Pagado")}</div>
                   </div>
                 ) : null}
@@ -307,7 +307,7 @@ export default function TripDetailView({
                     </div>
                   </div>
                 ) : (
-                  <div style={{ marginTop: 14 }} className="cp-meta">
+                  <div className="cp-meta cp-mt-14">
                     {tt("Aún no hay cobros registrados en este viaje.")}
                   </div>
                 )}
@@ -321,9 +321,9 @@ export default function TripDetailView({
             <div className="cp-card-title">{tt("Facturas")}</div>
             <div className="cp-card-sub">{tt("Descargas asociadas a este viaje")}</div>
             {invoices.length === 0 ? (
-              <div style={{ marginTop: 10 }} className="cp-meta">{tt("No hay facturas disponibles.")}</div>
+              <div className="cp-meta cp-mt-10">{tt("No hay facturas disponibles.")}</div>
             ) : (
-              <div className="casanova-tablewrap" style={{ marginTop: 14 }}>
+              <div className="casanova-tablewrap cp-mt-14">
                 <table className="casanova-table">
                   <thead>
                     <tr>
@@ -377,7 +377,7 @@ export default function TripDetailView({
             ) : null}
 
             {voucherItems.length === 0 ? (
-              <div style={{ marginTop: 10 }} className="cp-meta">
+              <div className="cp-meta cp-mt-10">
                 {isPaid
                   ? "No hay bonos disponibles para este viaje."
                   : "Los bonos aparecerán cuando el viaje esté pagado."}

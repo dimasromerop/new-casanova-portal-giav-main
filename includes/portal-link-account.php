@@ -68,7 +68,7 @@ function casanova_portal_shortcode_link_account($atts = []): string {
       <h3 class="casanova-link-account__title"><?php echo esc_html__('Vincula tu cuenta', 'casanova-portal'); ?></h3>
       <p class="casanova-link-account__intro"><?php echo esc_html__('Introduce tu DNI. Te enviaremos un código al email asociado a tu reserva para verificar que eres el titular.', 'casanova-portal'); ?></p>
 
-      <div class="casanova-link-account__alert" data-casanova-linking-alert style="display:none"></div>
+      <div class="casanova-link-account__alert casanova-link-account__alert--hidden" data-casanova-linking-alert></div>
 
       <!-- Step 1 -->
       <form class="casanova-link-account__form" data-casanova-linking-step="1">
@@ -83,7 +83,7 @@ function casanova_portal_shortcode_link_account($atts = []): string {
       </form>
 
       <!-- Step 2 -->
-      <form class="casanova-link-account__form" data-casanova-linking-step="2" style="display:none">
+      <form class="casanova-link-account__form casanova-link-account__form--hidden" data-casanova-linking-step="2">
         <label class="casanova-link-account__label">
           <span><?php echo esc_html__('Código de verificación', 'casanova-portal'); ?></span>
           <input class="casanova-link-account__input" type="text" name="otp" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" placeholder="<?php echo esc_attr__('6 dígitos', 'casanova-portal'); ?>" required>

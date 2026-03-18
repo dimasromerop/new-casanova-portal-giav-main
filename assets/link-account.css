@@ -110,6 +110,11 @@
   line-height: 1.35;
 }
 
+.casanova-link-account__alert--hidden,
+.casanova-link-account__form--hidden {
+  display: none;
+}
+
 .casanova-link-account__alert--error {
   background: rgba(220, 38, 38, 0.08);
   border: 1px solid rgba(220, 38, 38, 0.18);
