@@ -296,7 +296,12 @@ add_shortcode('casanova_card_pagos', function($atts) {
   $html .= '      <div class="casanova-paycard__value">' . esc_html(casanova_fmt_money($total)) . '</div>';
   $html .= '    </div>';
   $html .= '  </div>';
-  $html .= '  <progress class="casanova-paycard__progress" value="' . esc_attr((string)$progress) . '" max="100" aria-label="' . esc_attr__('Progreso de pago', 'casanova-portal') . '"></progress>';
+  $html .= '  ' . casanova_portal_progress_svg_html(
+    (float) $progress,
+    __('Progreso de pago', 'casanova-portal'),
+    'paycard',
+    'casanova-paycard__progress'
+  );
   $html .= '  <div class="casanova-paycard__meta">' . sprintf(
     esc_html__('Has pagado %1$s de %2$s', 'casanova-portal'),
     casanova_fmt_money($pagado),

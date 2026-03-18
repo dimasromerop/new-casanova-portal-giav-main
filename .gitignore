@@ -6,3 +6,5 @@ api_2_05.xml
 
 # Uncomment to ignore node_modules anywhere in the repo
 # **/node_modules/
+
+.claude/

@@ -1067,38 +1067,62 @@ a { color: inherit; text-decoration: none; }
 }
 .cp-strong { font-weight: 700; }
 
-.cp-progress-meter {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: none;
-  border-radius: inherit;
-  appearance: none;
-  background: transparent;
+.cp-progress-svg{
+  display:block;
+  width:100%;
+  height:100%;
+  line-height:0;
 }
 
-.cp-progress-meter::-webkit-progress-bar {
-  background: transparent;
+.cp-progress-svg__svg{
+  display:block;
+  width:100%;
+  height:100%;
+  overflow:visible;
 }
 
-.cp-progress-meter::-webkit-progress-value,
-.cp-progress-meter::-moz-progress-bar {
-  border-radius: inherit;
+.cp-progress-svg__track{
+  fill:rgba(20, 88, 79, 0.08);
 }
 
-.cp-progress-meter--trip-card::-webkit-progress-value,
-.cp-progress-meter--trip-card::-moz-progress-bar {
-  background: linear-gradient(90deg, #2c5a4d, #76c7ad);
+.cp-progress-svg__fill{
+  filter:drop-shadow(0 6px 14px rgba(20, 88, 79, 0.18));
 }
 
-.cp-progress-meter--finance::-webkit-progress-value,
-.cp-progress-meter--finance::-moz-progress-bar {
-  background: linear-gradient(90deg, #1f6d62, #3a9a8d);
+.cp-progress-svg__stop--start{
+  stop-color:#11675c;
 }
 
-.cp-progress-meter--loyalty::-webkit-progress-value,
-.cp-progress-meter--loyalty::-moz-progress-bar {
-  background: linear-gradient(90deg, var(--accent), var(--warm));
+.cp-progress-svg__stop--mid{
+  stop-color:#24a08b;
+}
+
+.cp-progress-svg__stop--end{
+  stop-color:#7ae3cf;
+}
+
+.cp-progress-svg--trip-card .cp-progress-svg__stop--start{
+  stop-color:#234f45;
+}
+
+.cp-progress-svg--trip-card .cp-progress-svg__stop--mid{
+  stop-color:#2f7a67;
+}
+
+.cp-progress-svg--trip-card .cp-progress-svg__stop--end{
+  stop-color:#8fd8c2;
+}
+
+.cp-progress-svg--loyalty .cp-progress-svg__stop--start{
+  stop-color:#14584f;
+}
+
+.cp-progress-svg--loyalty .cp-progress-svg__stop--mid{
+  stop-color:#6aac9d;
+}
+
+.cp-progress-svg--loyalty .cp-progress-svg__stop--end{
+  stop-color:#c98a5e;
 }
 
 /* Trip header: map + weather */
@@ -1789,17 +1813,9 @@ a { color: inherit; text-decoration: none; }
 
 .cp-trip-card__progress{
   width:100%;
-  height:12px;
-  overflow:hidden;
-  border-radius:999px;
-  background: rgba(20, 61, 54, 0.1);
-}
-
-.cp-trip-card__progress-bar{
-  display:block;
-  height:100%;
-  border-radius:inherit;
-  background: linear-gradient(90deg, #2c5a4d, #76c7ad);
+  height:14px;
+  line-height:0;
+  background:none;
 }
 
 .cp-trip-card__payment-meta{
@@ -2669,21 +2685,6 @@ a { color: inherit; text-decoration: none; }
   color: rgba(15, 23, 42, 0.78);
 }
 
-.cp-dashboard-loyalty__progress {
-  grid-column: 1 / -1;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(11, 61, 46, 0.1);
-  overflow: hidden;
-}
-
-.cp-dashboard-loyalty__progress-bar {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), var(--warm));
-}
-
 .cp-dashboard-loyalty__actions {
   grid-column: 1 / -1;
   display: flex;
@@ -3095,14 +3096,6 @@ body{
   color: rgba(24, 73, 63, 0.76);
 }
 
-.cp-dashboard-loyalty__progress{
-  background: rgba(24, 73, 63, 0.1);
-}
-
-.cp-dashboard-loyalty__progress-bar{
-  background: linear-gradient(90deg, #2d6659 0%, #95aca0 100%);
-}
-
 .cp-dashboard-loyalty__actions{
   border-top: 1px solid rgba(24, 73, 63, 0.08);
   padding-top: 14px;
@@ -3294,14 +3287,6 @@ body{
 
 .cp-dashboard-loyalty__meta{
   color: rgba(20, 88, 79, 0.74);
-}
-
-.cp-dashboard-loyalty__progress{
-  background: rgba(20, 88, 79, 0.07);
-}
-
-.cp-dashboard-loyalty__progress-bar{
-  background: linear-gradient(90deg, var(--accent) 0%, #7fb4a4 72%, var(--warm) 100%);
 }
 
 .cp-dashboard-loyalty__actions{
@@ -3497,19 +3482,9 @@ body{
 
 .cp-dashboard-loyalty__progress{
   grid-column: 1 / -1;
-  height: 12px;
-  border-radius: 999px;
-  background: rgba(20, 88, 79, 0.08);
-  overflow: hidden;
-}
-
-.cp-dashboard-loyalty__progress-bar{
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  min-width: 10px;
-  background: linear-gradient(90deg, var(--accent) 0%, #7fb4a4 72%, var(--warm) 100%);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  height: 14px;
+  line-height: 0;
+  background:none;
 }
 
 .cp-dashboard-loyalty__hint{
@@ -3816,9 +3791,12 @@ body{
 
 .cp-app[data-theme="dark"] .cp-dashboard-board::before,
 .cp-app[data-theme="dark"] .cp-dashboard-meter__bar,
-.cp-app[data-theme="dark"] .cp-dashboard-loyalty::before,
-.cp-app[data-theme="dark"] .cp-dashboard-loyalty__progress-bar{
-  background: linear-gradient(90deg, #76d0c1 0%, #4f897e 60%, #f0b17c 100%);
+.cp-app[data-theme="dark"] .cp-dashboard-loyalty::before{
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 58%),
+    linear-gradient(90deg, #76d0c1 0%, #4f897e 60%, #f0b17c 100%);
+  background-repeat:no-repeat, no-repeat;
+  background-size:100% 100%, 100% 100%;
 }
 
 .cp-app[data-theme="dark"] .cp-dashboard-board::after{
@@ -3862,7 +3840,51 @@ body{
 }
 
 .cp-app[data-theme="dark"] .cp-dashboard-loyalty__progress{
-  background: rgba(255, 255, 255, 0.06);
+  background:none;
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg__track{
+  fill:rgba(255,255,255,.08);
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg__fill{
+  filter:drop-shadow(0 8px 18px rgba(118, 208, 193, 0.18));
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg--trip-card .cp-progress-svg__stop--start{
+  stop-color:#58c7ae;
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg--trip-card .cp-progress-svg__stop--mid{
+  stop-color:#7fe0cf;
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg--trip-card .cp-progress-svg__stop--end{
+  stop-color:#c4fff1;
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg--finance .cp-progress-svg__stop--start{
+  stop-color:#54cbb5;
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg--finance .cp-progress-svg__stop--mid{
+  stop-color:#7fe8d8;
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg--finance .cp-progress-svg__stop--end{
+  stop-color:#b8fff2;
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg--loyalty .cp-progress-svg__stop--start{
+  stop-color:#76d0c1;
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg--loyalty .cp-progress-svg__stop--mid{
+  stop-color:#8dc6b8;
+}
+
+.cp-app[data-theme="dark"] .cp-progress-svg--loyalty .cp-progress-svg__stop--end{
+  stop-color:#f0b17c;
 }
 
 .cp-app[data-theme="dark"] .cp-dashboard-loyalty__actions{
@@ -4179,11 +4201,7 @@ body{
 }
 
 .cp-app[data-theme="dark"] .cp-trip-card__progress{
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.cp-app[data-theme="dark"] .cp-trip-card__progress-bar{
-  background: linear-gradient(90deg, #3c7967, #76c7ad);
+  background:none;
 }
 
 .cp-app[data-theme="dark"] .cp-trips-empty{
@@ -4913,17 +4931,9 @@ body{
 }
 
 .cp-trip-finance__meter{
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(20, 88, 79, 0.08);
-  overflow: hidden;
-}
-
-.cp-trip-finance__meter-bar{
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #1f6d62, #3a9a8d);
+  height: 14px;
+  line-height: 0;
+  background:none;
 }
 
 .cp-trip-includes{
@@ -5216,11 +5226,7 @@ body{
 }
 
 .cp-app[data-theme="dark"] .cp-trip-finance__meter{
-  background: rgba(118, 208, 193, 0.08);
-}
-
-.cp-app[data-theme="dark"] .cp-trip-finance__meter-bar{
-  background: linear-gradient(90deg, #5bc7b2, #98e5d7);
+  background:none;
 }
 
 .cp-app[data-theme="dark"] .cp-trip-includes__item{

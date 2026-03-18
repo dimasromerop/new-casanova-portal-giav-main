@@ -494,14 +494,16 @@
 /* ===== Mulligans: color por tier via CSS variables ===== */
 .casanova-mulligans-card{
   --tier-color: #2E7D32; /* default Birdie */
+  --tier-color-deep: #245f28;
+  --tier-color-soft: #67b96d;
 }
 
 /* Tier colors */
-.casanova-mulligans-card.is-birdie{ --tier-color: #2E7D32; }
-.casanova-mulligans-card.is-eagle{ --tier-color: #1E3A5F; }
-.casanova-mulligans-card.is-eagle_plus{ --tier-color: #6d8196; }
-.casanova-mulligans-card.is-eagle-plus{ --tier-color: #6d8196; }
-.casanova-mulligans-card.is-albatross{ --tier-color: #EAA221; }
+.casanova-mulligans-card.is-birdie{ --tier-color: #2E7D32; --tier-color-deep: #245f28; --tier-color-soft: #67b96d; }
+.casanova-mulligans-card.is-eagle{ --tier-color: #1E3A5F; --tier-color-deep: #17304f; --tier-color-soft: #6286ae; }
+.casanova-mulligans-card.is-eagle_plus{ --tier-color: #6d8196; --tier-color-deep: #54677c; --tier-color-soft: #a6b4c2; }
+.casanova-mulligans-card.is-eagle-plus{ --tier-color: #6d8196; --tier-color-deep: #54677c; --tier-color-soft: #a6b4c2; }
+.casanova-mulligans-card.is-albatross{ --tier-color: #EAA221; --tier-color-deep: #bf8113; --tier-color-soft: #f4c969; }
 
 /* Badge */
 .casanova-mulligans-badge{
@@ -518,23 +520,93 @@
 }
 
 /* Progress container */
-.casanova-progress{
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(0,0,0,.08);
-  overflow: hidden;
+.casanova-progress,
+.casanova-paycard__progress{
+  display:block;
+  width:100%;
+  height:14px;
 }
 
-/* Progress bar (muy específico para que no lo pise nada) */
-.casanova-mulligans-card .casanova-progress > span,
-.casanova-mulligans-card .casanova-progress .casanova-progress__bar{
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--tier-color);
-  border-radius: 999px;
-  transition: width .25s ease;
-  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+.casanova-progress-svg{
+  display:block;
+  width:100%;
+  height:100%;
+  line-height:0;
+}
+
+.casanova-progress-svg__svg{
+  display:block;
+  width:100%;
+  height:100%;
+  overflow:visible;
+}
+
+.casanova-progress-svg__track{
+  fill:rgba(0,0,0,.08);
+}
+
+.casanova-progress-svg__fill{
+  filter:drop-shadow(0 4px 10px rgba(15,23,42,.10));
+}
+
+.casanova-progress-svg__stop--start{
+  stop-color:#0f766e;
+}
+
+.casanova-progress-svg__stop--mid{
+  stop-color:#14b8a6;
+}
+
+.casanova-progress-svg__stop--end{
+  stop-color:#67e8f9;
+}
+
+.casanova-progress-svg--mulligans-birdie .casanova-progress-svg__stop--start{
+  stop-color:#245f28;
+}
+
+.casanova-progress-svg--mulligans-birdie .casanova-progress-svg__stop--mid{
+  stop-color:#2E7D32;
+}
+
+.casanova-progress-svg--mulligans-birdie .casanova-progress-svg__stop--end{
+  stop-color:#67b96d;
+}
+
+.casanova-progress-svg--mulligans-eagle .casanova-progress-svg__stop--start{
+  stop-color:#17304f;
+}
+
+.casanova-progress-svg--mulligans-eagle .casanova-progress-svg__stop--mid{
+  stop-color:#1E3A5F;
+}
+
+.casanova-progress-svg--mulligans-eagle .casanova-progress-svg__stop--end{
+  stop-color:#6286ae;
+}
+
+.casanova-progress-svg--mulligans-eagle-plus .casanova-progress-svg__stop--start{
+  stop-color:#54677c;
+}
+
+.casanova-progress-svg--mulligans-eagle-plus .casanova-progress-svg__stop--mid{
+  stop-color:#6d8196;
+}
+
+.casanova-progress-svg--mulligans-eagle-plus .casanova-progress-svg__stop--end{
+  stop-color:#a6b4c2;
+}
+
+.casanova-progress-svg--mulligans-albatross .casanova-progress-svg__stop--start{
+  stop-color:#bf8113;
+}
+
+.casanova-progress-svg--mulligans-albatross .casanova-progress-svg__stop--mid{
+  stop-color:#EAA221;
+}
+
+.casanova-progress-svg--mulligans-albatross .casanova-progress-svg__stop--end{
+  stop-color:#f4c969;
 }
 
 .casanova-mulligans-card__hint{
@@ -1255,38 +1327,6 @@
   display:inline-flex;
   opacity:.6;
   pointer-events:none;
-}
-
-progress.casanova-progress,
-progress.casanova-paycard__progress{
-  width:100%;
-  height:10px;
-  border:none;
-  border-radius:999px;
-  overflow:hidden;
-  appearance:none;
-  background:rgba(0,0,0,.08);
-}
-
-progress.casanova-progress::-webkit-progress-bar,
-progress.casanova-paycard__progress::-webkit-progress-bar{
-  background:rgba(0,0,0,.08);
-  border-radius:999px;
-}
-
-progress.casanova-progress::-moz-progress-bar,
-progress.casanova-paycard__progress::-moz-progress-bar{
-  border-radius:999px;
-}
-
-.casanova-mulligans-card progress.casanova-progress::-webkit-progress-value,
-.casanova-mulligans-card progress.casanova-progress::-moz-progress-bar{
-  background:var(--tier-color);
-}
-
-progress.casanova-paycard__progress::-webkit-progress-value,
-progress.casanova-paycard__progress::-moz-progress-bar{
-  background:#0f766e;
 }
 
 body.casanova-public-body{

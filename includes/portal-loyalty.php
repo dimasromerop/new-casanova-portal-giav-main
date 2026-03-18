@@ -631,7 +631,12 @@ add_shortcode('casanova_mulligans', function ($atts) {
 
   if ($next_key) {
     echo '  <div class="casanova-mulligans-card__progress">';
-    echo '    <progress class="casanova-progress" value="' . esc_attr((string) $progress) . '" max="100" aria-label="' . esc_attr__('Progreso Mulligans', 'casanova-portal') . '"></progress>';
+    echo '    ' . casanova_portal_progress_svg_html(
+      (float) $progress,
+      __('Progreso Mulligans', 'casanova-portal'),
+      'mulligans-' . str_replace('_', '-', $tier),
+      'casanova-progress'
+    );
     echo '    <div class="casanova-mulligans-card__hint">' . sprintf(
       wp_kses_post(__('Te faltan <strong>%1$s</strong> para subir a <strong>%2$s</strong>.', 'casanova-portal')),
       esc_html(casanova_fmt_money($to_next)),

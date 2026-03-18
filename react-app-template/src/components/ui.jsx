@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 
 import { t } from "../i18n/t.js";
 
@@ -60,5 +60,38 @@ export function TableSkeleton({ rows = 6, cols = 7 }) {
         </div>
       ))}
     </div>
+  );
+}
+
+export function ProgressBar({ value = 0, variant = "finance", label = "" }) {
+  const gradientId = useId().replace(/:/g, "");
+  const clipId = `cp-progress-clip-${gradientId}`;
+  const numericValue = Number(value);
+  const clamped = Number.isFinite(numericValue) ? Math.max(0, Math.min(100, numericValue)) : 0;
+
+  return (
+    <span
+      className={`cp-progress-svg cp-progress-svg--${variant}`.trim()}
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(clamped)}
+    >
+      <svg className="cp-progress-svg__svg" width="100%" height="14" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id={`cp-progress-gradient-${gradientId}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop className="cp-progress-svg__stop cp-progress-svg__stop--start" offset="0%" />
+            <stop className="cp-progress-svg__stop cp-progress-svg__stop--mid" offset="58%" />
+            <stop className="cp-progress-svg__stop cp-progress-svg__stop--end" offset="100%" />
+          </linearGradient>
+          <clipPath id={clipId}>
+            <rect x="0" y="0" width="100%" height="14" rx="7" ry="7" />
+          </clipPath>
+        </defs>
+        <rect className="cp-progress-svg__track" x="0" y="0" width="100%" height="14" rx="7" ry="7" />
+        <rect className="cp-progress-svg__fill" x="0" y="0" width={`${clamped}%`} height="14" clipPath={`url(#${clipId})`} fill={`url(#cp-progress-gradient-${gradientId})`} />
+      </svg>
+    </span>
   );
 }

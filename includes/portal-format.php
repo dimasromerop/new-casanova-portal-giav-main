@@ -80,6 +80,25 @@ function casanova_portal_action_button_html(?string $href, string $label, bool $
   return '<a class="' . esc_attr($class) . '" href="' . esc_url($href) . '">' . esc_html($label) . '</a>';
 }
 
+function casanova_portal_progress_svg_html(float $value, string $aria_label, string $variant, string $root_class = ''): string {
+  $clamped = max(0, min(100, round($value, 2)));
+  $gradient_id = wp_unique_id('casanova-progress-gradient-');
+  $clip_id = wp_unique_id('casanova-progress-clip-');
+  $classes = trim($root_class . ' casanova-progress-svg casanova-progress-svg--' . sanitize_html_class($variant));
+
+  return '<span class="' . esc_attr($classes) . '" role="progressbar" aria-label="' . esc_attr($aria_label) . '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . esc_attr((string) round($clamped)) . '">'
+    . '<svg class="casanova-progress-svg__svg" width="100%" height="14" aria-hidden="true" focusable="false">'
+    . '<defs><linearGradient id="' . esc_attr($gradient_id) . '" x1="0%" y1="0%" x2="100%" y2="0%">'
+    . '<stop class="casanova-progress-svg__stop casanova-progress-svg__stop--start" offset="0%" />'
+    . '<stop class="casanova-progress-svg__stop casanova-progress-svg__stop--mid" offset="58%" />'
+    . '<stop class="casanova-progress-svg__stop casanova-progress-svg__stop--end" offset="100%" />'
+    . '</linearGradient><clipPath id="' . esc_attr($clip_id) . '"><rect x="0" y="0" width="100%" height="14" rx="7" ry="7" /></clipPath></defs>'
+    . '<rect class="casanova-progress-svg__track" x="0" y="0" width="100%" height="14" rx="7" ry="7" />'
+    . '<rect class="casanova-progress-svg__fill" x="0" y="0" width="' . esc_attr(number_format($clamped, 2, '.', '')) . '%" height="14" clip-path="url(#' . esc_attr($clip_id) . ')" fill="url(#' . esc_attr($gradient_id) . ')" />'
+    . '</svg>'
+    . '</span>';
+}
+
 function casanova_badge(string $text, string $type = 'neutral'): string {
   $map = [
     'ok' => 'casanova-badge--status-ok',

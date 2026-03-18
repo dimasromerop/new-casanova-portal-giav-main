@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import BadgeLabel from "./BadgeLabel.jsx";
-import { Notice, TableSkeleton } from "./ui.jsx";
+import { Notice, ProgressBar, TableSkeleton } from "./ui.jsx";
 import { tt, ttf } from "../i18n/t.js";
 import { api } from "../lib/api.js";
 import { euro, formatDateES, normalizeTripDates } from "../lib/formatters.js";
@@ -217,18 +217,11 @@ function TripCard({ trip, onOpen }) {
           <span className="cp-trip-card__payment-total">{financials.totalLabel}</span>
         </div>
 
-        <div
-          className="cp-trip-card__progress"
-          role="progressbar"
-          aria-label={tt("Progreso de pago")}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(financials.progressPct)}
-        >
-          <progress
-            className="cp-progress-meter cp-progress-meter--trip-card"
+        <div className="cp-trip-card__progress">
+          <ProgressBar
             value={financials.progressPct}
-            max={100}
+            variant="trip-card"
+            label={tt("Progreso de pago")}
           />
         </div>
 

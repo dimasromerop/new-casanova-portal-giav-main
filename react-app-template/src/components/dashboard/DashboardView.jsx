@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import { t, tt } from "../../i18n/t.js";
-import { EmptyState } from "../ui.jsx";
+import { EmptyState, ProgressBar } from "../ui.jsx";
 import { euro, formatDateES, formatTierLabel, formatTimestamp, normalizeTripDates } from "../../lib/formatters.js";
 import { setParam } from "../../lib/params.js";
 import { compactList, countNightsBetween, flightSummary, serviceSemanticType, transferSummary, uniqueStrings } from "../../lib/tripServices.js";
@@ -552,11 +552,10 @@ export default function DashboardView({
                 </div>
               </div>
               <div className="cp-trip-finance__meter">
-                <progress
-                  className="cp-progress-meter cp-progress-meter--finance"
+                <ProgressBar
                   value={paymentProgress}
-                  max={100}
-                  aria-label={tt("Progreso de pago")}
+                  variant="finance"
+                  label={tt("Progreso de pago")}
                 />
               </div>
               <div className="cp-trip-module__meta">
@@ -689,11 +688,10 @@ export default function DashboardView({
                 </div>
               </div>
               <div className="cp-dashboard-loyalty__progress">
-                <progress
-                  className="cp-progress-meter cp-progress-meter--loyalty"
+                <ProgressBar
                   value={loyaltyProgressPct}
-                  max={100}
-                  aria-label={tt("Progreso de Mulligans")}
+                  variant="loyalty"
+                  label={tt("Progreso de Mulligans")}
                 />
               </div>
               <div className="cp-dashboard-loyalty__hint">{loyaltyHint}</div>
