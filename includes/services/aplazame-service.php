@@ -80,7 +80,7 @@ class Casanova_Aplazame_Service {
     $url = (string) $cfg['base_url'] . '/' . ltrim($path, '/');
     $args = [
       'timeout' => 20,
-      'user-agent' => 'CasanovaPortalGIAV/0.30.11 (+WordPress)',
+      'user-agent' => 'CasanovaPortalGIAV/0.30.12 (+WordPress)',
       'headers' => [
         'Accept' => (string) $cfg['accept'],
         'Authorization' => 'Bearer ' . (string) $cfg['private_key'],
