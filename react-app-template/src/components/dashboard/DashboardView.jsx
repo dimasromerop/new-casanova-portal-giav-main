@@ -19,8 +19,10 @@ function firstNameFromProfile(profile) {
 function DashboardGlanceItem({ icon: Icon, label, value, note, loading = false }) {
   return (
     <article className={`cp-trip-glance__item ${loading ? "is-loading" : ""}`}>
-      <span className="cp-trip-glance__icon" aria-hidden="true"><Icon /></span>
-      <div className="cp-trip-glance__label">{label}</div>
+      <div className="cp-trip-glance__top">
+        <span className="cp-trip-glance__icon" aria-hidden="true"><Icon /></span>
+        <div className="cp-trip-glance__label">{label}</div>
+      </div>
       {loading ? (
         <div className="cp-trip-glance__skeleton" aria-hidden="true">
           <span className="cp-trip-skeleton__line is-title" />
@@ -33,6 +35,64 @@ function DashboardGlanceItem({ icon: Icon, label, value, note, loading = false }
         </>
       )}
     </article>
+  );
+}
+
+function DashboardIncludeItem({ icon: Icon, label, value, detail = "", emphasis = false }) {
+  return (
+    <article className="cp-trip-includes__item">
+      <span className="cp-trip-includes__icon" aria-hidden="true"><Icon /></span>
+      <div className="cp-trip-includes__content">
+        <div className="cp-trip-includes__label">{label}</div>
+        <div className={`cp-trip-includes__value ${emphasis ? "is-emphasis" : ""}`.trim()}>{value}</div>
+        {detail ? <div className="cp-trip-includes__detail">{detail}</div> : null}
+      </div>
+    </article>
+  );
+}
+
+const LOYALTY_TIER_MIN_SPEND = {
+  birdie: 0,
+  eagle: 5000,
+  eagle_plus: 15000,
+  albatross: 30000,
+};
+
+function normalizeTierSlug(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/\+/g, "_plus")
+    .replace(/\-/g, "_");
+}
+
+function MulligansTierIcon({ tone = "birdie" }) {
+  if (tone === "albatross") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M12 18l6-7 6 5 6-5 6 7v4a3 3 0 0 1-3 3H15a3 3 0 0 1-3-3z" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M18 25v5a6 6 0 0 0 12 0v-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+        <circle cx="24" cy="21" r="1.8" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+
+  if (tone === "eagle") {
+    return (
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 12l3.5 7.1 7.8 1.1-5.6 5.4 1.3 7.6-7-3.7-7 3.7 1.3-7.6-5.6-5.4 7.8-1.1z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+        <path d="M12 21c2.6-2.3 5.5-3.5 8.6-3.7M36 21c-2.6-2.3-5.5-3.5-8.6-3.7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M29 12c-8.1 1.5-13 7.9-13 15 0 6 3.7 9 8.1 9 7.5 0 10.9-8.4 10.9-16 0-4.5-2.3-8.2-6-8z" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinejoin="round" />
+      <path d="M18.8 33.2c3.9-3.4 7-7.6 9-12.6" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
+      <path d="M20 18c1.6 1.1 2.8 2.4 3.8 4" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -102,12 +162,7 @@ export default function DashboardView({
   const lastSyncLabel = formatTimestamp(mull?.last_sync);
 
   const tierRaw = String(mull?.tier || "");
-  const tierSlug = tierRaw
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/\+/g, "_plus")
-    .replace(/\-/g, "_");
+  const tierSlug = normalizeTierSlug(tierRaw);
   const tierClass = tierSlug ? "is-" + tierSlug : "";
   const multLabel = typeof mull?.mult === "number" ? ("x" + mull.mult) : null;
   const progressRaw = typeof mull?.progress_pct === "number"
@@ -117,6 +172,22 @@ export default function DashboardView({
   const remaining = typeof mull?.remaining_to_next === "number" ? mull.remaining_to_next : null;
   const nextTier = mull?.next_tier_label ? String(mull.next_tier_label) : null;
   const hintText = (remaining !== null && nextTier) ? ("Te faltan " + euro(remaining) + " para subir a " + nextTier + ".") : null;
+  const nextTierSlug = normalizeTierSlug(nextTier);
+  const tierMinSpend = LOYALTY_TIER_MIN_SPEND[tierSlug] ?? 0;
+  const nextTierMinSpend = LOYALTY_TIER_MIN_SPEND[nextTierSlug];
+  const spendValue = typeof mull?.spend === "number" ? mull.spend : Number.NaN;
+  const fallbackProgressPct = Number.isFinite(spendValue) && Number.isFinite(nextTierMinSpend)
+    ? Math.max(0, Math.min(100, Math.round(((spendValue - tierMinSpend) / Math.max(1, nextTierMinSpend - tierMinSpend)) * 100)))
+    : 0;
+  const tierTone = tierSlug.includes("albatross") ? "albatross" : (tierSlug.includes("eagle") ? "eagle" : "birdie");
+  const progressTargetLabel = nextTier || tt("Nivel m\u00e1ximo");
+  const loyaltyProgressPct = nextTier ? Math.max(progressPct, fallbackProgressPct) : 100;
+  const loyaltyCopy = nextTier
+    ? tt("Tu nivel actual, tus puntos y el progreso hacia el siguiente nivel.")
+    : tt("Tu nivel actual y los puntos que ya has acumulado.");
+  const loyaltyHint = (remaining !== null && nextTier)
+    ? ("Te faltan " + euro(remaining) + " para " + nextTier + ".")
+    : tt("Ya est\u00e1s en el nivel m\u00e1s alto del programa.");
 
   const heroTrip = hasActiveTrip ? (detailTrip || nextTrip || null) : null;
   const tripLabel = heroTrip?.title ? String(heroTrip.title) : tt("Viaje");
@@ -241,6 +312,11 @@ export default function DashboardView({
   const includeExtras = extrasCount
     ? compactList(otherTitles, 2)
     : tt("Coordinación y asistencia de Casanova Golf durante tu viaje");
+
+  const includeStayValue = nightsLabel || tt("Estancia por confirmar");
+  const includeStayDetail = compactList(hotelTitles, 3) || tt("Hoteles por confirmar");
+  const includeGolfValue = golfLabel || tt("Rondas de golf por confirmar");
+  const includeGolfDetail = compactList(golfTitles, 3) || tt("Campos por confirmar");
 
   const agency = window.CasanovaPortal?.agency || {};
   const agencyName = String(agency.nombre || "Casanova Golf").trim();
@@ -496,22 +572,30 @@ export default function DashboardView({
           <div className="cp-trip-module__eyebrow">{tt("Lo que incluye tu viaje")}</div>
           <div className="cp-trip-module__title">{tt("Tu viaje incluye")}</div>
           <div className="cp-trip-includes">
-            <div className="cp-trip-includes__row">
-              <span>{tt("Estancia")}</span>
-              <strong>{includeStay}</strong>
-            </div>
-            <div className="cp-trip-includes__row">
-              <span>{tt("Golf")}</span>
-              <strong>{includeGolf}</strong>
-            </div>
-            <div className="cp-trip-includes__row">
-              <span>{tt("Vuelos y traslados")}</span>
-              <strong>{includeMobility}</strong>
-            </div>
-            <div className="cp-trip-includes__row">
-              <span>{tt("Extras y asistencia")}</span>
-              <strong>{includeExtras}</strong>
-            </div>
+            <DashboardIncludeItem
+              icon={BedIcon}
+              label={tt("Estancia")}
+              value={includeStayValue}
+              detail={includeStayDetail}
+              emphasis
+            />
+            <DashboardIncludeItem
+              icon={GolfFlagIcon}
+              label={tt("Golf")}
+              value={includeGolfValue}
+              detail={includeGolfDetail}
+              emphasis
+            />
+            <DashboardIncludeItem
+              icon={CarIcon}
+              label={tt("Vuelos y traslados")}
+              value={includeMobility}
+            />
+            <DashboardIncludeItem
+              icon={ChatBubbleIcon}
+              label={tt("Extras y asistencia")}
+              value={includeExtras}
+            />
           </div>
         </article>
           </>
@@ -565,7 +649,22 @@ export default function DashboardView({
                   {hintText || tt("Aquí tienes tu avance y un acceso rápido a los movimientos, sin recargar la portada.")}
                 </div>
               </div>
-              <div className="cp-dashboard-loyalty__stats">
+              <div className="cp-dashboard-loyalty__summary">
+                <div className="cp-dashboard-loyalty__current">
+                  <span className={`cp-dashboard-loyalty__medal is-${tierTone}`} aria-hidden="true">
+                    <MulligansTierIcon tone={tierTone} />
+                  </span>
+                  <div className="cp-dashboard-loyalty__current-copy">
+                    <div className="cp-dashboard-loyalty__kicker">{tt("Nivel actual")}</div>
+                    <div className="cp-dashboard-loyalty__level">{levelLabel}</div>
+                  </div>
+                </div>
+                <div className="cp-dashboard-loyalty__points-panel">
+                  <div className="cp-dashboard-loyalty__kicker">{tt("Puntos")}</div>
+                  <div className="cp-dashboard-loyalty__points">{points.toLocaleString("es-ES")}</div>
+                </div>
+              </div>
+              <div className="cp-dashboard-loyalty__stats-old" aria-hidden="true">
                 <div className="cp-dashboard-loyalty__points">{points.toLocaleString("es-ES")}</div>
                 <div className="cp-dashboard-loyalty__meta">
                   {tt("Nivel")} {levelLabel} · {tt("Ratio actual")} {multLabel || "—"}
@@ -574,9 +673,20 @@ export default function DashboardView({
                   {tt("Gasto acumulado")}: {typeof mull?.spend === "number" ? euro(mull.spend) : "—"}
                 </div>
               </div>
-              <div className="cp-dashboard-loyalty__progress">
-                <span className="cp-dashboard-loyalty__progress-bar" style={{ width: `${progressPct}%` }} />
+              <div className="cp-dashboard-loyalty__progress-head">
+                <div className="cp-dashboard-loyalty__progress-end">
+                  <span>{tt("Nivel actual")}</span>
+                  <strong>{levelLabel}</strong>
+                </div>
+                <div className="cp-dashboard-loyalty__progress-end is-next">
+                  <span>{tt("PrÃ³ximo nivel")}</span>
+                  <strong>{progressTargetLabel}</strong>
+                </div>
               </div>
+              <div className="cp-dashboard-loyalty__progress">
+                <span className="cp-dashboard-loyalty__progress-bar" style={{ width: `${loyaltyProgressPct}%` }} />
+              </div>
+              <div className="cp-dashboard-loyalty__hint">{loyaltyHint}</div>
               <div className="cp-dashboard-loyalty__actions">
                 {lastSyncLabel ? <span className="cp-dashboard-loyalty__updated">{tt("Actualizado")}: {lastSyncLabel}</span> : <span />}
                 <button className="cp-btn cp-btn--ghost" onClick={() => setParam("view", "mulligans")}>

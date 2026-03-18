@@ -25,15 +25,46 @@ export default function SecurityView({ onChangePassword, readOnly = false, readO
           </div>
         ) : null}
 
-        <Field label="Contraseña actual">
-          <input className="cp-input" type="password" value={current} onChange={(event) => setCurrent(event.target.value)} disabled={readOnly} />
-        </Field>
-        <Field label="Nueva contraseña">
-          <input className="cp-input" type="password" value={next} onChange={(event) => setNext(event.target.value)} disabled={readOnly} />
-        </Field>
-        <Field label="Confirmar nueva contraseña">
-          <input className="cp-input" type="password" value={confirm} onChange={(event) => setConfirm(event.target.value)} disabled={readOnly} />
-        </Field>
+        <section className="cp-form-section cp-form-section--compact">
+          <div className="cp-form-section__head">
+            <div className="cp-form-section__eyebrow">{tt("Seguridad")}</div>
+            <div className="cp-form-section__title">{tt("Credenciales de acceso")}</div>
+          </div>
+
+          <Field label={tt("Contraseña actual")} htmlFor="security-current-password" readOnly={readOnly}>
+            <input
+              id="security-current-password"
+              className="cp-input"
+              type="password"
+              value={current}
+              onChange={(event) => setCurrent(event.target.value)}
+              readOnly={readOnly}
+              aria-readonly={readOnly ? "true" : undefined}
+            />
+          </Field>
+          <Field label={tt("Nueva contraseña")} htmlFor="security-next-password" readOnly={readOnly}>
+            <input
+              id="security-next-password"
+              className="cp-input"
+              type="password"
+              value={next}
+              onChange={(event) => setNext(event.target.value)}
+              readOnly={readOnly}
+              aria-readonly={readOnly ? "true" : undefined}
+            />
+          </Field>
+          <Field label={tt("Confirmar nueva contraseña")} htmlFor="security-confirm-password" readOnly={readOnly}>
+            <input
+              id="security-confirm-password"
+              className="cp-input"
+              type="password"
+              value={confirm}
+              onChange={(event) => setConfirm(event.target.value)}
+              readOnly={readOnly}
+              aria-readonly={readOnly ? "true" : undefined}
+            />
+          </Field>
+        </section>
 
         <div className="cp-actions-row">
           <button className="cp-btn-primary" type="button" onClick={() => onChangePassword({ current, next, confirm })} disabled={readOnly}>

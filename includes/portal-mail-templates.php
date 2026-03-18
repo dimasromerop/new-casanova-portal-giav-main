@@ -35,6 +35,9 @@ function casanova_tpl_email_confirmacion_cobro(array $ctx): array {
   $fecha = (string)($ctx['fecha'] ?? '');
   $pagado = (string)($ctx['pagado'] ?? '');
   $pendiente = (string)($ctx['pendiente'] ?? '');
+  $modalidad = (string)($ctx['modalidad'] ?? '');
+  $resto_message = (string)($ctx['resto_message'] ?? '');
+  $is_group_payment = !empty($ctx['is_group_payment']);
 
   $expLabel = $codExp !== '' ? esc_html($codExp) : ('#' . $idExp);
   $url = esc_url(casanova_portal_url_expediente($idExp));
@@ -48,10 +51,17 @@ function casanova_tpl_email_confirmacion_cobro(array $ctx): array {
     $body .= '<p>' . esc_html__('Hola,', 'casanova-portal') . '</p>';
   }
 
-  $body .= '<p>' . sprintf(wp_kses_post(__('Hemos registrado un pago para tu expediente <strong>%s</strong>.', 'casanova-portal')), $expLabel) . '</p>';
+  if ($is_group_payment) {
+    $body .= '<p>' . sprintf(wp_kses_post(__('Hemos registrado correctamente tu pago para el expediente <strong>%s</strong>.', 'casanova-portal')), $expLabel) . '</p>';
+  } else {
+    $body .= '<p>' . sprintf(wp_kses_post(__('Hemos registrado un pago para tu expediente <strong>%s</strong>.', 'casanova-portal')), $expLabel) . '</p>';
+  }
 
   $body .= '<table style="width:70%;border-collapse:collapse;margin:12px 0;font-size:14px;">';
   $body .= '<tr><td style="padding:8px;border-bottom:1px solid #eee;">' . esc_html__('Importe', 'casanova-portal') . '</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right;"><strong>' . esc_html($importe) . '</strong></td></tr>';
+  if ($modalidad !== '') {
+    $body .= '<tr><td style="padding:8px;border-bottom:1px solid #eee;">' . esc_html__('Modalidad', 'casanova-portal') . '</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">' . esc_html($modalidad) . '</td></tr>';
+  }
   if ($fecha !== '') {
     $body .= '<tr><td style="padding:8px;border-bottom:1px solid #eee;">' . esc_html__('Fecha', 'casanova-portal') . '</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">' . esc_html($fecha) . '</td></tr>';
   }
@@ -63,8 +73,16 @@ function casanova_tpl_email_confirmacion_cobro(array $ctx): array {
   }
   $body .= '</table>';
 
-  $body .= '<p>' . esc_html__('Puedes ver el estado actualizado aquí:', 'casanova-portal') . '</p>';
-  $body .= '<p><a href="' . $url . '" style="display:inline-block;padding:10px 14px;border:1px solid #ddd;border-radius:10px;text-decoration:none;">' . esc_html__('Ver expediente', 'casanova-portal') . '</a></p>';
+  if ($resto_message !== '') {
+    $body .= '<p>' . esc_html($resto_message) . '</p>';
+  }
+
+  if ($is_group_payment) {
+    $body .= '<p>' . esc_html__('Si necesitas ayuda con el pago, contacta con la agencia.', 'casanova-portal') . '</p>';
+  } else {
+    $body .= '<p>' . esc_html__('Puedes ver el estado actualizado aquí:', 'casanova-portal') . '</p>';
+    $body .= '<p><a href="' . $url . '" style="display:inline-block;padding:10px 14px;border:1px solid #ddd;border-radius:10px;text-decoration:none;">' . esc_html__('Ver expediente', 'casanova-portal') . '</a></p>';
+  }
 
   $html = casanova_mail_wrap_html(__('Pago recibido', 'casanova-portal'), $body);
 

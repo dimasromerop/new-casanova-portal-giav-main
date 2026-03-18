@@ -30,6 +30,8 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
 
   const locale = profile?.locale || "";
   const lockedMessage = readOnlyMessage || tt("Modo de vista cliente activo. Solo lectura.");
+  const fullName = `${giav.nombre || ""} ${giav.apellidos || ""}`.trim() || "—";
+  const email = giav.email || profile?.user?.email || "—";
 
   return (
     <div className="cp-content">
@@ -43,48 +45,115 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
           </div>
         ) : null}
 
-        <div className="cp-grid2">
-          <Field label="Nombre">
-            <input className="cp-input" value={`${giav.nombre || ""} ${giav.apellidos || ""}`.trim() || "—"} disabled />
-          </Field>
-          <Field label="Email">
-            <input className="cp-input" value={giav.email || profile?.user?.email || "—"} disabled />
-          </Field>
-        </div>
+        <section className="cp-form-section">
+          <div className="cp-form-section__head">
+            <div className="cp-form-section__eyebrow">{tt("Datos personales")}</div>
+            <div className="cp-form-section__title">{tt("Contacto y acceso")}</div>
+          </div>
 
-        <div className="cp-grid2">
-          <Field label="Teléfono">
-            <input className="cp-input" value={form.telefono} onChange={(event) => setForm((state) => ({ ...state, telefono: event.target.value }))} placeholder="" disabled={readOnly} />
-          </Field>
-          <Field label="Móvil">
-            <input className="cp-input" value={form.movil} onChange={(event) => setForm((state) => ({ ...state, movil: event.target.value }))} placeholder="" disabled={readOnly} />
-          </Field>
-        </div>
+          <div className="cp-grid2">
+            <Field label={tt("Nombre")} htmlFor="profile-name" readOnly>
+              <input id="profile-name" className="cp-input" value={fullName} readOnly aria-readonly="true" />
+            </Field>
+            <Field label={tt("Email")} htmlFor="profile-email" readOnly>
+              <input id="profile-email" className="cp-input" value={email} readOnly aria-readonly="true" />
+            </Field>
+          </div>
 
-        <div className="cp-divider" />
-        <div className="cp-card-subtitle">{tt("Dirección")}</div>
+          <div className="cp-grid2">
+            <Field label={tt("Teléfono")} htmlFor="profile-phone" readOnly={readOnly}>
+              <input
+                id="profile-phone"
+                className="cp-input"
+                value={form.telefono}
+                onChange={(event) => setForm((state) => ({ ...state, telefono: event.target.value }))}
+                readOnly={readOnly}
+                aria-readonly={readOnly ? "true" : undefined}
+              />
+            </Field>
+            <Field label={tt("Móvil")} htmlFor="profile-mobile" readOnly={readOnly}>
+              <input
+                id="profile-mobile"
+                className="cp-input"
+                value={form.movil}
+                onChange={(event) => setForm((state) => ({ ...state, movil: event.target.value }))}
+                readOnly={readOnly}
+                aria-readonly={readOnly ? "true" : undefined}
+              />
+            </Field>
+          </div>
+        </section>
 
-        <Field label="Dirección">
-          <input className="cp-input" value={form.direccion} onChange={(event) => setForm((state) => ({ ...state, direccion: event.target.value }))} disabled={readOnly} />
-        </Field>
+        <div className="cp-divider cp-divider--section" />
 
-        <div className="cp-grid2">
-          <Field label="Código postal">
-            <input className="cp-input" value={form.codPostal} onChange={(event) => setForm((state) => ({ ...state, codPostal: event.target.value }))} disabled={readOnly} />
-          </Field>
-          <Field label="Población">
-            <input className="cp-input" value={form.poblacion} onChange={(event) => setForm((state) => ({ ...state, poblacion: event.target.value }))} disabled={readOnly} />
-          </Field>
-        </div>
+        <section className="cp-form-section">
+          <div className="cp-form-section__head">
+            <div className="cp-form-section__eyebrow">{tt("Dirección")}</div>
+            <div className="cp-form-section__title">{tt("Datos de ubicación")}</div>
+          </div>
 
-        <div className="cp-grid2">
-          <Field label="Provincia">
-            <input className="cp-input" value={form.provincia} onChange={(event) => setForm((state) => ({ ...state, provincia: event.target.value }))} disabled={readOnly} />
+          <Field label={tt("Dirección")} htmlFor="profile-address" readOnly={readOnly}>
+            <input
+              id="profile-address"
+              className="cp-input"
+              value={form.direccion}
+              onChange={(event) => setForm((state) => ({ ...state, direccion: event.target.value }))}
+              readOnly={readOnly}
+              aria-readonly={readOnly ? "true" : undefined}
+            />
           </Field>
-          <Field label="País" help="(Opcional, según datos de facturación)">
-            <input className="cp-input" value={form.pais} onChange={(event) => setForm((state) => ({ ...state, pais: event.target.value }))} disabled={readOnly} />
-          </Field>
-        </div>
+
+          <div className="cp-grid2">
+            <Field label={tt("Código postal")} htmlFor="profile-postal-code" readOnly={readOnly}>
+              <input
+                id="profile-postal-code"
+                className="cp-input"
+                value={form.codPostal}
+                onChange={(event) => setForm((state) => ({ ...state, codPostal: event.target.value }))}
+                readOnly={readOnly}
+                aria-readonly={readOnly ? "true" : undefined}
+              />
+            </Field>
+            <Field label={tt("Población")} htmlFor="profile-city" readOnly={readOnly}>
+              <input
+                id="profile-city"
+                className="cp-input"
+                value={form.poblacion}
+                onChange={(event) => setForm((state) => ({ ...state, poblacion: event.target.value }))}
+                readOnly={readOnly}
+                aria-readonly={readOnly ? "true" : undefined}
+              />
+            </Field>
+          </div>
+
+          <div className="cp-grid2">
+            <Field label={tt("Provincia")} htmlFor="profile-region" readOnly={readOnly}>
+              <input
+                id="profile-region"
+                className="cp-input"
+                value={form.provincia}
+                onChange={(event) => setForm((state) => ({ ...state, provincia: event.target.value }))}
+                readOnly={readOnly}
+                aria-readonly={readOnly ? "true" : undefined}
+              />
+            </Field>
+            <Field
+              label={tt("País")}
+              htmlFor="profile-country"
+              help={tt("(Opcional, según datos de facturación)")}
+              readOnly={readOnly}
+            >
+              <input
+                id="profile-country"
+                className="cp-input"
+                value={form.pais}
+                onChange={(event) => setForm((state) => ({ ...state, pais: event.target.value }))}
+                readOnly={readOnly}
+                aria-readonly={readOnly ? "true" : undefined}
+              />
+            </Field>
+          </div>
+        </section>
 
         <div className="cp-actions-row">
           <button className="cp-btn-primary" type="button" onClick={() => onSave(form)} disabled={readOnly}>
@@ -95,13 +164,22 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
 
       <div className="cp-card" style={{ background: "var(--surface)" }}>
         <div className="cp-card-title">{t("portal_language", "Idioma del portal")}</div>
-        <div className="cp-row" style={{ gap: 12, alignItems: "center" }}>
-          <select className="cp-input" value={locale} onChange={(event) => onLocale(event.target.value)} style={{ maxWidth: 280 }} disabled={readOnly}>
-            <option value="es_ES">{tt("Español")}</option>
-            <option value="en_US">{tt("English")}</option>
-          </select>
-          <div className="cp-help">{tt("Esto solo afecta al portal.")}</div>
-        </div>
+        <section className="cp-form-section cp-form-section--compact">
+          <Field label={tt("Idioma")} htmlFor="profile-locale" help={tt("Esto solo afecta al portal.")} readOnly={readOnly}>
+            <select
+              id="profile-locale"
+              className="cp-input"
+              value={locale}
+              onChange={(event) => onLocale(event.target.value)}
+              style={{ maxWidth: 280 }}
+              disabled={readOnly}
+              aria-disabled={readOnly ? "true" : undefined}
+            >
+              <option value="es_ES">{tt("Español")}</option>
+              <option value="en_US">{tt("English")}</option>
+            </select>
+          </Field>
+        </section>
       </div>
     </div>
   );

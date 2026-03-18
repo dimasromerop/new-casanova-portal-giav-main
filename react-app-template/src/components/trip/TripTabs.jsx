@@ -12,11 +12,12 @@ export default function Tabs({ tab, onTab }) {
   ];
 
   return (
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+    <div className="cp-trip-tabs" role="tablist" aria-label={tt("Secciones del viaje")}>
       {items.map((it) => (
         <button
           key={it.k}
-          className={`cp-btn ${tab === it.k ? "primary" : ""}`}
+          type="button"
+          className={`cp-btn cp-trip-tabs__btn ${tab === it.k ? "primary" : ""}`}
           onClick={() => onTab(it.k)}
         >
           {it.label}

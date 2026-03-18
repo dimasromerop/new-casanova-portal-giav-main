@@ -30,6 +30,69 @@ function casanova_is_reembolso_cobro($c): bool {
   return ($tipo === 'REEMBOLSO' || strpos($tipo, 'REEM') !== false || strpos($tipo, 'DEV') !== false);
 }
 
+function casanova_payment_intent_payload_array(object $intent): array {
+  $payload_raw = (string)($intent->payload ?? '');
+  if ($payload_raw === '') return [];
+
+  $payload = json_decode($payload_raw, true);
+  return is_array($payload) ? $payload : [];
+}
+
+function casanova_payment_intent_email_context(object $intent): array {
+  $payload = casanova_payment_intent_payload_array($intent);
+  $payment_link = is_array($payload['payment_link'] ?? null) ? $payload['payment_link'] : [];
+  $payment_link_id = (int)($payment_link['id'] ?? 0);
+  $payment_link_scope = (string)($payment_link['scope'] ?? '');
+
+  $link_meta = [];
+  if ($payment_link_id > 0 && function_exists('casanova_payment_link_get')) {
+    $link = casanova_payment_link_get($payment_link_id);
+    if ($link) {
+      $meta_raw = (string)($link->metadata ?? '');
+      if ($meta_raw !== '') {
+        $decoded = json_decode($meta_raw, true);
+        if (is_array($decoded)) {
+          $link_meta = $decoded;
+        }
+      }
+    }
+  }
+
+  $billing_name = trim((string)($link_meta['billing_name'] ?? ($payload['billing_name'] ?? '')));
+  $billing_lastname = trim((string)($link_meta['billing_lastname'] ?? ($payload['billing_lastname'] ?? '')));
+  $billing_fullname = trim((string)($link_meta['billing_fullname'] ?? ($payload['billing_fullname'] ?? trim($billing_name . ' ' . $billing_lastname))));
+  $billing_email = trim((string)($link_meta['billing_email'] ?? ($payload['billing_email'] ?? '')));
+  $mode = strtolower(trim((string)($link_meta['mode'] ?? ($payload['mode'] ?? ''))));
+
+  $user = null;
+  if (!empty($intent->user_id) && function_exists('get_user_by')) {
+    $user = get_user_by('id', (int)($intent->user_id ?? 0));
+  }
+
+  if (($billing_email === '' || !is_email($billing_email)) && $user && !empty($user->user_email)) {
+    $billing_email = (string)$user->user_email;
+  }
+
+  $cliente_nombre = $billing_name !== '' ? $billing_name : $billing_fullname;
+  if ($cliente_nombre === '' && $user) {
+    $cliente_nombre = (string)($user->first_name ?: $user->display_name);
+  }
+
+  return [
+    'payload' => $payload,
+    'payment_link' => $payment_link,
+    'payment_link_scope' => $payment_link_scope,
+    'link_meta' => $link_meta,
+    'billing_name' => $billing_name,
+    'billing_lastname' => $billing_lastname,
+    'billing_fullname' => $billing_fullname,
+    'billing_email' => $billing_email,
+    'cliente_nombre' => $cliente_nombre,
+    'mode' => $mode,
+    'user' => $user,
+  ];
+}
+
 /**
  * Detecta cambios y encola emails.
  * - Llamar a esto después de calcular $pago en la vista del expediente.
@@ -107,13 +170,16 @@ function casanova_on_payment_cobro_recorded_send_email(int $intent_id): void {
     return;
   }
 
-  if (!function_exists('get_user_by') || !function_exists('casanova_mail_send_payment_confirmed')) return;
+  if (!function_exists('casanova_mail_send_payment_confirmed')) return;
 
-  $user = get_user_by('id', (int)($intent->user_id ?? 0));
-  if (!$user || empty($user->user_email)) return;
+  $mail_ctx = casanova_payment_intent_email_context($intent);
+  $to = trim((string)($mail_ctx['billing_email'] ?? ''));
+  if ($to === '' || !is_email($to)) {
+    error_log('[CASANOVA][MAIL] SKIP: no recipient email for intent_id=' . $intent_id);
+    return;
+  }
 
   $exp_id = (int)($intent->id_expediente ?? 0);
-  $idCliente = (int)($intent->id_cliente ?? 0);
 
   // Unificar: siempre usar el CÓDIGO HUMANO desde Expediente_GET
   $codExp = '';
@@ -130,8 +196,8 @@ function casanova_on_payment_cobro_recorded_send_email(int $intent_id): void {
 
   // Para evitar “dos cuerpos” en payment_confirmed, NO pasamos totales aquí.
   $ctx = [
-    'to' => $user->user_email,
-    'cliente_nombre' => ($user->first_name ?: $user->display_name),
+    'to' => $to,
+    'cliente_nombre' => (string)($mail_ctx['cliente_nombre'] ?? ''),
     'idExpediente' => $exp_id,
     'codigoExpediente' => $codExp,
     'importe' => number_format((float)($intent->amount ?? 0), 2, ',', '.') . ' €',
@@ -139,6 +205,21 @@ function casanova_on_payment_cobro_recorded_send_email(int $intent_id): void {
     'pagado' => '',
     'pendiente' => '',
   ];
+
+  $payment_link_scope = (string)($mail_ctx['payment_link_scope'] ?? '');
+  $mode = (string)($mail_ctx['mode'] ?? '');
+  if ($payment_link_scope === 'group_base') {
+    $mode_label = __('Pago total', 'casanova-portal');
+    if ($mode === 'deposit') {
+      $mode_label = __('Depósito', 'casanova-portal');
+      $ctx['resto_message'] = __('Recibirás además un email con el enlace para completar el resto del pago.', 'casanova-portal');
+    } elseif ($mode === 'rest') {
+      $mode_label = __('Pago restante', 'casanova-portal');
+    }
+
+    $ctx['is_group_payment'] = true;
+    $ctx['modalidad'] = $mode_label;
+  }
 
   error_log('[CASANOVA][MAIL] SENDING: payment_confirmed (cobro_recorded)…');
   $ok = (bool) casanova_mail_send_payment_confirmed($ctx);

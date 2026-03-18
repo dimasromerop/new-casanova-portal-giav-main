@@ -72,50 +72,59 @@ export default function TripHeader({ trip, map, weather, itineraryUrl }) {
   const range = normalizeTripDates(trip);
 
   return (
-    <div className="cp-card" style={{ marginTop: 14 }}>
-      <div className="cp-card-header">
-        <div>
-          <div className="cp-card-title" style={{ fontSize: 20 }}>
+    <div className="cp-card cp-trip-header" style={{ marginTop: 14 }}>
+      <div className="cp-card-header cp-trip-header__card-header">
+        <div className="cp-trip-header__summary">
+          <div className="cp-card-title cp-trip-header__title">
             {trip?.title || tt("Viaje")}
           </div>
-          <div className="cp-card-sub">
+          <div className="cp-card-sub cp-trip-header__sub">
             {trip?.code || ttf("Expediente #{id}", { id: trip?.id || "—" })} · {trip?.status || "—"}
           </div>
         </div>
+
         <div className="cp-trip-head__meta-actions">
           <div className="cp-trip-head__meta">
-            <span className="cp-strong">{tt("Fechas:")}</span> {formatDateES(range.start)} – {formatDateES(range.end)}
+            <span className="cp-strong">{tt("Fechas:")}</span>
+            <span className="cp-trip-head__dates">{formatDateES(range.start)} – {formatDateES(range.end)}</span>
           </div>
+
           <div className="cp-trip-head__actions">
-            {map?.url ? (
-              <a
+            <div className="cp-trip-head__cta-group">
+              {map?.url ? (
+                <a
+                  className="cp-btn"
+                  href={String(map.url)}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={map?.type === "route" ? tt("Ver ruta en Google Maps") : tt("Ver mapa en Google Maps")}
+                >
+                  {map?.type === "route" ? tt("Ver ruta") : tt("Ver mapa")}
+                </a>
+              ) : null}
+
+              <button
+                type="button"
                 className="cp-btn"
-                href={String(map.url)}
-                target="_blank"
-                rel="noreferrer"
-                title={map?.type === "route" ? tt("Ver ruta en Google Maps") : tt("Ver mapa en Google Maps")}
+                onClick={() => {
+                  setParam("tab", "payments");
+                }}
               >
-                {map?.type === "route" ? tt("Ver ruta") : tt("Ver mapa")}
-              </a>
-            ) : null}
-            <button
-              className="cp-btn"
-              onClick={() => {
-                setParam("tab", "payments");
-              }}
-            >
-              {tt("Ver pagos")}
-            </button>
-            {itineraryUrl ? (
-              <a
-                className="cp-btn cp-btn--ghost"
-                href={itineraryUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                {tt("Programa del viaje (PDF)")}
-              </a>
-            ) : null}
+                {tt("Ver pagos")}
+              </button>
+
+              {itineraryUrl ? (
+                <a
+                  className="cp-btn cp-btn--ghost"
+                  href={itineraryUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {tt("Programa del viaje (PDF)")}
+                </a>
+              ) : null}
+            </div>
+
             <TripWeather weather={weather} />
           </div>
         </div>

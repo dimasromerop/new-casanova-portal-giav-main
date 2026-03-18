@@ -33,6 +33,7 @@ export function ServiceItem({ service, indent = false }) {
   const bonusText = typeof detail.bonus_text === "string" ? detail.bonus_text.trim() : "";
   const price = typeof service.price === "number" ? service.price : null;
   const imageUrl = service?.media?.image_url || "";
+  const hasImage = Boolean(imageUrl);
   const viewUrl = service.voucher_urls?.view || "";
   const pdfUrl = service.voucher_urls?.pdf || "";
   const canVoucher = Boolean(service.actions?.voucher);
@@ -109,7 +110,7 @@ export function ServiceItem({ service, indent = false }) {
 
   return (
     <div className={`cp-service${indent ? " cp-service--child" : ""}`}>
-      <div className="cp-service__summary">
+      <div className={`cp-service__summary${hasImage ? "" : " is-no-image"}`}>
         {imageUrl ? (
           <div className="cp-service__thumb" aria-hidden="true">
             <img src={imageUrl} alt="" loading="lazy" />

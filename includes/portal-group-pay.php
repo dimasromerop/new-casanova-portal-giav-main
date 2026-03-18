@@ -101,6 +101,7 @@ function casanova_handle_group_pay_request(string $token): void {
   $reservas = $ctx['reservas'] ?? [];
   $calc = $ctx['calc'] ?? [];
   $numPax = (int)($ctx['num_pax'] ?? 0);
+  $basePending = (float)($ctx['base_pending'] ?? 0);
   $baseTotal = (float)($ctx['base_total'] ?? 0);
   if ($baseTotal <= 0) {
     // Fallback: si no viene Venta desde GIAV, aproximamos como pendiente + ya pagado en slots.
@@ -198,28 +199,20 @@ function casanova_handle_group_pay_request(string $token): void {
       exit;
     }
 
-    $covers_self = !empty($_POST['covers_self']);
-    $covers_others = !empty($_POST['covers_others']);
+    $units = isset($_POST['units']) ? (int)$_POST['units'] : 1;
+    if ($units < 1) $units = 1;
+    if ($units > 10) $units = 10;
 
     $others_raw = isset($_POST['others_names']) ? (string)$_POST['others_names'] : '';
     $others_names = trim(sanitize_textarea_field($others_raw));
     $others_list = [];
-    if ($covers_others) {
+    if ($others_names !== '') {
       $lines = preg_split('/\r\n|\r|\n/', $others_names);
       foreach ($lines as $ln) {
         $ln = trim(sanitize_text_field($ln));
         if ($ln !== '') $others_list[] = $ln;
       }
-      if (empty($others_list)) {
-        casanova_render_payment_link_error(__('Debes indicar los nombres de los otros viajeros.', 'casanova-portal'));
-        exit;
-      }
     }
-
-    $internal_note_raw = isset($_POST['internal_note']) ? (string)$_POST['internal_note'] : '';
-    $internal_note = trim(sanitize_textarea_field($internal_note_raw));
-
-    $units = ($covers_self ? 1 : 0) + ($covers_others ? max(1, count($others_list)) : 0);
     if ($units <= 0) {
       casanova_render_payment_link_error(__('Debes seleccionar al menos 1 persona.', 'casanova-portal'));
       exit;
@@ -264,27 +257,23 @@ function casanova_handle_group_pay_request(string $token): void {
       'status' => 'active',
       'created_by' => 'group',
       'billing_dni' => $dni,
-        'billing_email' => $billing_email,
       'metadata' => [
         'mode' => $mode,
         'units' => $units,
         'unit_total' => $unit_total,
         'unit_deposit' => $unit_deposit,
-        'covers_self' => $covers_self ? 1 : 0,
-        'covers_others' => $covers_others ? 1 : 0,
-        'others_names' => $others_list,
-        'internal_note' => $internal_note,
-        'total_due' => $total_due,
-        'deposit_total' => ($mode === 'deposit') ? $deposit_total : 0,
-        'group_token_id' => (int)$group->id,
-        'id_reserva_pq' => $idReservaPQ,
         'billing_name' => $billing_name,
         'billing_lastname' => $billing_lastname,
         'billing_fullname' => $billing_fullname,
         'billing_dni' => $dni,
         'billing_email' => $billing_email,
+        'others_names' => $others_list,
+        'group_token_id' => (int)$group->id,
+        'id_reserva_pq' => $idReservaPQ,
         'preferred_method' => $selected_method,
         'auto_start' => true,
+        'total_due' => $total_due,
+        'deposit_total' => ($mode === 'deposit') ? $deposit_total : 0,
       ],
     ]);
 
@@ -327,7 +316,7 @@ function casanova_handle_group_pay_request(string $token): void {
   </style>';
 
   echo '<h2 style="margin:0 0 6px;">' . esc_html__('Pago del viaje', 'casanova-portal') . '</h2>';
-  echo '<p style="margin:0 0 14px;color:#555;">' . esc_html__('Indica a cuántas personas cubre el pago y completa los datos de facturación.', 'casanova-portal') . '</p>';
+  echo '<p style="margin:0 0 14px;color:#555;">' . esc_html__('Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador.', 'casanova-portal') . '</p>';
   $codigo_html = $exp_codigo ? ' <span style="color:#666;">(' . esc_html($exp_codigo) . ')</span>' : '';
   echo '<p style="margin:0 0 14px;">' . wp_kses_post(
     sprintf(__('Viaje: <strong>%1$s</strong>%2$s', 'casanova-portal'), esc_html($exp_label), $codigo_html)
@@ -347,6 +336,7 @@ function casanova_handle_group_pay_request(string $token): void {
   $default_amount = $deposit_allowed && $unit_deposit_preview > 0.009 && $unit_deposit_preview + 0.01 < $unit_total
     ? $unit_deposit_preview
     : $unit_total;
+  $transfer_note = __('El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
 
   if ($flash_msg !== '') {
     $bg = ($flash_type === 'success') ? '#f0fff4' : (($flash_type === 'error') ? '#fff7f7' : '#f7f7ff');
@@ -356,9 +346,9 @@ function casanova_handle_group_pay_request(string $token): void {
       . '</div>';
   }
 
-  // Mini-form: reenviar enlace de pago final si ya pagó depósito.
-  echo '<div style="border:1px solid #eee;border-radius:8px;padding:12px;margin:0 0 14px;">';
-  echo '<div style="font-weight:600;margin:0 0 8px;">' . esc_html__('¿Ya pagaste el depósito?', 'casanova-portal') . '</div>';
+  echo '<details style="border:1px solid #eee;border-radius:8px;padding:12px;margin:0 0 14px;">';
+  echo '<summary style="font-weight:600;cursor:pointer;">' . esc_html__('¿Ya pagaste el depósito? Reenviar enlace para pagar el resto', 'casanova-portal') . '</summary>';
+  echo '<div style="margin-top:10px;color:#555;">' . esc_html__('Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos el enlace del pago restante.', 'casanova-portal') . '</div>';
   echo '<form method="post" action="' . esc_url(casanova_group_pay_url((string)$group->token)) . '" style="margin:0;">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
   echo '<input type="hidden" name="action" value="resend_magic" />';
@@ -371,10 +361,10 @@ function casanova_handle_group_pay_request(string $token): void {
     . '</label>';
   echo '</div>';
   echo '<button type="submit" style="margin-top:10px;padding:10px 14px;border:1px solid #111;border-radius:8px;background:#fff;color:#111;cursor:pointer;">'
-    . esc_html__('Reenviar enlace', 'casanova-portal')
+    . esc_html__('Enviar enlace del resto', 'casanova-portal')
     . '</button>';
   echo '</form>';
-  echo '</div>';
+  echo '</details>';
 
   echo '<form id="casanova-group-pay-form" method="post" action="' . esc_url(casanova_group_pay_url((string)$group->token)) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
@@ -397,32 +387,30 @@ function casanova_handle_group_pay_request(string $token): void {
   if ($inespay_enabled) {
     echo '<div class="casanova-two-col" style="margin:6px 0 0;">';
     echo '<label style="display:block;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-    echo '<input type="radio" name="method" value="card" checked style="margin-right:8px;" />' . esc_html__('Tarjeta (Redsys)', 'casanova-portal');
+    echo '<input type="radio" name="method" value="card" checked style="margin-right:8px;" />' . esc_html__('Tarjeta', 'casanova-portal');
+    echo '<span style="display:block;margin-left:24px;margin-top:4px;font-size:12px;color:#666;">' . esc_html__('Pago inmediato y seguro.', 'casanova-portal') . '</span>';
     echo '</label>';
     echo '<label style="display:block;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-    echo '<input type="radio" name="method" value="bank_transfer" style="margin-right:8px;" />' . esc_html__('Transferencia bancaria (Inespay)', 'casanova-portal');
+    echo '<input type="radio" name="method" value="bank_transfer" style="margin-right:8px;" />' . esc_html__('Transferencia bancaria online', 'casanova-portal');
+    echo '<span style="display:block;margin-left:24px;margin-top:4px;font-size:12px;color:#666;">' . esc_html__('PSD2 · Sin recargo.', 'casanova-portal') . '</span>';
     echo '</label>';
     echo '</div>';
+    echo '<div id="casanova-method-note" style="display:none;margin-top:8px;padding:10px 12px;border:1px solid #eee;border-radius:8px;background:#fafafa;color:#555;font-size:12px;line-height:1.5;">' . esc_html($transfer_note) . '</div>';
   } else {
     echo '<input type="hidden" name="method" value="card" />';
     echo '<div style="margin:6px 0 12px;color:#666;">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
   }
 
-  echo '<div style="margin:14px 0 6px;font-weight:600;">' . esc_html__('Personas incluidas', 'casanova-portal') . '</div>';
-  echo '<label style="display:block;margin:6px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-  echo '<input type="checkbox" name="covers_self" value="1" checked style="margin-right:8px;" />' . esc_html__('Me incluye a mí', 'casanova-portal');
-  echo '</label>';
-  echo '<label style="display:block;margin:6px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-  echo '<input type="checkbox" name="covers_others" value="1" style="margin-right:8px;" />' . esc_html__('Incluye a otras personas', 'casanova-portal');
-  echo '</label>';
+  echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Personas incluidas en este pago', 'casanova-portal') . '</label>';
+  echo '<select name="units" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">';
+  for ($i = 1; $i <= 10; $i++) {
+    echo '<option value="' . esc_attr((string)$i) . '">' . esc_html((string)$i) . '</option>';
+  }
+  echo '</select>';
 
-  echo '<div id="casanova-others-wrap" style="display:none;margin-top:10px;">';
-  echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Nombres de los otros viajeros (uno por línea)', 'casanova-portal') . '</label>';
-  echo '<textarea name="others_names" rows="4" placeholder="Nombre 1\nNombre 2" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;"></textarea>';
-  echo '</div>';
-
-  echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Nota interna (opcional)', 'casanova-portal') . '</label>';
-  echo '<textarea name="internal_note" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;"></textarea>';
+  echo '<label style="display:block;margin:10px 0 6px;font-weight:600;">' . esc_html__('Nombres de viajeros (opcional)', 'casanova-portal') . '</label>';
+  echo '<textarea name="others_names" rows="4" placeholder="Nombre 1&#10;Nombre 2" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;"></textarea>';
+  echo '<div style="margin-top:6px;font-size:12px;color:#666;">' . esc_html__('Solo para referencia de la agencia. 1 nombre por línea.', 'casanova-portal') . '</div>';
 
   if ($deposit_allowed) {
     echo '<div class="casanova-two-col" style="margin:10px 0 0;">';
@@ -463,24 +451,18 @@ function casanova_handle_group_pay_request(string $token): void {
       function init(){
         const form = document.getElementById("casanova-group-pay-form");
         if (!form) return;
-        const cbSelf = form.elements["covers_self"];
-        const cbOthers = form.elements["covers_others"];
-        const othersWrap = document.getElementById("casanova-others-wrap");
-        const othersTa = form.elements["others_names"];
+        const unitsSelect = form.elements["units"];
         const modeInputs = form.querySelectorAll("input[name=mode]");
+        const methodInputs = form.querySelectorAll("input[name=method]");
+        const methodNote = document.getElementById("casanova-method-note");
         const summary = document.getElementById("casanova-group-summary");
         const btn = document.getElementById("casanova-group-pay-button");
 
-        function countOthers(){
-          if (!othersTa || !othersTa.value) return 0;
-          const lines = String(othersTa.value).split(/\r\n|\r|\n/).map(s => String(s || "").trim()).filter(Boolean);
-          return lines.length;
-        }
-
         function getUnits(){
-          const selfUnits = (cbSelf && cbSelf.checked) ? 1 : 0;
-          const othersUnits = (cbOthers && cbOthers.checked) ? Math.max(1, countOthers()) : 0;
-          return selfUnits + othersUnits;
+          const raw = parseInt(unitsSelect && unitsSelect.value ? unitsSelect.value : "1", 10);
+          if (!isFinite(raw) || raw < 1) return 1;
+          if (raw > 10) return 10;
+          return raw;
         }
 
         function getMode(){
@@ -489,14 +471,32 @@ function casanova_handle_group_pay_request(string $token): void {
           return m;
         }
 
+        function getMethod(){
+          let m = "card";
+          Array.prototype.forEach.call(methodInputs, function(i){ if (i.checked) m = i.value; });
+          return m;
+        }
+
         function update(){
           const units = getUnits();
           const mode = getMode();
+          const method = getMethod();
           const total = Math.round((Number(unitTotal) * Number(units)) * 100) / 100;
           const dep = Math.round((Number(unitDeposit) * Number(units)) * 100) / 100;
-          const amount = (mode === "deposit" && dep > 0.009 && dep + 0.01 < total) ? dep : total;
-          if (othersWrap) othersWrap.style.display = (cbOthers && cbOthers.checked) ? "block" : "none";
-          if (summary) summary.textContent = "Personas: " + String(units) + " | Importe: " + fmt(amount) + " \\u20AC";
+          const isDeposit = (mode === "deposit" && dep > 0.009 && dep + 0.01 < total);
+          const amount = isDeposit ? dep : total;
+          if (methodNote) methodNote.style.display = (method === "bank_transfer") ? "block" : "none";
+          if (summary) {
+            const lines = [
+              "Importe por persona: " + fmt(unitTotal) + " \\u20AC",
+              "Personas: " + String(units)
+            ];
+            if (isDeposit) {
+              lines.push("Dep\\u00f3sito por persona: " + fmt(unitDeposit) + " \\u20AC");
+            }
+            lines.push("Total a pagar hoy: " + fmt(amount) + " \\u20AC");
+            summary.innerHTML = lines.join("<br />");
+          }
           if (btn) btn.textContent = "Pagar " + fmt(amount) + " \\u20AC";
         }
 

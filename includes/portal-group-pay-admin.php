@@ -23,7 +23,9 @@ add_action('admin_post_casanova_create_group_token', function () {
     }
   }
 
-  $base = admin_url('options-general.php?page=casanova-payments&tab=links');
+  $base = function_exists('casanova_payment_links_admin_base_url')
+    ? casanova_payment_links_admin_base_url()
+    : admin_url('admin.php?page=casanova-payments-links');
   if ($idExpediente <= 0) {
     wp_safe_redirect(add_query_arg(['group_error' => 'expediente'], $base));
     exit;
@@ -58,4 +60,3 @@ add_action('admin_post_casanova_create_group_token', function () {
   ], $base));
   exit;
 });
-

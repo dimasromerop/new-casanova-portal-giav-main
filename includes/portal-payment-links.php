@@ -268,6 +268,7 @@ function casanova_handle_payment_link_request(string $token): void {
   if (!empty($meta_prefill['billing_lastname'])) {
     $prefill_lastname = (string) $meta_prefill['billing_lastname'];
   }
+  $prefill_email = !empty($meta_prefill['billing_email']) ? (string)$meta_prefill['billing_email'] : '';
   $prefill_dni = !empty($meta_prefill['billing_dni']) ? (string)$meta_prefill['billing_dni'] : '';
   $prefill_mode = !empty($meta_prefill['mode']) ? strtolower((string)$meta_prefill['mode']) : '';
   $prefill_method = !empty($meta_prefill['preferred_method']) ? strtolower((string)$meta_prefill['preferred_method']) : '';
@@ -336,11 +337,13 @@ function casanova_handle_payment_link_request(string $token): void {
     $authorized = $pending;
   }
 
-  // Deposito solo para links de passenger_share (pasajeros).
+  // Deposito para links individuales con importe autorizado.
   $deposit_allowed = false;
   $deposit_amount = 0.0;
-  $deposit_base = ($scope === 'passenger_share') ? $authorized : $pending;
+  $deposit_base = in_array($scope, ['passenger_share', 'individual_link'], true) ? $authorized : $pending;
   if ($scope === 'passenger_share' && $paid_now <= 0.01 && function_exists('casanova_payments_is_deposit_allowed')) {
+    $deposit_allowed = casanova_payments_is_deposit_allowed($reservas);
+  } elseif ($scope === 'individual_link' && function_exists('casanova_payments_is_deposit_allowed')) {
     $deposit_allowed = casanova_payments_is_deposit_allowed($reservas);
   }
   if ($deposit_allowed && function_exists('casanova_payments_calc_deposit_amount')) {
@@ -451,7 +454,10 @@ function casanova_handle_payment_link_request(string $token): void {
       'mode' => $mode,
       'method' => $selected_method,
       'billing_dni' => $dni,
-      'billing_name' => $billing_fullname,
+      'billing_name' => $billing_name,
+      'billing_lastname' => $billing_lastname,
+      'billing_fullname' => $billing_fullname,
+      'billing_email' => $prefill_email,
       'payment_link' => [
         'id' => (int)$link->id,
         'token' => (string)$link->token,
@@ -706,6 +712,7 @@ function casanova_handle_payment_link_request(string $token): void {
   if ($pref_mode !== 'deposit' && $pref_mode !== 'full') $pref_mode = '';
   $checked_deposit = ($deposit_effective && ($pref_mode === 'deposit' || $pref_mode === ''));
   $checked_full = !$checked_deposit;
+  $transfer_note = __('El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
 
   header('Content-Type: text/html; charset=' . get_bloginfo('charset'));
   echo '<div style="max-width:720px;margin:24px auto;padding:18px;border:1px solid #e5e5e5;border-radius:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">';
@@ -738,14 +745,6 @@ function casanova_handle_payment_link_request(string $token): void {
     )
   ) . '</div>';
 
-  $auth_html = '<strong>' . esc_html(number_format($authorized, 2, ',', '.')) . ' EUR</strong>';
-  echo '<div style="margin-top:6px;">' . wp_kses_post(
-    sprintf(
-      __('Importe autorizado en este enlace: %s', 'casanova-portal'),
-      $auth_html
-    )
-  ) . '</div>';
-
   if ($deadline_txt !== '') {
     echo '<div style="margin-top:6px;">' . esc_html(
       sprintf(
@@ -774,11 +773,14 @@ function casanova_handle_payment_link_request(string $token): void {
     $card_checked = ($prefill_method === 'bank_transfer') ? '' : 'checked';
     $bank_checked = ($prefill_method === 'bank_transfer') ? 'checked' : '';
     echo '<label style="display:block;margin:6px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-    echo '<input type="radio" name="method" value="card" ' . $card_checked . ' style="margin-right:8px;" />' . esc_html__('Tarjeta (Redsys)', 'casanova-portal');
+    echo '<input type="radio" name="method" value="card" ' . $card_checked . ' style="margin-right:8px;" />' . esc_html__('Tarjeta', 'casanova-portal');
+    echo '<span style="display:block;margin-left:24px;margin-top:4px;font-size:12px;color:#666;">' . esc_html__('Pago inmediato y seguro.', 'casanova-portal') . '</span>';
     echo '</label>';
     echo '<label style="display:block;margin:6px 0;padding:10px;border:1px solid #ddd;border-radius:8px;cursor:pointer;">';
-    echo '<input type="radio" name="method" value="bank_transfer" ' . $bank_checked . ' style="margin-right:8px;" />' . esc_html__('Transferencia bancaria (Inespay)', 'casanova-portal');
+    echo '<input type="radio" name="method" value="bank_transfer" ' . $bank_checked . ' style="margin-right:8px;" />' . esc_html__('Transferencia bancaria online', 'casanova-portal');
+    echo '<span style="display:block;margin-left:24px;margin-top:4px;font-size:12px;color:#666;">' . esc_html__('PSD2 · Sin recargo.', 'casanova-portal') . '</span>';
     echo '</label>';
+    echo '<div id="casanova-method-note" style="' . (($prefill_method === 'bank_transfer') ? '' : 'display:none;') . 'margin-top:8px;padding:10px 12px;border:1px solid #eee;border-radius:8px;background:#fafafa;color:#555;font-size:12px;line-height:1.5;">' . esc_html($transfer_note) . '</div>';
   } else {
     echo '<input type="hidden" name="method" value="card" />';
     echo '<div style="margin:6px 0 12px;color:#666;">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
@@ -815,6 +817,22 @@ function casanova_handle_payment_link_request(string $token): void {
     . '</button>';
 
   echo '</form>';
+  if ($inespay_enabled) {
+    echo '<script>
+      (function(){
+        const note = document.getElementById("casanova-method-note");
+        if (!note) return;
+        const inputs = document.querySelectorAll("input[name=method]");
+        function update(){
+          let method = "card";
+          Array.prototype.forEach.call(inputs, function(i){ if (i.checked) method = i.value; });
+          note.style.display = (method === "bank_transfer") ? "block" : "none";
+        }
+        Array.prototype.forEach.call(inputs, function(i){ i.addEventListener("change", update); });
+        update();
+      })();
+    </script>';
+  }
 
   echo '<p style="margin:14px 0 0;font-size:12px;color:#777;">'
     . esc_html__('Si tienes dudas, contacta con la agencia antes de pagar.', 'casanova-portal')

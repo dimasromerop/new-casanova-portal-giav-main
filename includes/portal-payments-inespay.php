@@ -128,20 +128,49 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
     if ($billing_dni === '' && !empty($plink_meta['billing_dni'])) {
       $billing_dni = (string)$plink_meta['billing_dni'];
     }
-    $note_covers_self = !empty($plink_meta['covers_self']);
-    $note_covers_others = !empty($plink_meta['covers_others']);
     $note_others = $plink_meta['others_names'] ?? [];
-    if (!is_array($note_others)) $note_others = [];
-    $note_internal = trim((string)($plink_meta['internal_note'] ?? ''));
-
-    $others_txt = '';
-    if ($note_covers_others && !empty($note_others)) {
-      $others_txt = implode(', ', array_map('sanitize_text_field', array_slice($note_others, 0, 20)));
+    if (is_string($note_others) && $note_others !== '') {
+      $note_others = preg_split('/\r\n|\r|\n/', $note_others);
     }
-    $giav_human_note = 'Pagador: ' . trim($payer_name . ' ' . $billing_dni) . ' (' . $note_email . '). '
-      . 'Cubre: ' . ($note_covers_self ? 'sí' : 'no') . '. '
-      . 'Otros: ' . ($others_txt !== '' ? $others_txt : '-') . '. '
-      . 'Nota: ' . ($note_internal !== '' ? $note_internal : '-');
+    if (!is_array($note_others)) $note_others = [];
+    $note_others = array_values(array_filter(array_map('sanitize_text_field', $note_others), static function ($value) {
+      return $value !== '';
+    }));
+
+    $mode = strtolower(trim((string)($plink_meta['mode'] ?? ($payload['mode'] ?? ''))));
+    $mode_label = '';
+    if ($mode === 'deposit') $mode_label = 'depósito';
+    elseif ($mode === 'full') $mode_label = 'total';
+    elseif ($mode === 'rest') $mode_label = 'resto';
+
+    if ($payment_link_scope === 'group_base') {
+      $units = (int)($plink_meta['units'] ?? 0);
+      $parts = [
+        'Pagador: ' . trim($payer_name . ' ' . $billing_dni) . ' (' . $note_email . ').',
+      ];
+      if ($units > 0) {
+        $parts[] = 'Personas: ' . $units . '.';
+      }
+      if ($mode_label !== '') {
+        $parts[] = 'Modalidad: ' . $mode_label . '.';
+      }
+      if (!empty($note_others)) {
+        $parts[] = 'Referencia viajeros: ' . implode(', ', array_slice($note_others, 0, 20)) . '.';
+      }
+      $giav_human_note = implode(' ', $parts);
+    } else {
+      $note_covers_self = !empty($plink_meta['covers_self']);
+      $note_covers_others = !empty($plink_meta['covers_others']);
+      $note_internal = trim((string)($plink_meta['internal_note'] ?? ''));
+      $others_txt = '';
+      if ($note_covers_others && !empty($note_others)) {
+        $others_txt = implode(', ', array_slice($note_others, 0, 20));
+      }
+      $giav_human_note = 'Pagador: ' . trim($payer_name . ' ' . $billing_dni) . ' (' . $note_email . '). '
+        . 'Cubre: ' . ($note_covers_self ? 'sí' : 'no') . '. '
+        . 'Otros: ' . ($others_txt !== '' ? $others_txt : '-') . '. '
+        . 'Nota: ' . ($note_internal !== '' ? $note_internal : '-');
+    }
 
     $notasInternas = $giav_human_note . ' | ref=' . (string)($dataReturn['reference'] ?? '') . ' payin=' . (string)($dataReturn['singlePayinId'] ?? '');
 

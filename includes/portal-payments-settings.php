@@ -41,6 +41,61 @@ function casanova_portal_mulligans_enabled(): bool {
 }
 
 add_action('admin_menu', function () {
+  add_menu_page(
+    'Casanova Portal',
+    'Casanova Portal',
+    'manage_options',
+    'casanova-payments',
+    'casanova_payments_render_settings_page',
+    'dashicons-money-alt',
+    58
+  );
+
+  add_submenu_page(
+    'casanova-payments',
+    'Resumen',
+    'Resumen',
+    'manage_options',
+    'casanova-payments',
+    'casanova_payments_render_settings_page'
+  );
+
+  add_submenu_page(
+    'casanova-payments',
+    'Pagos',
+    'Pagos',
+    'manage_options',
+    'casanova-payments-payments',
+    'casanova_payments_render_settings_page'
+  );
+
+  add_submenu_page(
+    'casanova-payments',
+    'Cobros y enlaces',
+    'Cobros y enlaces',
+    'manage_options',
+    'casanova-payments-links',
+    'casanova_payments_render_settings_page'
+  );
+
+  add_submenu_page(
+    'casanova-payments',
+    'GIAV',
+    'GIAV',
+    'manage_options',
+    'casanova-payments-giav',
+    'casanova_payments_render_settings_page'
+  );
+
+  add_submenu_page(
+    'casanova-payments',
+    'Diagnostico',
+    'Diagnostico',
+    'manage_options',
+    'casanova-payments-diagnostics',
+    'casanova_payments_render_settings_page'
+  );
+
   add_options_page(
     'Casanova Portal',
     'Casanova Portal',
@@ -48,7 +103,11 @@ add_action('admin_menu', function () {
     'casanova-payments',
     'casanova_payments_render_settings_page'
   );
-});
+}, 20);
+
+add_action('admin_menu', function () {
+  remove_submenu_page('options-general.php', 'casanova-payments');
+}, 99);
 
 add_action('admin_init', function () {
   // --- Pagos
@@ -179,16 +238,116 @@ function casanova_portal_get_bricks_templates(): array {
   return $templates;
 }
 
+function casanova_portal_admin_sections(): array {
+  return [
+    'overview' => [
+      'slug' => 'casanova-payments',
+      'title' => 'Resumen',
+      'description' => 'Acceso rapido a las utilidades activas del portal y a la configuracion que sigue vigente.',
+    ],
+    'payments' => [
+      'slug' => 'casanova-payments-payments',
+      'title' => 'Pagos',
+      'description' => 'Configuracion de depositos, overrides y herramientas de soporte ligadas a GIAV.',
+    ],
+    'links' => [
+      'slug' => 'casanova-payments-links',
+      'title' => 'Cobros y enlaces',
+      'description' => 'Payment links individuales, tokens de grupo y enlaces recientes.',
+    ],
+    'giav' => [
+      'slug' => 'casanova-payments-giav',
+      'title' => 'GIAV',
+      'description' => 'Catalogos e IDs tecnicos de GIAV para soporte y configuracion.',
+    ],
+    'diagnostics' => [
+      'slug' => 'casanova-payments-diagnostics',
+      'title' => 'Diagnostico',
+      'description' => 'Herramientas internas para revisar datos legacy de slots y charges.',
+    ],
+  ];
+}
+
+function casanova_portal_admin_section_from_legacy_tab(string $tab): string {
+  switch ($tab) {
+    case 'payments':
+      return 'payments';
+    case 'links':
+      return 'links';
+    case 'slots':
+      return 'diagnostics';
+    case 'giav':
+      return 'giav';
+    case 'portal':
+    case 'menu':
+    case 'help':
+    default:
+      return 'overview';
+  }
+}
+
+function casanova_portal_admin_page_slug_for_section(string $section): string {
+  $sections = casanova_portal_admin_sections();
+  return $sections[$section]['slug'] ?? $sections['overview']['slug'];
+}
+
+function casanova_portal_admin_current_section(): string {
+  $page = isset($_GET['page']) ? sanitize_key((string) $_GET['page']) : '';
+  $legacy_tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : '';
+
+  if ($legacy_tab !== '') {
+    return casanova_portal_admin_section_from_legacy_tab($legacy_tab);
+  }
+
+  foreach (casanova_portal_admin_sections() as $section => $meta) {
+    if ($page === (string) ($meta['slug'] ?? '')) {
+      return $section;
+    }
+  }
+
+  return 'overview';
+}
+
+function casanova_portal_admin_url(string $section = 'overview', array $args = []): string {
+  $slug = casanova_portal_admin_page_slug_for_section($section);
+  return add_query_arg($args, admin_url('admin.php?page=' . $slug));
+}
+
 function casanova_payments_render_settings_page(): void {
   if (!current_user_can('manage_options')) return;
 
-  $tab = isset($_GET['tab']) ? sanitize_key((string)$_GET['tab']) : 'payments';
-  if (!in_array($tab, ['payments','portal','menu','links','slots','giav','help'], true)) $tab = 'payments';
+  $section = casanova_portal_admin_current_section();
+  $legacy_tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : '';
+  $php_self = isset($_SERVER['PHP_SELF']) ? (string) $_SERVER['PHP_SELF'] : '';
+  $sections = casanova_portal_admin_sections();
+  $current = $sections[$section] ?? $sections['overview'];
 
-  echo '<div class="wrap">';
+  if (($legacy_tab !== '' || strpos($php_self, 'options-general.php') !== false) && !headers_sent()) {
+    $args = $_GET;
+    unset($args['page'], $args['tab']);
+    wp_safe_redirect(casanova_portal_admin_url($section, $args));
+    exit;
+  }
+
+  $tab = $section;
+  if ($section === 'diagnostics') {
+    $tab = 'slots';
+  }
+
+  echo '<div class="wrap casanova-admin-wrap">';
+  echo '<style>
+    .casanova-admin-lead { max-width: 920px; margin-bottom: 18px; }
+    .casanova-admin-legacy-tabs { display: none !important; }
+    .casanova-admin-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin:20px 0 8px; max-width:1100px; }
+    .casanova-admin-card { background:#fff; border:1px solid #dcdcde; border-radius:12px; padding:18px; box-shadow:0 1px 2px rgba(16,24,40,.04); }
+    .casanova-admin-card h2 { margin:0 0 8px; font-size:16px; line-height:1.35; }
+    .casanova-admin-card p { margin:0 0 14px; color:#50575e; }
+    .casanova-admin-note { max-width:1100px; margin-top:8px; }
+  </style>';
   echo '<h1>Casanova Portal</h1>';
+  echo '<p class="description casanova-admin-lead">' . esc_html((string) ($current['description'] ?? '')) . '</p>';
 
-  $base = admin_url('options-general.php?page=casanova-payments');
+  $base = casanova_portal_admin_url('overview');
   $t_pay = add_query_arg(['tab' => 'payments'], $base);
   $t_por = add_query_arg(['tab' => 'portal'], $base);
   $t_men = add_query_arg(['tab' => 'menu'], $base);
@@ -197,7 +356,7 @@ function casanova_payments_render_settings_page(): void {
   $t_slots = add_query_arg(['tab' => 'slots'], $base);
   $t_giav = add_query_arg(['tab' => 'giav'], $base);
 
-  echo '<nav class="nav-tab-wrapper" aria-label="Secciones">';
+  echo '<nav class="nav-tab-wrapper casanova-admin-legacy-tabs" aria-label="Secciones">';
   echo '<a href="' . esc_url($t_pay) . '" class="nav-tab ' . ($tab==='payments'?'nav-tab-active':'') . '">Pagos</a>';
   echo '<a href="' . esc_url($t_por) . '" class="nav-tab ' . ($tab==='portal'?'nav-tab-active':'') . '">Portal</a>';
   echo '<a href="' . esc_url($t_men) . '" class="nav-tab ' . ($tab==='menu'?'nav-tab-active':'') . '">Menú</a>';
@@ -207,12 +366,39 @@ function casanova_payments_render_settings_page(): void {
   echo '<a href="' . esc_url($t_hlp) . '" class="nav-tab ' . ($tab==='help'?'nav-tab-active':'') . '">Ayuda</a>';
   echo '</nav>';
 
-  if ($tab === 'payments') {
+  if ($section === 'overview') {
+    $mulligans_enabled = casanova_portal_mulligans_enabled();
+
+    echo '<div class="notice notice-info inline casanova-admin-note"><p>Las vistas del portal, el menu dinamico y la ayuda legacy se han retirado de esta administracion. Aqui quedan solo las utilidades que siguen activas.</p></div>';
+    echo '<div class="casanova-admin-grid">';
+    echo '<section class="casanova-admin-card"><h2>Pagos</h2><p>Configura depositos, overrides por expediente y usa las busquedas rapidas de expediente y cliente.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('payments')) . '">Abrir pagos</a></p></section>';
+    echo '<section class="casanova-admin-card"><h2>Cobros y enlaces</h2><p>Crea payment links individuales, tokens de grupo y consulta los ultimos enlaces generados.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('links')) . '">Abrir cobros y enlaces</a></p></section>';
+    echo '<section class="casanova-admin-card"><h2>GIAV</h2><p>Consulta formas de pago y custom fields sin salir del admin ni depender del REST publico.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('giav')) . '">Abrir GIAV</a></p></section>';
+    echo '<section class="casanova-admin-card"><h2>Diagnostico</h2><p>Deja a mano la parte legacy de slots y charges para soporte puntual, fuera del flujo principal.</p><p><a class="button button-secondary" href="' . esc_url(casanova_portal_admin_url('diagnostics')) . '">Abrir diagnostico</a></p></section>';
+    echo '</div>';
+    echo '<div class="casanova-admin-card" style="max-width:820px; margin-top:18px;">';
+    echo '<h2>Modulo de fidelizacion</h2>';
+    echo '<p>Control rapido para activar o desactivar Mulligans en el portal, sin volver a las pantallas legacy.</p>';
+    echo '<form method="post" action="options.php">';
+    settings_fields('casanova_portal');
+    echo '<input type="hidden" name="casanova_portal_mulligans_enabled" value="0" />';
+    echo '<label for="casanova_portal_mulligans_enabled" style="display:block; margin:10px 0 8px;">';
+    echo '<input type="checkbox" id="casanova_portal_mulligans_enabled" name="casanova_portal_mulligans_enabled" value="1" ' . checked($mulligans_enabled, true, false) . ' /> ';
+    echo 'Activar Mulligans en el portal';
+    echo '</label>';
+    echo '<p class="description">Si lo desactivas, Mulligans deja de mostrarse en dashboard, router y vistas del portal, pero no se toca la logica interna.</p>';
+    submit_button('Guardar modulo', 'primary', 'submit', false);
+    echo '</form>';
+    echo '</div>';
+
+  } elseif ($tab === 'payments') {
     $p  = get_option('casanova_deposit_percent', 10);
     $m  = get_option('casanova_deposit_min_amount', 50);
     $ov = get_option('casanova_deposit_overrides', '');
     $idfp_inespay = (int) get_option('casanova_giav_idformapago_inespay', 0);
     if (!is_string($ov)) $ov = '';
+
+    echo '<h2>Ajustes de pagos</h2>';
 
     echo '<form method="post" action="options.php">';
     settings_fields('casanova_payments');
@@ -246,8 +432,7 @@ function casanova_payments_render_settings_page(): void {
 
     // Search form (GET) to avoid mixing with settings POST.
     echo '<form method="get" action="">';
-    echo '<input type="hidden" name="page" value="casanova-payments" />';
-    echo '<input type="hidden" name="tab" value="payments" />';
+    echo '<input type="hidden" name="page" value="' . esc_attr(casanova_portal_admin_page_slug_for_section('payments')) . '" />';
     echo '<p>';
     echo '<label for="giav_expediente_q" class="screen-reader-text">Buscar expediente</label>';
     echo '<input name="giav_expediente_q" id="giav_expediente_q" type="text" class="regular-text" placeholder="ID o código (números) o texto del título" value="' . esc_attr($qexp) . '" /> ';
@@ -290,8 +475,6 @@ function casanova_payments_render_settings_page(): void {
               echo '</tr>';
             }
             echo '</tbody></table>';
-          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
-          echo '</form>';
             echo '<p class="description">Copia el <strong>ID (GIAV)</strong> para el override: <code>ID=porcentaje</code>.</p>';
           }
         }
@@ -303,8 +486,7 @@ function casanova_payments_render_settings_page(): void {
     echo '<p class="description">Util para soporte e impersonacion. Puedes buscar por <strong>ID exacto</strong>, <strong>DNI</strong>, <strong>email</strong> o <strong>nombre</strong> y obtener el <strong>ID de cliente</strong> sin salir del portal.</p>';
 
     echo '<form method="get" action="">';
-    echo '<input type="hidden" name="page" value="casanova-payments" />';
-    echo '<input type="hidden" name="tab" value="payments" />';
+    echo '<input type="hidden" name="page" value="' . esc_attr(casanova_portal_admin_page_slug_for_section('payments')) . '" />';
     echo '<p>';
     echo '<label for="giav_cliente_q" class="screen-reader-text">Buscar cliente</label>';
     echo '<input name="giav_cliente_q" id="giav_cliente_q" type="text" class="regular-text" placeholder="ID, DNI, email o nombre" value="' . esc_attr($qclient) . '" /> ';
@@ -617,6 +799,8 @@ function casanova_payments_render_settings_page(): void {
     $group_token = isset($_GET['group_token']) ? sanitize_text_field((string) $_GET['group_token']) : '';
     $group_error = isset($_GET['group_error']) ? sanitize_key((string) $_GET['group_error']) : '';
 
+    echo '<h2>Cobros y enlaces</h2>';
+
     if ($created && $token !== '') {
       $url = function_exists('casanova_payment_link_url') ? casanova_payment_link_url($token) : '';
       echo '<div class="notice notice-success"><p><strong>Link creado.</strong> ' . esc_html($token) . '</p>';
@@ -627,6 +811,8 @@ function casanova_payments_render_settings_page(): void {
     } elseif ($error) {
       $msg = 'No se pudo crear el link.';
       if ($error === 'amount') $msg = 'Importe invalido.';
+      if ($error === 'giav_amount') $msg = 'No se pudo obtener el pendiente desde GIAV. Indica un importe manual o revisa el expediente.';
+      if ($error === 'amount_exceeds_pending') $msg = 'El importe indicado supera el pendiente actual del expediente en GIAV.';
       if ($error === 'expediente') $msg = 'Expediente invalido.';
       if ($error === 'missing') $msg = 'Modulo de payment links no disponible.';
       if ($error === 'create') $msg = 'Error al crear el link.';
@@ -648,7 +834,8 @@ function casanova_payments_render_settings_page(): void {
       echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
     }
 
-    echo '<h2>Crear Payment Link</h2>';
+    echo '<h2>Crear Payment Link individual</h2>';
+    echo '<p class="description">Usa este formulario solo para links individuales de expediente. Para grupos, crea siempre un token de grupo en el bloque inferior.</p>';
     echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
     wp_nonce_field('casanova_create_payment_link');
     echo '<input type="hidden" name="action" value="casanova_create_payment_link" />';
@@ -657,52 +844,17 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><th scope="row"><label for="id_expediente">ID Expediente (GIAV)</label></th>';
     echo '<td><input name="id_expediente" id="id_expediente" type="number" min="1" step="1" required class="regular-text" /></td></tr>';
 
-    echo '<tr><th scope="row"><label for="scope">Scope</label></th>';
-    echo '<td><select name="scope" id="scope">';
-    echo '<option value="group_total">group_total (total pendiente)</option>';
-    echo '<option value="group_partial">group_partial</option>';
-    echo '<option value="passenger_share">passenger_share</option>';
-    echo '<option value="custom_amount">custom_amount</option>';
-    echo '<option value="slot_base">slot_base (plazas base)</option>';
-    echo '</select></td></tr>';
-
     echo '<tr><th scope="row"><label for="amount_authorized">Importe autorizado (EUR)</label></th>';
     echo '<td><input name="amount_authorized" id="amount_authorized" type="text" class="regular-text" placeholder="Ej: 300.00" />';
-    echo '<p class="description">Obligatorio si scope no es <code>group_total</code>.</p></td></tr>';
-
-    echo '<tr><th scope="row"><label for="currency">Moneda</label></th>';
-    echo '<td><input name="currency" id="currency" type="text" value="EUR" class="small-text" /></td></tr>';
+    echo '<p class="description">Opcional. Si lo dejas vacío, se usará el pendiente real actual del expediente en GIAV.</p></td></tr>';
 
     echo '<tr><th scope="row"><label for="expires_at">Caduca el (opcional)</label></th>';
     echo '<td><input name="expires_at" id="expires_at" type="date" class="regular-text" />';
     echo '<p class="description">Se aplica a fin de dia (23:59:59).</p></td></tr>';
-
-    echo '<tr><th scope="row"><label for="id_reserva_pq">ID Reserva PQ (opcional)</label></th>';
-    echo '<td><input name="id_reserva_pq" id="id_reserva_pq" type="number" min="0" step="1" class="regular-text" /></td></tr>';
-
-    echo '<tr><th scope="row"><label for="id_pasajero">ID Pasajero (opcional)</label></th>';
-    echo '<td><input name="id_pasajero" id="id_pasajero" type="number" min="0" step="1" class="regular-text" /></td></tr>';
     echo '</table>';
 
     submit_button('Crear link');
     echo '</form>';
-
-    echo '<script>
-      (function(){
-        const scope = document.getElementById("scope");
-        const amount = document.getElementById("amount_authorized");
-        if (!scope || !amount) return;
-        function toggle(){
-          const v = scope.value;
-          const needs = (v !== "group_total");
-          amount.disabled = !needs;
-          amount.required = needs;
-          if (!needs) amount.value = "";
-        }
-        scope.addEventListener("change", toggle);
-        toggle();
-      })();
-    </script>';
 
     echo '<hr />';
     echo '<h2>Crear token reusable de grupo</h2>';
@@ -727,7 +879,7 @@ function casanova_payments_render_settings_page(): void {
     echo '</form>';
 
     echo '<hr />';
-    echo '<h2>Ultimos links</h2>';
+    echo '<h2>Links recientes</h2>';
 
     $deleted = isset($_GET['link_deleted']) ? absint($_GET['link_deleted']) : -1;
     if ($deleted >= 0) {
@@ -753,11 +905,11 @@ function casanova_payments_render_settings_page(): void {
           echo '<button type="submit" class="button button-secondary" onclick="return confirm(\'Eliminar links seleccionados?\')">Eliminar seleccionados</button>';
           echo '</div>';
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Expediente</th><th>Scope</th><th>Plazas</th><th>Importe</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
+          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Expediente</th><th>Scope</th><th>Detalle</th><th>Importe</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
           foreach ($rows as $r) {
             $token = (string)($r->token ?? '');
             $url = ($token && function_exists('casanova_payment_link_url')) ? casanova_payment_link_url($token) : '';
-            $slots_count = '';
+            $detail = '';
             if ((string)($r->scope ?? '') === 'slot_base') {
               $meta = [];
               $raw = (string)($r->metadata ?? '');
@@ -765,14 +917,16 @@ function casanova_payments_render_settings_page(): void {
                 $decoded = json_decode($raw, true);
                 if (is_array($decoded)) $meta = $decoded;
               }
-              $slots_count = isset($meta['slots_count']) ? (string)$meta['slots_count'] : '';
+              $detail = isset($meta['slots_count']) ? ('slots: ' . (string)$meta['slots_count']) : '';
+            } elseif ((string)($r->scope ?? '') === 'individual_link') {
+              $detail = 'individual';
             }
             echo '<tr>';
             echo '<td><input type="checkbox" name="link_ids[]" value="' . esc_attr((string)$r->id) . '" /></td>';
             echo '<td>' . esc_html((string)$r->id) . '</td>';
             echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
             echo '<td>' . esc_html((string)$r->scope) . '</td>';
-            echo '<td>' . esc_html($slots_count) . '</td>';
+            echo '<td>' . esc_html($detail) . '</td>';
             echo '<td>' . esc_html(number_format((float)$r->amount_authorized, 2, ',', '.')) . ' ' . esc_html((string)$r->currency) . '</td>';
             echo '<td>' . esc_html((string)$r->status) . '</td>';
             echo '<td><code>' . esc_html($token) . '</code></td>';
@@ -806,12 +960,11 @@ function casanova_payments_render_settings_page(): void {
         $rows = $wpdb->get_results("SELECT * FROM {$gt} ORDER BY id DESC LIMIT 20");
         if (!empty($rows)) {
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Expediente</th><th>PQ</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
+          echo '<thead><tr><th>ID</th><th>Expediente</th><th>PQ</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
           foreach ($rows as $r) {
             $token = (string)($r->token ?? '');
             $url = ($token && function_exists('casanova_group_pay_url')) ? casanova_group_pay_url($token) : '';
             echo '<tr>';
-            echo '<td><input type="checkbox" name="link_ids[]" value="' . esc_attr((string)$r->id) . '" /></td>';
             echo '<td>' . esc_html((string)$r->id) . '</td>';
             echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
             echo '<td>' . esc_html((string)($r->id_reserva_pq ?? '')) . '</td>';
@@ -820,13 +973,9 @@ function casanova_payments_render_settings_page(): void {
             echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir</a>' : '') . '</td>';
             echo '<td>' . esc_html((string)($r->expires_at ?? '')) . '</td>';
             echo '<td>' . esc_html((string)($r->created_at ?? '')) . '</td>';
-            $del_url = wp_nonce_url(add_query_arg(['action'=>'casanova_delete_payment_links','id'=>(int)$r->id], admin_url('admin-post.php')), 'casanova_delete_payment_links');
-            echo '<td><a href="' . esc_url($del_url) . '" class="button-link-delete" onclick="return confirm(\'Eliminar este link?\')">Eliminar</a></td>';
             echo '</tr>';
           }
           echo '</tbody></table>';
-          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
-          echo '</form>';
         } else {
           echo '<p class="description">No hay tokens de grupo.</p>';
         }
@@ -841,10 +990,9 @@ function casanova_payments_render_settings_page(): void {
     $idExpediente = isset($_GET['expediente_id']) ? absint($_GET['expediente_id']) : 0;
     $idReservaPQ = isset($_GET['reserva_pq']) ? absint($_GET['reserva_pq']) : 0;
 
-    echo '<h2>Group Slots</h2>';
+    echo '<h2>Diagnostico legacy</h2>';
     echo '<form method="get" style="margin:12px 0;">';
-    echo '<input type="hidden" name="page" value="casanova-payments" />';
-    echo '<input type="hidden" name="tab" value="slots" />';
+    echo '<input type="hidden" name="page" value="' . esc_attr(casanova_portal_admin_page_slug_for_section('diagnostics')) . '" />';
     echo '<input type="number" name="expediente_id" value="' . esc_attr((string)$idExpediente) . '" placeholder="ID Expediente" style="min-width:160px;" /> ';
     echo '<input type="number" name="reserva_pq" value="' . esc_attr((string)$idReservaPQ) . '" placeholder="ID Reserva PQ (opcional)" style="min-width:180px;" /> ';
     submit_button('Ver', 'secondary', '', false);
@@ -861,7 +1009,7 @@ function casanova_payments_render_settings_page(): void {
       echo '<h3>Slots</h3>';
       if (!empty($slots)) {
         echo '<table class="widefat striped">';
-        echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Slot</th><th>Base Due</th><th>Base Paid</th><th>Status</th><th>PQ</th></tr></thead><tbody>';
+        echo '<thead><tr><th>ID</th><th>Slot</th><th>Base Due</th><th>Base Paid</th><th>Status</th><th>PQ</th></tr></thead><tbody>';
         foreach ($slots as $s) {
           echo '<tr>';
           echo '<td>' . esc_html((string)$s->id) . '</td>';
@@ -873,8 +1021,6 @@ function casanova_payments_render_settings_page(): void {
           echo '</tr>';
         }
         echo '</tbody></table>';
-          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
-          echo '</form>';
       } else {
         echo '<p class="description">No hay slots para este expediente.</p>';
       }
@@ -885,7 +1031,7 @@ function casanova_payments_render_settings_page(): void {
         echo '<h3>Charges</h3>';
         if (!empty($charges)) {
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th style="width:26px"><input type="checkbox" id="casanova_links_checkall" /></th><th>ID</th><th>Titulo</th><th>Tipo</th><th>Due</th><th>Paid</th><th>Status</th><th>Slot</th><th>PQ</th></tr></thead><tbody>';
+          echo '<thead><tr><th>ID</th><th>Titulo</th><th>Tipo</th><th>Due</th><th>Paid</th><th>Status</th><th>Slot</th><th>PQ</th></tr></thead><tbody>';
           foreach ($charges as $c) {
             echo '<tr>';
             echo '<td>' . esc_html((string)$c->id) . '</td>';
@@ -899,8 +1045,6 @@ function casanova_payments_render_settings_page(): void {
             echo '</tr>';
           }
           echo '</tbody></table>';
-          echo '<script>(function(){var a=document.getElementById("casanova_links_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"link_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
-          echo '</form>';
         } else {
           echo '<p class="description">No hay charges para este expediente.</p>';
         }
@@ -911,29 +1055,29 @@ function casanova_payments_render_settings_page(): void {
 
   } elseif ($tab === 'giav') {
     // Admin-only: render catalogs directly (no REST auth/nonce needed).
-    $section = isset($_GET['section']) ? sanitize_key((string) $_GET['section']) : 'payment-methods';
+    $giav_section = isset($_GET['section']) ? sanitize_key((string) $_GET['section']) : 'payment-methods';
     $q = isset($_GET['q']) ? sanitize_text_field((string) $_GET['q']) : '';
     $include_disabled = isset($_GET['include_disabled']) ? (bool) $_GET['include_disabled'] : true;
     $include_hidden = isset($_GET['include_hidden']) ? (bool) $_GET['include_hidden'] : true;
 
     echo '<div style="margin-top:14px;">';
+    echo '<h2>Herramientas GIAV</h2>';
     echo '<p class="description">Herramientas internas para sacar IDs desde GIAV (formas de pago y custom fields) sin pelearse con la autenticación del REST.</p>';
 
-    $base_giav = add_query_arg(['tab' => 'giav'], $base);
+    $base_giav = casanova_portal_admin_url('giav');
     $link_pay = add_query_arg(['section' => 'payment-methods'], $base_giav);
     $link_exp = add_query_arg(['section' => 'custom-expediente'], $base_giav);
     $link_res = add_query_arg(['section' => 'custom-reserva'], $base_giav);
 
     echo '<p>';
-    echo '<a class="button ' . ($section==='payment-methods'?'button-primary':'') . '" href="' . esc_url($link_pay) . '">Formas de pago</a> ';
-    echo '<a class="button ' . ($section==='custom-expediente'?'button-primary':'') . '" href="' . esc_url($link_exp) . '">Custom fields (Expediente)</a> ';
-    echo '<a class="button ' . ($section==='custom-reserva'?'button-primary':'') . '" href="' . esc_url($link_res) . '">Custom fields (Servicios/Reserva)</a>';
+    echo '<a class="button ' . ($giav_section==='payment-methods'?'button-primary':'') . '" href="' . esc_url($link_pay) . '">Formas de pago</a> ';
+    echo '<a class="button ' . ($giav_section==='custom-expediente'?'button-primary':'') . '" href="' . esc_url($link_exp) . '">Custom fields (Expediente)</a> ';
+    echo '<a class="button ' . ($giav_section==='custom-reserva'?'button-primary':'') . '" href="' . esc_url($link_res) . '">Custom fields (Servicios/Reserva)</a>';
     echo '</p>';
 
     echo '<form method="get" style="margin:12px 0;">';
-    echo '<input type="hidden" name="page" value="casanova-payments" />';
-    echo '<input type="hidden" name="tab" value="giav" />';
-    echo '<input type="hidden" name="section" value="' . esc_attr($section) . '" />';
+    echo '<input type="hidden" name="page" value="' . esc_attr(casanova_portal_admin_page_slug_for_section('giav')) . '" />';
+    echo '<input type="hidden" name="section" value="' . esc_attr($giav_section) . '" />';
     echo '<input type="search" name="q" value="' . esc_attr($q) . '" placeholder="Filtrar por nombre/código…" style="min-width:320px;" /> ';
     echo '<label style="margin-left:10px;"><input type="checkbox" name="include_disabled" value="1" ' . checked($include_disabled, true, false) . ' /> incluir deshabilitados</label> ';
     echo '<label style="margin-left:10px;"><input type="checkbox" name="include_hidden" value="1" ' . checked($include_hidden, true, false) . ' /> incluir ocultos</label> ';
@@ -943,7 +1087,7 @@ function casanova_payments_render_settings_page(): void {
     $err = null;
     $rows = [];
 
-    if ($section === 'payment-methods') {
+    if ($giav_section === 'payment-methods') {
       // Fetch all pages (GIAV pageSize max 100) so admins don't miss items.
       if (function_exists('casanova_giav_forma_pago_search_all_pages')) {
         $items = casanova_giav_forma_pago_search_all_pages($include_disabled, 10);
@@ -972,7 +1116,7 @@ function casanova_payments_render_settings_page(): void {
         }
       }
     } else {
-      $target = ($section === 'custom-expediente') ? 'Expediente' : 'Reserva';
+      $target = ($giav_section === 'custom-expediente') ? 'Expediente' : 'Reserva';
       // Fetch all pages (GIAV pageSize max 100) so admins don't miss definitions.
       if (function_exists('casanova_giav_customdata_search_all_pages')) {
         $items = casanova_giav_customdata_search_all_pages($target, $include_hidden, 10);
@@ -1007,7 +1151,7 @@ function casanova_payments_render_settings_page(): void {
     } else {
       echo '<p class="description">Resultados: <strong>' . esc_html((string) count($rows)) . '</strong></p>';
       echo '<table class="widefat striped">';
-      if ($section === 'payment-methods') {
+      if ($giav_section === 'payment-methods') {
         echo '<thead><tr><th style="width:80px;">Id</th><th>Nombre</th><th>Código</th><th>Categoría</th><th>Tipo</th><th>Deshabilitado</th></tr></thead><tbody>';
         foreach ($rows as $r) {
           echo '<tr>';

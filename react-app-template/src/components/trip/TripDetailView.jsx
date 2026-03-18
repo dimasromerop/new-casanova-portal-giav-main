@@ -164,12 +164,12 @@ export default function TripDetailView({
   }, [detail?.trip, fallbackTrip]);
 
   return (
-    <div className="cp-content" style={{ maxWidth: 1200, width: "100%", margin: "0 auto" }}>
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <button className="cp-btn" onClick={() => setParam("view", "trips")}>
+    <div className="cp-content cp-trip-detail">
+      <div className="cp-trip-detail__nav">
+        <button type="button" className="cp-btn cp-trip-detail__back" onClick={() => setParam("view", "trips")}>
           {tt("← Viajes")}
         </button>
-        <div className="cp-meta" style={{ opacity: 0.85 }}>
+        <div className="cp-meta cp-trip-detail__breadcrumb">
           {tt("Viajes &gt;")} <span className="cp-strong">{title}</span>
         </div>
       </div>
@@ -189,7 +189,7 @@ export default function TripDetailView({
         }}
       />
 
-      <div style={{ marginTop: 14 }}>
+      <div className="cp-trip-detail__body">
         {loading ? (
           <div className="cp-card" style={{ background: "var(--surface)" }}>
             <div className="cp-card-title">{tt("Cargando expediente")}</div>
