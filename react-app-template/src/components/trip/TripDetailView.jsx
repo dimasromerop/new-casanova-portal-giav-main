@@ -217,7 +217,7 @@ export default function TripDetailView({
                     {packageServices.length > 0 ? (
                       <div className="cp-service-section">
                         <div className="cp-service-section__heading">{tt("Servicios incluidos")}</div>
-                        <ServiceList services={packageServices} indent />
+                        <ServiceList services={packageServices} indent sortMode="chronological" />
                       </div>
                     ) : null}
                   </div>

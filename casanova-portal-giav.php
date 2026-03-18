@@ -277,6 +277,7 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/services/inbox-service.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/services/payments-service.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/services/payment-links-service.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/services/inespay-service.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/services/aplazame-service.php';
 
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/dto/trip-dto.php';
   // Resolver de imágenes/permalinks (hoteles JetEngine CCT, campos CPT, etc.)
@@ -335,6 +336,7 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/inbox-controller.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-tpv.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-cron.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-inespay.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-aplazame.php';
   // Admin-only helper endpoints (GIAV catalogs: formas de pago, custom fields, etc.)
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-giav-admin-tools.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-calendar.php';

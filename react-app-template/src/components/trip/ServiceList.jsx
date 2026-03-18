@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 
 import { tt } from "../../i18n/t.js";
 import { euro } from "../../lib/formatters.js";
+import { dateToUtcMidnight, serviceSemanticType } from "../../lib/tripServices.js";
 
 function IconPlane() {
   return (
@@ -27,6 +28,63 @@ function IconPlane() {
   );
 }
 
+function cleanServiceText(value) {
+  const text = String(value ?? "").trim();
+  return text ? text.replace(/\s+/g, " ") : "";
+}
+
+function parseDateRangeBounds(range) {
+  const source = cleanServiceText(range);
+  if (!source) return { start: "", end: "" };
+
+  const matches = source.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}/g);
+  if (!matches?.length) return { start: source, end: source };
+
+  return {
+    start: matches[0] || "",
+    end: matches[1] || matches[0] || "",
+  };
+}
+
+function getServiceDateBounds(service) {
+  const start = cleanServiceText(service?.date_from || service?.date_start);
+  const end = cleanServiceText(service?.date_to || service?.date_end);
+  if (start || end) {
+    const fallback = start || end;
+    return {
+      start: start || fallback,
+      end: end || fallback,
+    };
+  }
+
+  return parseDateRangeBounds(service?.date_range);
+}
+
+function getGolfObservationText(service, detail, detailPayload) {
+  const candidates = [
+    detailPayload?.observations,
+    detailPayload?.observation,
+    detailPayload?.observaciones,
+    detailPayload?.observacion,
+    detail?.observations,
+    detail?.observation,
+    detail?.observaciones,
+    detail?.observacion,
+    service?.observations,
+    service?.observation,
+    service?.observaciones,
+    service?.observacion,
+    detail?.bonus_text,
+  ];
+
+  for (const candidate of candidates) {
+    const clean = cleanServiceText(candidate);
+    if (clean) return clean;
+  }
+
+  return "";
+}
+
 export function ServiceItem({ service, indent = false }) {
   const [open, setOpen] = useState(false);
   const detail = service.detail || {};
@@ -41,9 +99,13 @@ export function ServiceItem({ service, indent = false }) {
   const tagLabel = (service.type || "servicio").toUpperCase();
   const serviceType = (detail.type || service.type || "").toUpperCase();
   const isPlaneService = serviceType === "AV";
-  const semanticType = String(service.semantic_type || "").toLowerCase();
+  const semanticType = serviceSemanticType(service);
   const detailPayload = detail.details || service.details || {};
   const segments = Array.isArray(detailPayload.segments) ? detailPayload.segments : [];
+  const serviceDatesLabel = cleanServiceText(service.date_range) || "Fechas por confirmar";
+  const golfObservationText = semanticType === "golf"
+    ? getGolfObservationText(service, detail, detailPayload)
+    : "";
 
   const shouldShowRow = (...expectedTypes) => !semanticType || expectedTypes.includes(semanticType);
   const extraDetailRows = [
@@ -117,9 +179,6 @@ export function ServiceItem({ service, indent = false }) {
           </div>
         ) : null}
         <div className="cp-service__main">
-          <div className="cp-service__code">
-            {detail.code || service.id || "Servicio"}
-          </div>
           <div className="cp-service__title">
             {isPlaneService ? (
               <span className="cp-service__title-icon" aria-hidden="true">
@@ -129,7 +188,8 @@ export function ServiceItem({ service, indent = false }) {
             <span>{service.title || "Servicio"}</span>
           </div>
           <div className="cp-service__dates">
-            {service.date_range || "Fechas por confirmar"}
+            <span>{serviceDatesLabel}</span>
+            {golfObservationText ? <span className="cp-service__dates-note">{golfObservationText}</span> : null}
           </div>
         </div>
         <div className="cp-service__right">
@@ -240,11 +300,48 @@ function compareServicesByGiavCode(a, b) {
   });
 }
 
-export default function ServiceList({ services, indent = false }) {
+function getChronologicalSortMeta(service) {
+  const semantic = serviceSemanticType(service);
+  const bounds = getServiceDateBounds(service);
+  const startUtc = dateToUtcMidnight(bounds.start);
+  const endUtc = dateToUtcMidnight(bounds.end);
+  const isMultiDay = Number.isFinite(startUtc) && Number.isFinite(endUtc) && startUtc !== endUtc;
+
+  return {
+    bucket: semantic !== "hotel" && isMultiDay ? 1 : 0,
+    date: Number.isFinite(startUtc) ? startUtc : Number.MAX_SAFE_INTEGER,
+    tieBreaker: semantic === "hotel" ? 0 : 1,
+    key: getServiceSortKey(service),
+    title: cleanServiceText(service?.title).toLowerCase(),
+  };
+}
+
+function compareServicesChronologically(a, b) {
+  const metaA = getChronologicalSortMeta(a);
+  const metaB = getChronologicalSortMeta(b);
+
+  if (metaA.bucket !== metaB.bucket) return metaA.bucket - metaB.bucket;
+  if (metaA.date !== metaB.date) return metaA.date - metaB.date;
+  if (metaA.tieBreaker !== metaB.tieBreaker) return metaA.tieBreaker - metaB.tieBreaker;
+
+  const keyCompare = metaA.key.localeCompare(metaB.key, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+  if (keyCompare !== 0) return keyCompare;
+
+  return metaA.title.localeCompare(metaB.title, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+export default function ServiceList({ services, indent = false, sortMode = "code" }) {
   const sortedServices = useMemo(() => {
     if (!Array.isArray(services)) return [];
-    return [...services].sort(compareServicesByGiavCode);
-  }, [services]);
+    const list = [...services];
+    return list.sort(sortMode === "chronological" ? compareServicesChronologically : compareServicesByGiavCode);
+  }, [services, sortMode]);
 
   if (!sortedServices.length) return null;
 

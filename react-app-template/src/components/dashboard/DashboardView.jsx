@@ -195,6 +195,7 @@ export default function DashboardView({
   const tripContext = tripCode ? `${tripLabel} (${tripCode})` : tripLabel;
   const tripDates = normalizeTripDates(heroTrip || nextTrip);
   const tripDateRange = [formatDateES(tripDates.start), formatDateES(tripDates.end)].filter((value) => value && value !== "—").join(" — ");
+  const tripDatesLabel = tripDateRange || tt("Fechas por confirmar");
   const tripReferenceLabel = tripCode ? `${tt("Referencia")} ${tripCode}` : "";
   const daysLeftRaw = Number(nextTrip?.days_left);
   const daysLeft = Number.isFinite(daysLeftRaw) ? Math.max(0, Math.round(daysLeftRaw)) : null;
@@ -408,7 +409,7 @@ export default function DashboardView({
             <div className="cp-trip-hero-card__meta">
               <span className="cp-trip-hero-card__meta-item">
                 <span className="cp-trip-hero-card__meta-icon" aria-hidden="true"><CalendarIcon /></span>
-                <span>{tripDateRange || tt("Fechas por confirmar")}</span>
+                <span>{tripDatesLabel}</span>
               </span>
               {tripReferenceLabel ? <span className="cp-trip-hero-card__meta-item is-reference">{tripReferenceLabel}</span> : null}
               {heroTrip?.status ? <span className="cp-pill cp-trip-hero-card__status">{heroTrip.status}</span> : null}
@@ -473,6 +474,11 @@ export default function DashboardView({
               <div className="cp-trip-module__title">{tt("Los puntos clave de tu viaje")}</div>
             </div>
             {actionTripLabel ? <span className={`cp-pill cp-trip-glance__badge ${actionPillClass}`}>{actionPillLabel}</span> : null}
+          </div>
+
+          <div className="cp-trip-glance__dates">
+            <span className="cp-trip-glance__dates-icon" aria-hidden="true"><CalendarIcon /></span>
+            <span className="cp-trip-glance__dates-text">{tripDatesLabel}</span>
           </div>
 
           <div className="cp-trip-glance__grid">

@@ -132,6 +132,13 @@ class Casanova_Payments_Service {
       $inespay_enabled = ($k !== '' && $t !== '');
     }
 
+    $aplazame_giav_method_id = defined('CASANOVA_GIAV_IDFORMAPAGO_APLAZAME')
+      ? (int) CASANOVA_GIAV_IDFORMAPAGO_APLAZAME
+      : (int) get_option('casanova_giav_idformapago_aplazame', 0);
+    $aplazame_enabled = class_exists('Casanova_Aplazame_Service')
+      && Casanova_Aplazame_Service::is_enabled()
+      && $aplazame_giav_method_id > 0;
+
     $payment_methods = [
       [
         'id' => 'card',
@@ -142,6 +149,11 @@ class Casanova_Payments_Service {
         'id' => 'bank_transfer',
         'enabled' => (bool) $inespay_enabled,
         'label' => __('Transferencia bancaria', 'casanova-portal'),
+      ],
+      [
+        'id' => 'aplazame',
+        'enabled' => (bool) $aplazame_enabled,
+        'label' => __('Aplazame', 'casanova-portal'),
       ],
     ];
     return [

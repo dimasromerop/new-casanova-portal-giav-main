@@ -909,12 +909,8 @@ a { color: inherit; text-decoration: none; }
   min-width: 0;
 }
 
-.cp-service__code {
-  font-weight: 700;
-}
-
 .cp-service__title {
-  margin-top: 4px;
+  margin-top: 0;
   font-size: 15px;
   display: flex;
   align-items: center;
@@ -939,9 +935,18 @@ a { color: inherit; text-decoration: none; }
 }
 
 .cp-service__dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
   margin-top: 2px;
   font-size: 13px;
   color: var(--muted);
+}
+
+.cp-service__dates-note {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .cp-service__right {
@@ -4783,6 +4788,45 @@ body{
   font-weight: 700;
 }
 
+.cp-trip-glance__dates{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(20, 88, 79, 0.12);
+  border-radius: 999px;
+  background: rgba(20, 88, 79, 0.06);
+  color: var(--text);
+}
+
+.cp-trip-glance__dates-icon{
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--accent);
+}
+
+.cp-trip-glance__dates-icon svg{
+  width: 15px;
+  height: 15px;
+}
+
+.cp-trip-glance__dates-text{
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .cp-trip-glance__grid{
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5144,6 +5188,7 @@ body{
 
 .cp-app[data-theme="dark"] .cp-trip-hero-card__title,
 .cp-app[data-theme="dark"] .cp-trip-module__title,
+.cp-app[data-theme="dark"] .cp-trip-glance__dates-text,
 .cp-app[data-theme="dark"] .cp-trip-glance__value,
 .cp-app[data-theme="dark"] .cp-trip-finance__stat strong,
 .cp-app[data-theme="dark"] .cp-trip-includes__value,
@@ -5158,11 +5203,17 @@ body{
 }
 
 .cp-app[data-theme="dark"] .cp-trip-hero-card__destination-icon,
+.cp-app[data-theme="dark"] .cp-trip-glance__dates-icon,
 .cp-app[data-theme="dark"] .cp-trip-glance__icon,
 .cp-app[data-theme="dark"] .cp-trip-contact__message-icon,
 .cp-app[data-theme="dark"] .cp-trip-includes__icon{
   background: rgba(118, 208, 193, 0.12);
   color: #9fe3d5;
+}
+
+.cp-app[data-theme="dark"] .cp-trip-glance__dates{
+  border-color: rgba(118, 208, 193, 0.16);
+  background: rgba(118, 208, 193, 0.08);
 }
 
 .cp-app[data-theme="dark"] .cp-trip-hero-card__status{
@@ -5798,6 +5849,20 @@ body{
     margin-top: 14px;
   }
 
+  .cp-trip-glance__dates{
+    margin-top: 14px;
+    padding: 9px 12px;
+  }
+
+  .cp-trip-glance__dates-icon{
+    width: 26px;
+    height: 26px;
+  }
+
+  .cp-trip-glance__dates-text{
+    font-size: 12px;
+  }
+
   .cp-trip-glance__item{
     padding: 14px;
     gap: 8px;
@@ -5893,6 +5958,10 @@ body{
 
   .cp-trip-glance__head .cp-trip-module__title{
     font-size: 22px;
+  }
+
+  .cp-trip-glance__dates{
+    width: 100%;
   }
 
   .cp-trip-glance__grid{

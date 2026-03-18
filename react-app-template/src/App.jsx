@@ -649,6 +649,8 @@ function App() {
               body:
                 method === "bank_transfer"
                   ? tt("La transferencia ya se ha iniciado. Actualizaremos tus pagos cuando recibamos la confimación del banco.")
+                  : method === "aplazame"
+                    ? tt("La solicitud con Aplazame ha quedado pendiente. Actualizaremos tus pagos en cuanto recibamos la confirmación final.")
                   : tt("Hemos recibido el pago. Gracias, procesamos el cobro y actualizamos tus datos."),
             }
           : {
@@ -674,7 +676,10 @@ function App() {
     }
 
     if (payment === "failed") {
-      notify(tt("La transferencia no se completó. Si el banco la confirma más tarde, lo verás reflejado aquí."), "warn");
+      const failedMessage = method === "aplazame"
+        ? tt("La solicitud con Aplazame no se completó. Si el estado cambia más tarde, lo verás reflejado aquí.")
+        : tt("La transferencia no se completó. Si el banco la confirma más tarde, lo verás reflejado aquí.");
+      notify(failedMessage, "warn");
       setParam("payment", "");
       setParam("pay_status", "");
       setParam("method", "");

@@ -1314,6 +1314,12 @@ class Casanova_Trip_Service {
     $date_from = self::normalize_date($r->FechaDesde ?? null);
     $date_to = self::normalize_date($r->FechaHasta ?? null);
 
+    $dx = is_object($r) ? ($r->DatosExternos ?? null) : null;
+    $observations = trim(self::pick_first([
+      self::read_prop($r, ['Observaciones', 'Observacion', 'Comentarios', 'Comentario']),
+      self::read_prop($dx, ['Observaciones', 'Observacion', 'Comentarios', 'Comentario']),
+    ]));
+
     $actions = self::build_actions($lightweight ? false : $allow_voucher);
     $voucher_urls = (!$lightweight && $allow_voucher) ? self::voucher_urls($expediente_id, $rid) : ['view' => '', 'pdf' => ''];
 
@@ -1342,6 +1348,7 @@ class Casanova_Trip_Service {
       'date_from' => $date_from,
       'date_to' => $date_to,
       'date_range' => $dates,
+      'observations' => $observations,
       'details' => $details,
       'price' => $price,
       'included' => $included,
@@ -1354,6 +1361,7 @@ class Casanova_Trip_Service {
         'subtype' => $subtype,
         'dates' => $dates,
         'locator' => (string) ($r->Localizador ?? ''),
+        'observations' => $observations,
         'bonus_text' => trim((string) ($r->TextoBono ?? '')),
         'details' => $details,
       ],

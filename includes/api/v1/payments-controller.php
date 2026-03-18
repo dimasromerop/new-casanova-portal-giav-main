@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) exit;
 class Casanova_Payments_Controller {
 
   private static array $ALLOWED_TYPES = ['deposit', 'balance'];
-  private static array $ALLOWED_METHODS = ['card', 'bank_transfer'];
+  private static array $ALLOWED_METHODS = ['card', 'bank_transfer', 'aplazame'];
 
   public static function register_routes(): void {
     register_rest_route('casanova/v1', '/payments/intent', [
@@ -34,7 +34,7 @@ class Casanova_Payments_Controller {
         'method' => [
           'type' => 'string',
           'required' => false,
-          'description' => 'card|bank_transfer',
+          'description' => 'card|bank_transfer|aplazame',
           'validate_callback' => function ($value) {
             $v = strtolower(trim((string)$value));
             return $v === '' || in_array($v, self::$ALLOWED_METHODS, true);
@@ -137,6 +137,17 @@ class Casanova_Payments_Controller {
       return self::error_response($message, $code, 403);
     }
 
+    $amount = (float)($action['amount'] ?? 0);
+    if ($amount <= 0) {
+      return self::error_response(
+        esc_html__('Importe invÃ¡lido.', 'casanova-portal'),
+        'invalid_amount',
+        400
+      );
+    }
+
+    $mode = $type === 'deposit' ? 'deposit' : 'full';
+
     // 1) Tarjeta (Redsys): mantenemos lo existente.
     if ($method === 'card') {
       $pay_url = $context['pay_url'] ?? '';
@@ -157,7 +168,152 @@ class Casanova_Payments_Controller {
       ]);
     }
 
-    // 2) Transferencia (Inespay): iniciamos orden y devolvemos su portal URL.
+    // 2) Aplazame: creamos checkout server-side y el frontend abre el SDK.
+    if ($method === 'aplazame') {
+      if (!class_exists('Casanova_Aplazame_Service')) {
+        return self::error_response(
+          esc_html__('Aplazame no estÃ¡ disponible en el servidor.', 'casanova-portal'),
+          'aplazame_missing',
+          500
+        );
+      }
+      if (!function_exists('casanova_payment_intent_create')) {
+        return self::error_response(
+          esc_html__('No se pudo inicializar el pago (intents).', 'casanova-portal'),
+          'intent_missing',
+          500
+        );
+      }
+
+      $public_cfg = Casanova_Aplazame_Service::public_checkout_config();
+      if (is_wp_error($public_cfg)) {
+        return self::error_response(
+          esc_html__('Aplazame no estÃ¡ configurado todavÃ­a.', 'casanova-portal'),
+          'aplazame_config_missing',
+          500
+        );
+      }
+
+      $aplazame_giav_method_id = defined('CASANOVA_GIAV_IDFORMAPAGO_APLAZAME')
+        ? (int) CASANOVA_GIAV_IDFORMAPAGO_APLAZAME
+        : (int) get_option('casanova_giav_idformapago_aplazame', 0);
+      if ($aplazame_giav_method_id <= 0) {
+        return self::error_response(
+          esc_html__('Falta configurar la forma de pago de Aplazame en GIAV.', 'casanova-portal'),
+          'aplazame_giav_missing',
+          500
+        );
+      }
+
+      $reference = 'APL-' . (int)$expediente_id . '-' . substr(casanova_payments_new_token(), 0, 12);
+      $intent = casanova_payment_intent_create([
+        'user_id' => $user_id,
+        'id_cliente' => $idCliente,
+        'id_expediente' => $expediente_id,
+        'amount' => $amount,
+        'currency' => 'EUR',
+        'status' => 'created',
+        'provider' => 'aplazame',
+        'method' => 'aplazame',
+        'provider_reference' => $reference,
+        'payload' => [
+          'mode' => $mode,
+          'method' => 'aplazame',
+          'created_from' => 'portal',
+        ],
+      ]);
+      if (is_wp_error($intent)) {
+        return self::error_response(
+          esc_html__('No se pudo crear el intento de pago.', 'casanova-portal'),
+          'intent_create_failed',
+          500
+        );
+      }
+
+      $merchant_urls = self::aplazame_merchant_urls($expediente_id, (int)$intent->id);
+      $checkout_payload = Casanova_Aplazame_Service::build_checkout_payload(
+        $user_id,
+        $idCliente,
+        $intent,
+        is_array($context['reservas'] ?? null) ? $context['reservas'] : [],
+        $merchant_urls
+      );
+      if (is_wp_error($checkout_payload)) {
+        casanova_payment_intent_update((int)$intent->id, [
+          'status' => 'failed',
+          'payload' => casanova_intent_payload_merge($intent->payload ?? null, [
+            'aplazame_init' => [
+              'ok' => false,
+              'error' => $checkout_payload->get_error_message(),
+              'error_code' => $checkout_payload->get_error_code(),
+              'time' => current_time('mysql'),
+            ],
+          ]),
+        ]);
+
+        $status = in_array($checkout_payload->get_error_code(), ['aplazame_missing_email', 'aplazame_missing_address'], true)
+          ? 400
+          : 500;
+
+        return self::error_response(
+          $checkout_payload->get_error_message(),
+          'aplazame_payload_invalid',
+          $status
+        );
+      }
+
+      $checkout = Casanova_Aplazame_Service::create_checkout($checkout_payload);
+      if (is_wp_error($checkout)) {
+        casanova_payment_intent_update((int)$intent->id, [
+          'status' => 'failed',
+          'payload' => casanova_intent_payload_merge($intent->payload ?? null, [
+            'aplazame_init' => [
+              'ok' => false,
+              'error' => $checkout->get_error_message(),
+              'error_data' => $checkout->get_error_data(),
+              'time' => current_time('mysql'),
+            ],
+          ]),
+        ]);
+
+        return self::error_response(
+          $checkout->get_error_message() ?: esc_html__('No se pudo iniciar Aplazame.', 'casanova-portal'),
+          'aplazame_init_failed',
+          502
+        );
+      }
+
+      casanova_payment_intent_update((int)$intent->id, [
+        'provider_payment_id' => (string)($checkout['checkout_id'] ?? ''),
+        'status' => 'initiated',
+        'payload' => casanova_intent_payload_merge($intent->payload ?? null, [
+          'aplazame_init' => [
+            'ok' => true,
+            'checkout_id' => (string)($checkout['checkout_id'] ?? ''),
+            'location' => (string)($checkout['location'] ?? ''),
+            'time' => current_time('mysql'),
+          ],
+        ]),
+      ]);
+
+      return rest_ensure_response([
+        'ok' => true,
+        'method' => 'aplazame',
+        'flow' => 'aplazame',
+        'checkout_id' => (string)($checkout['checkout_id'] ?? ''),
+        'intent_id' => (int)$intent->id,
+        'aplazame' => $public_cfg,
+        'return_urls' => [
+          'success' => $merchant_urls['success_url'],
+          'pending' => $merchant_urls['pending_url'],
+          'ko' => $merchant_urls['ko_url'],
+          'error' => $merchant_urls['error_url'],
+          'dismiss' => $merchant_urls['dismiss_url'],
+        ],
+      ]);
+    }
+
+    // 3) Transferencia (Inespay): iniciamos orden y devolvemos su portal URL.
     if (!class_exists('Casanova_Inespay_Service')) {
       return self::error_response(
         esc_html__('Inespay no está disponible en el servidor.', 'casanova-portal'),
@@ -330,6 +486,51 @@ class Casanova_Payments_Controller {
       'method' => 'bank_transfer',
       'intent_id' => (int)$intent->id,
     ]);
+  }
+
+  private static function aplazame_merchant_urls(int $expediente_id, int $intent_id): array {
+    $portal_base = function_exists('casanova_portal_base_url')
+      ? (string) casanova_portal_base_url()
+      : home_url('/portal-app/');
+
+    return [
+      'portal_url' => self::portal_trip_url($portal_base, $expediente_id, $intent_id),
+      'notification_url' => home_url('/wp-json/casanova/v1/aplazame/notify'),
+      'success_url' => self::portal_trip_url($portal_base, $expediente_id, $intent_id, [
+        'payment' => 'success',
+        'method' => 'aplazame',
+        'pay_status' => 'ok',
+        'refresh' => '1',
+      ]),
+      'pending_url' => self::portal_trip_url($portal_base, $expediente_id, $intent_id, [
+        'payment' => 'success',
+        'method' => 'aplazame',
+        'pay_status' => 'checking',
+        'refresh' => '1',
+      ]),
+      'error_url' => self::portal_trip_url($portal_base, $expediente_id, $intent_id, [
+        'payment' => 'failed',
+        'method' => 'aplazame',
+        'pay_status' => 'error',
+      ]),
+      'dismiss_url' => self::portal_trip_url($portal_base, $expediente_id, $intent_id),
+      'ko_url' => self::portal_trip_url($portal_base, $expediente_id, $intent_id, [
+        'payment' => 'failed',
+        'method' => 'aplazame',
+        'pay_status' => 'ko',
+      ]),
+    ];
+  }
+
+  private static function portal_trip_url(string $portal_base, int $expediente_id, int $intent_id, array $extra = []): string {
+    $args = array_merge([
+      'view' => 'trip',
+      'tab' => 'payments',
+      'expediente' => $expediente_id,
+      'intent_id' => $intent_id,
+    ], $extra);
+
+    return esc_url_raw(add_query_arg($args, $portal_base));
   }
 
   private static function error_response(string $message, string $code, int $status): WP_REST_Response {

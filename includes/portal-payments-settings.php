@@ -173,6 +173,36 @@ add_action('admin_init', function () {
     'default' => 0,
   ]);
 
+  register_setting('casanova_payments', 'casanova_aplazame_public_key', [
+    'type' => 'string',
+    'sanitize_callback' => function($value) {
+      return substr(trim((string) $value), 0, 255);
+    },
+    'default' => '',
+  ]);
+
+  register_setting('casanova_payments', 'casanova_aplazame_private_key', [
+    'type' => 'string',
+    'sanitize_callback' => function($value) {
+      return substr(trim((string) $value), 0, 255);
+    },
+    'default' => '',
+  ]);
+
+  register_setting('casanova_payments', 'casanova_aplazame_sandbox', [
+    'type' => 'boolean',
+    'sanitize_callback' => function($value) {
+      return !empty($value) ? 1 : 0;
+    },
+    'default' => 1,
+  ]);
+
+  register_setting('casanova_payments', 'casanova_giav_idformapago_aplazame', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 0,
+  ]);
+
   // --- Portal (legacy templates por vista)
   register_setting('casanova_portal', 'casanova_portal_mulligans_enabled', [
     'type' => 'boolean',
@@ -411,6 +441,10 @@ function casanova_payments_render_settings_page(): void {
     $m  = get_option('casanova_deposit_min_amount', 50);
     $ov = get_option('casanova_deposit_overrides', '');
     $idfp_inespay = (int) get_option('casanova_giav_idformapago_inespay', 0);
+    $aplazame_public_key = (string) get_option('casanova_aplazame_public_key', '');
+    $aplazame_private_key = (string) get_option('casanova_aplazame_private_key', '');
+    $aplazame_sandbox = (bool) get_option('casanova_aplazame_sandbox', 1);
+    $idfp_aplazame = (int) get_option('casanova_giav_idformapago_aplazame', 0);
     if (!is_string($ov)) $ov = '';
 
     echo '<h2>Ajustes de pagos</h2>';
@@ -432,6 +466,22 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><th scope="row"><label for="casanova_giav_idformapago_inespay">GIAV: ID forma de pago (Inespay)</label></th>';
     echo '<td><input name="casanova_giav_idformapago_inespay" id="casanova_giav_idformapago_inespay" type="number" min="0" step="1" value="' . esc_attr($idfp_inespay) . '" />';
     echo '<p class="description">Obligatorio para que el webhook de Inespay registre el cobro en GIAV. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_INESPAY</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_aplazame_public_key">Aplazame: Public key</label></th>';
+    echo '<td><input name="casanova_aplazame_public_key" id="casanova_aplazame_public_key" type="text" class="regular-text code" value="' . esc_attr($aplazame_public_key) . '" />';
+    echo '<p class="description">Clave publica del SDK Javascript. Alternativa: define <code>CASANOVA_APLAZAME_PUBLIC_KEY</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_aplazame_private_key">Aplazame: Private key</label></th>';
+    echo '<td><input name="casanova_aplazame_private_key" id="casanova_aplazame_private_key" type="password" class="regular-text code" value="' . esc_attr($aplazame_private_key) . '" autocomplete="off" />';
+    echo '<p class="description">Clave privada para crear checkouts y validar notificaciones. Alternativa: define <code>CASANOVA_APLAZAME_PRIVATE_KEY</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
+
+    echo '<tr><th scope="row">Aplazame: Sandbox</th>';
+    echo '<td><input type="hidden" name="casanova_aplazame_sandbox" value="0" /><label for="casanova_aplazame_sandbox"><input name="casanova_aplazame_sandbox" id="casanova_aplazame_sandbox" type="checkbox" value="1" ' . checked($aplazame_sandbox, true, false) . ' /> usar entorno de pruebas</label>';
+    echo '<p class="description">Si activas sandbox, el backend usara <code>application/vnd.aplazame.sandbox.v4+json</code> y el SDK cargara <code>sandbox=true</code>. Alternativa: define <code>CASANOVA_APLAZAME_SANDBOX</code> en <code>wp-config.php</code>.</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_giav_idformapago_aplazame">GIAV: ID forma de pago (Aplazame)</label></th>';
+    echo '<td><input name="casanova_giav_idformapago_aplazame" id="casanova_giav_idformapago_aplazame" type="number" min="0" step="1" value="' . esc_attr($idfp_aplazame) . '" />';
+    echo '<p class="description">Obligatorio para que la notificacion final de Aplazame registre el cobro en GIAV. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_APLAZAME</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
 
     echo '</table>';
     submit_button();

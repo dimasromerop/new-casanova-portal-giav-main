@@ -5,6 +5,59 @@ import { tt } from "../../i18n/t.js";
 import { api } from "../../lib/api.js";
 import { euro } from "../../lib/formatters.js";
 
+let aplazameSdkPromise = null;
+
+function onAplazameReady() {
+  return new Promise((resolve) => {
+    if (window.aplazame && typeof window.aplazame.checkout === "function") {
+      resolve(window.aplazame);
+      return;
+    }
+
+    (window.aplazame = window.aplazame || []).push((aplazame) => {
+      resolve(aplazame);
+    });
+  });
+}
+
+function loadAplazameSdk(config = {}) {
+  const publicKey = String(config?.public_key || "").trim();
+  const sandbox = Boolean(config?.sandbox);
+  if (!publicKey) {
+    return Promise.reject(new Error(tt("Aplazame no esta configurado correctamente.")));
+  }
+
+  if (aplazameSdkPromise) {
+    return aplazameSdkPromise;
+  }
+
+  const src = `https://cdn.aplazame.com/aplazame.js?public-key=${encodeURIComponent(publicKey)}&sandbox=${sandbox ? "true" : "false"}`;
+  aplazameSdkPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-casanova-aplazame="1"]');
+    if (existing) {
+      onAplazameReady().then(resolve).catch(reject);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    script.dataset.casanovaAplazame = "1";
+    script.onload = () => {
+      onAplazameReady().then(resolve).catch(reject);
+    };
+    script.onerror = () => {
+      aplazameSdkPromise = null;
+      reject(new Error(tt("No se pudo cargar Aplazame.")));
+    };
+
+    document.head.appendChild(script);
+  });
+
+  return aplazameSdkPromise;
+}
+
 export default function PaymentActions({ expediente, payments, mock, readOnly = false, readOnlyMessage = "" }) {
   const [state, setState] = useState({ loading: null, error: null });
   const lockedMessage = readOnlyMessage || tt("Modo de vista cliente activo. Solo lectura.");
@@ -66,10 +119,55 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
           method,
         },
       });
+
+      if (payload?.ok && method === "aplazame" && payload?.checkout_id) {
+        const aplazame = await loadAplazameSdk(payload?.aplazame);
+        const returnUrls = payload?.return_urls || {};
+
+        aplazame.checkout(payload.checkout_id, {
+          onSuccess() {
+            window.location.href = returnUrls.success || window.location.href;
+          },
+          onPending() {
+            window.location.href = returnUrls.pending || window.location.href;
+          },
+          onKO() {
+            window.location.href = returnUrls.ko || window.location.href;
+          },
+          onError() {
+            setState({ loading: null, error: tt("No se pudo abrir Aplazame. Intentalo de nuevo.") });
+          },
+          onDismiss() {
+            setState({ loading: null, error: null });
+          },
+          onClose(resultStatus) {
+            if (resultStatus === "success") {
+              window.location.href = returnUrls.success || window.location.href;
+              return;
+            }
+            if (resultStatus === "pending") {
+              window.location.href = returnUrls.pending || window.location.href;
+              return;
+            }
+            if (resultStatus === "ko") {
+              window.location.href = returnUrls.ko || window.location.href;
+              return;
+            }
+            if (resultStatus === "error") {
+              setState({ loading: null, error: tt("No se pudo abrir Aplazame. Intentalo de nuevo.") });
+              return;
+            }
+            setState({ loading: null, error: null });
+          },
+        });
+        return;
+      }
+
       if (payload?.ok && payload?.redirect_url) {
         window.location.href = payload.redirect_url;
         return;
       }
+
       throw payload;
     } catch (error) {
       const message =
@@ -84,6 +182,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
   const hasMultipleActionChoices = depositAllowed && balanceAllowed;
   const currency = payments?.currency || "EUR";
   const transferNote = tt("El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.");
+  const aplazameNote = tt("Aplazame te permite fraccionar el pago del viaje. Al continuar se abrira su checkout seguro para completar la financiacion en cuotas.");
 
   if (readOnly) {
     return (
@@ -102,12 +201,17 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
         <div className="cp-pay-methods" role="tablist" aria-label={tt("Método de pago")}>
           {methods.filter((method) => method && method.enabled).map((method) => {
             const isBankTransfer = method.id === "bank_transfer";
+            const isAplazame = method.id === "aplazame";
             const title = isBankTransfer
               ? tt("Transferencia bancaria online")
-              : (method.label || tt("Tarjeta"));
+              : isAplazame
+                ? tt("Aplazame")
+                : (method.label || tt("Tarjeta"));
             const meta = isBankTransfer
               ? tt("PSD2 · Sin recargo")
-              : tt("Pago inmediato y seguro");
+              : isAplazame
+                ? tt("Pago a plazos")
+                : tt("Pago inmediato y seguro");
 
             return (
               <button
@@ -127,6 +231,12 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
       {payMethod === "bank_transfer" ? (
         <div className="cp-pay-method-note">
           {transferNote}
+        </div>
+      ) : null}
+
+      {payMethod === "aplazame" ? (
+        <div className="cp-pay-method-note">
+          {aplazameNote}
         </div>
       ) : null}
 
