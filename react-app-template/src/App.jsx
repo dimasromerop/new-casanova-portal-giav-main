@@ -21,11 +21,10 @@ import { api } from "./lib/api.js";
 import { formatMsgDate } from "./lib/formatters.js";
 import { readParams, setParam } from "./lib/params.js";
 import { getBonusesVariant, getPaymentVariant, getStatusVariant } from "./lib/statusBadges.js";
-import { LS_KEYS, lsGet, lsGetInt, lsSet, lsSetInt, resolveInitialTheme } from "./lib/storage.js";
+import { LS_KEYS, lsGet, lsSet, resolveInitialTheme } from "./lib/storage.js";
 
-/* ===== Local state (frontend-only) =====
-   GIAV is read-only from this portal for now. We track "seen" client-side to avoid
-   zombie badges and keep UX sane while we wait for API write-back.
+/* ===== Local state =====
+   El portal ya escribe mensajes propios; GIAV sigue entrando como fuente adicional.
 */
 
 const ICON_PROPS = {
@@ -461,9 +460,6 @@ function App() {
   const [loadingInbox, setLoadingInbox] = useState(false);
   const [inboxErr, setInboxErr] = useState(null);
 
-  const [inboxLatestTs, setInboxLatestTs] = useState(() => lsGetInt(LS_KEYS.inboxLatestTs, 0));
-  const [messagesLastSeenTs, setMessagesLastSeenTs] = useState(() => lsGetInt(LS_KEYS.messagesLastSeenTs, 0));
-
   const dashboardRequestIdRef = useRef(0);
   const inboxRequestIdRef = useRef(0);
   const profileRequestRef = useRef(null);
@@ -802,28 +798,22 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView]);
 
-  useEffect(() => {
-    const items = Array.isArray(inbox?.items) ? inbox.items : [];
-    if (!items.length) return;
-    const latest = items.reduce((max, it) => {
-      const d = it?.last_message_at || it?.date;
-      const t = d ? new Date(d).getTime() : 0;
-      return t > max ? t : max;
-    }, 0);
-    if (latest) handleLatestTs(latest);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inbox]);
+  function refreshMessagesState() {
+    void (async () => {
+      const inboxRes = await loadInbox({ refresh: true, background: true });
+      if (!inboxRes || typeof inboxRes.unread !== "number") return;
 
-  function handleLatestTs(ts) {
-    if (!ts || !Number.isFinite(ts)) return;
-    setInboxLatestTs(ts);
-    lsSetInt(LS_KEYS.inboxLatestTs, ts);
-  }
-
-  function markMessagesSeen() {
-    const now = Date.now();
-    setMessagesLastSeenTs(now);
-    lsSetInt(LS_KEYS.messagesLastSeenTs, now);
+      setDashboard((current) => {
+        if (!current || typeof current !== "object") return current;
+        return {
+          ...current,
+          messages: {
+            ...(current.messages || {}),
+            unread: inboxRes.unread,
+          },
+        };
+      });
+    })();
   }
 
   async function saveProfile(data) {
@@ -900,10 +890,7 @@ function App() {
 
   const unreadInbox = inbox?.unread;
   const unreadDash = dashboard?.messages?.unread;
-  const unreadFromServer = typeof unreadInbox === "number" ? unreadInbox : (typeof unreadDash === "number" ? unreadDash : 0);
-
-  const unreadCount =
-    inboxLatestTs > 0 && messagesLastSeenTs >= inboxLatestTs ? 0 : unreadFromServer;
+  const unreadCount = typeof unreadInbox === "number" ? unreadInbox : (typeof unreadDash === "number" ? unreadDash : 0);
 
   const title = useMemo(() => {
     if ((activeView === "viajes" || activeView === "trips")) return t('nav_trips', 'Viajes');
@@ -991,8 +978,7 @@ function App() {
             dashboard={dashboard}
             readOnly={isReadOnly}
             readOnlyMessage={readOnlyMessage}
-            onLatestTs={handleLatestTs}
-            onSeen={markMessagesSeen}
+            onSeen={refreshMessagesState}
             mulligansEnabled={isMulligansEnabled}
             KpiCard={KpiCard}
             paymentIcons={{ IconBriefcase, IconShieldCheck, IconClockArrow, IconSparkle }}
@@ -1003,8 +989,6 @@ function App() {
             inbox={inbox}
             loading={loadingInbox && !inbox}
             error={inbox ? null : inboxErr}
-            onLatestTs={handleLatestTs}
-            onSeen={markMessagesSeen}
           />
         ) : activeView === "dashboard" ? (
           <DashboardView

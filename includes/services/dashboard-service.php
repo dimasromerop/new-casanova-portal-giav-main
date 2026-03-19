@@ -42,6 +42,14 @@ class Casanova_Dashboard_Service {
     return self::$perf_breakdown;
   }
 
+  public static function cache_key_for_user(int $idCliente, int $user_id): string {
+    $token = function_exists('casanova_portal_messages_cache_token')
+      ? casanova_portal_messages_cache_token($user_id)
+      : ((string) $user_id);
+
+    return 'casanova_dash_v4_' . $idCliente . '_' . $user_id . '_' . md5((string) $token);
+  }
+
   public static function build_for_user(int $user_id, bool $refresh = false): Casanova_Dashboard_DTO {
     $perf_total_start = microtime(true);
     self::perf_reset();
@@ -57,7 +65,7 @@ class Casanova_Dashboard_Service {
     // Cache ligero: GIAV manda, WP consume.
     if (!$refresh && $idCliente > 0) {
       $cache_lookup_start = microtime(true);
-      $cache_key = 'casanova_dash_v3_' . $idCliente;
+      $cache_key = self::cache_key_for_user($idCliente, $user_id);
       $cached = get_transient($cache_key);
       self::perf_mark('cache_lookup_ms', $cache_lookup_start);
       if (is_array($cached) && !empty($cached)) {
@@ -190,7 +198,7 @@ class Casanova_Dashboard_Service {
 
     if ($idCliente > 0) {
       $cache_store_start = microtime(true);
-      set_transient('casanova_dash_v3_' . $idCliente, $data, 60); // TTL corto
+      set_transient(self::cache_key_for_user($idCliente, $user_id), $data, 60); // TTL corto
       self::perf_mark('cache_store_ms', $cache_store_start);
     }
 

@@ -19,7 +19,6 @@ export default function TripDetailView({
   dashboard,
   readOnly = false,
   readOnlyMessage = "",
-  onLatestTs,
   onSeen,
   mulligansEnabled = true,
   KpiCard,
@@ -150,6 +149,7 @@ export default function TripDetailView({
 
   const title = trip?.title || ttf("Expediente #{id}", { id: expediente });
   const tab = readParams().tab;
+  const showDetailState = tab !== "messages";
 
   const resolvedTrip = useMemo(() => {
     if (!detail?.trip) return fallbackTrip;
@@ -190,12 +190,12 @@ export default function TripDetailView({
       />
 
       <div className="cp-trip-detail__body">
-        {loading ? (
+        {showDetailState && loading ? (
           <div className="cp-card">
             <div className="cp-card-title">{tt("Cargando expediente")}</div>
             <Skeleton lines={8} />
           </div>
-        ) : err ? (
+        ) : showDetailState && err ? (
           <div className="cp-notice is-warn">{tt("No se puede cargar el expediente ahora mismo.")}</div>
         ) : null}
 
@@ -405,7 +405,13 @@ export default function TripDetailView({
           <div className="cp-card">
             <div className="cp-card-title">{tt("Mensajes")}</div>
             <div className="cp-card-sub">{tt("Conversación sobre este viaje")}</div>
-            <MessagesTimeline expediente={expediente} mock={mock} onLatestTs={onLatestTs} onSeen={onSeen} />
+            <MessagesTimeline
+              expediente={expediente}
+              mock={mock}
+              onSeen={onSeen}
+              readOnly={readOnly}
+              readOnlyMessage={readOnlyMessage}
+            />
           </div>
         ) : null}
       </div>

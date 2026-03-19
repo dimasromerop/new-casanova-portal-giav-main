@@ -24,10 +24,13 @@ class Casanova_Inbox_Service {
     $seen_version = function_exists('casanova_messages_seen_version')
       ? casanova_messages_seen_version($user_id)
       : 1;
+    $local_version = function_exists('casanova_portal_messages_user_version')
+      ? casanova_portal_messages_user_version($user_id)
+      : 1;
 
     if (!$refresh && function_exists('casanova_cache_remember')) {
       return casanova_cache_remember(
-        'inbox:' . $user_id . ':' . (int) $mock . ':' . $seen_version,
+        'inbox:' . $user_id . ':' . (int) $mock . ':' . $seen_version . ':' . $local_version,
         60,
         function () use ($user_id, $mock) {
           return self::build_inbox_for_user($user_id, (bool) $mock);

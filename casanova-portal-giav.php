@@ -2,7 +2,7 @@
 /**
  * Plugin Name: New Casanova Portal - GIAV
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
- * Version: 0.30.13
+ * Version: 0.30.15
  * Author: Casanova Golf
  * Text Domain: casanova-portal
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
 // DB / plugin upgrade (runs on normal updates too, not only on activation)
 // -----------------------------------------------------------------------------
 function casanova_portal_giav_current_version(): string {
-  return '0.30.13';
+  return '0.30.15';
 }
 
 // -----------------------------------------------------------------------------
@@ -54,6 +54,9 @@ function casanova_portal_giav_maybe_upgrade(): void {
   // Ensure DB schema is up to date (dbDelta is safe to re-run).
   if (function_exists('casanova_payments_install')) {
     casanova_payments_install();
+  }
+  if (function_exists('casanova_portal_messages_install')) {
+    casanova_portal_messages_install();
   }
 
   // Mark that we need a rewrite flush, but do it on 'init' only.
@@ -226,10 +229,12 @@ add_action('wp_enqueue_scripts', function () {
 // 1) INCLUDES MÍNIMOS para activación (solo DB)
 require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-db.php';
 require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-otp-db.php';
+require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-messages-db.php';
 
 // 2) HOOK de activación (tabla)
 register_activation_hook(__FILE__, 'casanova_payments_install');
 register_activation_hook(__FILE__, 'casanova_portal_otp_install');
+register_activation_hook(__FILE__, 'casanova_portal_messages_install');
 
 // Activación: reglas de rewrite (return limpio de Inespay)
 
@@ -267,6 +272,7 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/giav-client-create.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/helpers-giav.php';
 
   // API-first (services + REST) - sin impacto visual
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-messages-store.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/dto/dashboard-dto.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/services/dashboard-service.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/dashboard-controller.php';
@@ -318,6 +324,7 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/inbox-controller.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/giav-reservas-map.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-profile.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-loyalty.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-messages-admin.php';
   
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-db.php'; 
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-intents.php';

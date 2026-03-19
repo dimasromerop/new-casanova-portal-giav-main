@@ -52,6 +52,9 @@ class Casanova_Dashboard_Controller {
 
         if ($idCliente > 0) {
           delete_transient('casanova_dash_v3_' . $idCliente);
+          if (class_exists('Casanova_Dashboard_Service') && method_exists('Casanova_Dashboard_Service', 'cache_key_for_user')) {
+            delete_transient(Casanova_Dashboard_Service::cache_key_for_user($idCliente, $effective_user_id));
+          }
         }
 
         if (
