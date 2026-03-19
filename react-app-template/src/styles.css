@@ -179,8 +179,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .cp-badge--warning {
-  background: #ffedd5;
-  color: #b45309;
+  background: #d1cf711f;
+  color: #838009;
 }
 
 .cp-badge--danger {
@@ -189,8 +189,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .cp-badge--info {
-  background: #e0e7ff;
-  color: #3730a3;
+ background: #e6ffe0;
+    color: #395233;
 }
 
 .cp-badge--muted {
@@ -3275,9 +3275,9 @@ body{
 }
 
 .cp-dashboard-status.is-warn{
-  background: rgba(240, 165, 107, 0.12);
-  border-color: rgba(240, 165, 107, 0.22);
-  color: #996740;
+ background: #d1cf711f;
+    border-color: #cfbfb342;
+    color: #838009;
 }
 
 .cp-dashboard-chip,
@@ -4964,9 +4964,9 @@ body{
 
 .cp-trip-module__status.is-warn,
 .cp-trip-glance__badge.is-warn{
-  background: rgba(240, 165, 107, 0.12);
-  border-color: rgba(240, 165, 107, 0.26);
-  color: #8a4e22;
+  background: #d1cf711f;
+    border-color: #cfbfb342;
+    color: #838009;
 }
 
 .cp-trip-module__status.is-ok,
