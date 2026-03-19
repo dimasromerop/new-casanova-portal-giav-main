@@ -274,7 +274,9 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
       ];
       $result['inserted'] = true;
       $result['should_notify'] = true;
-      if ($payment_link_id > 0 && function_exists('casanova_payment_link_mark_paid')) {
+      if ($payment_link_id > 0 && function_exists('casanova_payment_link_sync_after_cobro')) {
+        casanova_payment_link_sync_after_cobro($intent, $payment_link_id, $payment_link_scope, $cobro_id, $billing_dni);
+      } elseif ($payment_link_id > 0 && function_exists('casanova_payment_link_mark_paid')) {
         casanova_payment_link_mark_paid($payment_link_id, $cobro_id, $billing_dni);
       }
       if ($payment_link_id > 0 && $payment_link_scope === 'slot_base' && function_exists('casanova_payment_link_get')) {

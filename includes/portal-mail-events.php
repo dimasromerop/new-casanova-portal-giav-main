@@ -208,13 +208,15 @@ function casanova_on_payment_cobro_recorded_send_email(int $intent_id): void {
 
   $payment_link_scope = (string)($mail_ctx['payment_link_scope'] ?? '');
   $mode = (string)($mail_ctx['mode'] ?? '');
-  if ($payment_link_scope === 'group_base') {
-    $mode_label = __('Pago total', 'casanova-portal');
+  if (in_array($payment_link_scope, ['group_base', 'individual_link'], true)) {
+    $mode_label = __('Pago', 'casanova-portal');
     if ($mode === 'deposit') {
       $mode_label = __('Depósito', 'casanova-portal');
       $ctx['resto_message'] = __('Recibirás además un email con el enlace para completar el resto del pago.', 'casanova-portal');
     } elseif ($mode === 'rest') {
       $mode_label = __('Pago restante', 'casanova-portal');
+    } elseif ($payment_link_scope === 'group_base') {
+      $mode_label = __('Pago total', 'casanova-portal');
     }
 
     $ctx['is_group_payment'] = true;
