@@ -1316,8 +1316,10 @@ class Casanova_Trip_Service {
 
     $dx = is_object($r) ? ($r->DatosExternos ?? null) : null;
     $observations = trim(self::pick_first([
-      self::read_prop($r, ['Observaciones', 'Observacion', 'Comentarios', 'Comentario']),
-      self::read_prop($dx, ['Observaciones', 'Observacion', 'Comentarios', 'Comentario']),
+      // Solo exponemos notas pensadas para cliente. Las observaciones/comentarios genericos
+      // pueden incluir notas internas de GIAV y no deben salir en el portal publico.
+      self::read_prop($r, ['ObservacionesAlCliente', 'observacionesAlCliente']),
+      self::read_prop($dx, ['ObservacionesAlCliente', 'observacionesAlCliente']),
     ]));
 
     $actions = self::build_actions($lightweight ? false : $allow_voucher);
