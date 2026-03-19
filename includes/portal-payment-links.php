@@ -175,6 +175,27 @@ function casanova_payment_link_estimated_remaining_from_intent(object $intent): 
   return round(max(0.0, $pending_at_create - $amount), 2);
 }
 
+function casanova_payment_link_email_remaining_after_deposit(object $intent, int $idExpediente, int $idCliente = 0): float {
+  $estimated = casanova_payment_link_estimated_remaining_from_intent($intent);
+  $resolved = casanova_payment_link_resolve_pending_amount($idExpediente, $idCliente);
+
+  if (is_wp_error($resolved)) {
+    return $estimated;
+  }
+
+  $resolved = round((float)$resolved, 2);
+  if ($estimated > 0.01) {
+    if ($resolved - $estimated > 0.01) {
+      error_log('[CASANOVA][PAYLINK] email remaining fallback to estimated exp=' . $idExpediente . ' intent_id=' . (int)($intent->id ?? 0) . ' resolved=' . $resolved . ' estimated=' . $estimated);
+      return $estimated;
+    }
+
+    return round(min($resolved, $estimated), 2);
+  }
+
+  return $resolved;
+}
+
 function casanova_payment_link_resolve_pending_amount(int $idExpediente, int $idCliente = 0) {
   if ($idExpediente <= 0) {
     return new WP_Error('expediente', __('Expediente invalido.', 'casanova-portal'));
@@ -1063,12 +1084,11 @@ function casanova_maybe_send_magic_resto_link(int $intent_id): void {
 
   $remaining = 0.0;
   if ($payment_link_scope === 'individual_link') {
-    $remaining_calc = casanova_payment_link_resolve_pending_amount((int)($link->id_expediente ?? 0), (int)($intent->id_cliente ?? 0));
-    if (is_wp_error($remaining_calc)) {
-      $remaining = casanova_payment_link_estimated_remaining_from_intent($intent);
-    } else {
-      $remaining = round((float)$remaining_calc, 2);
-    }
+    $remaining = casanova_payment_link_email_remaining_after_deposit(
+      $intent,
+      (int)($link->id_expediente ?? 0),
+      (int)($intent->id_cliente ?? 0)
+    );
   } else {
     $total_due = (float)($meta['total_due'] ?? 0);
     $deposit_total = (float)($meta['deposit_total'] ?? 0);
