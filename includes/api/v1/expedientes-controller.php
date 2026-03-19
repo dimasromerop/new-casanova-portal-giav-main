@@ -140,6 +140,7 @@ class Casanova_Expedientes_Controller {
     $payments = self::describe_payments($idCliente, $id);
     $pending = isset($payments['pending']) ? $payments['pending'] : null;
     $bonuses_available = is_numeric($pending) ? ($pending <= 0.01) : null;
+    $hero_image_url = self::resolve_hero_image_url($idCliente, $id);
 
     return [
       'id' => $id,
@@ -154,12 +155,65 @@ class Casanova_Expedientes_Controller {
       'date_end' => $date_end,
       'date_range' => $date_range,
       'payments' => $payments,
+      'hero_image_url' => $hero_image_url,
       'bonuses' => ['available' => $bonuses_available],
       '_raw' => [
         'start' => $start_raw,
         'end' => $end_raw,
       ],
     ];
+  }
+
+  private static function resolve_hero_image_url(int $idCliente, int $idExpediente): string {
+    static $cache = [];
+
+    if ($idCliente <= 0 || $idExpediente <= 0) {
+      return '';
+    }
+
+    $cache_key = $idCliente . ':' . $idExpediente;
+    if (array_key_exists($cache_key, $cache)) {
+      return $cache[$cache_key];
+    }
+
+    if (!class_exists('Casanova_Trip_Service') || !method_exists('Casanova_Trip_Service', 'get_dashboard_summary')) {
+      $cache[$cache_key] = '';
+      return $cache[$cache_key];
+    }
+
+    $summary = Casanova_Trip_Service::get_dashboard_summary($idCliente, $idExpediente);
+    $cache[$cache_key] = is_array($summary) ? self::pick_hero_image_from_summary($summary) : '';
+
+    return $cache[$cache_key];
+  }
+
+  /**
+   * @param array<string,mixed> $summary
+   */
+  private static function pick_hero_image_from_summary(array $summary): string {
+    $package = isset($summary['package']) && is_array($summary['package']) ? $summary['package'] : null;
+    $package_services = ($package && isset($package['services']) && is_array($package['services']))
+      ? $package['services']
+      : [];
+    $extras = isset($summary['extras']) && is_array($summary['extras']) ? $summary['extras'] : [];
+
+    $pool = array_merge($package_services, $extras);
+    if ($package) {
+      $pool[] = $package;
+    }
+
+    foreach ($pool as $service) {
+      if (!is_array($service)) {
+        continue;
+      }
+
+      $url = isset($service['media']['image_url']) ? trim((string) $service['media']['image_url']) : '';
+      if ($url !== '') {
+        return $url;
+      }
+    }
+
+    return '';
   }
 
   private static function describe_payments(int $idCliente, int $idExpediente): array {

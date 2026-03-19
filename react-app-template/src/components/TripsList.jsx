@@ -64,6 +64,28 @@ function formatTripAmount(value, currency = "EUR") {
   return sanitizeText(euro(value, currency));
 }
 
+function pickHeroImageFromSummary(summary) {
+  if (!summary || typeof summary !== "object") return "";
+  const pkgServices = Array.isArray(summary?.package?.services) ? summary.package.services : [];
+  const extras = Array.isArray(summary?.extras) ? summary.extras : [];
+  const pool = [...pkgServices, ...extras];
+
+  for (const service of pool) {
+    const url = service?.media?.image_url;
+    if (typeof url === "string" && url.trim() !== "") {
+      return url.trim();
+    }
+  }
+
+  const packageImage = summary?.package?.media?.image_url || "";
+  return typeof packageImage === "string" ? packageImage.trim() : "";
+}
+
+function getTripHeroImage(trip) {
+  const directImage = trip?.hero_image_url || trip?.media?.image_url || trip?.trip?.hero_image_url || "";
+  return typeof directImage === "string" ? directImage.trim() : "";
+}
+
 function getTripFinancials(trip) {
   const payments = trip?.payments || null;
   const totalAmount = typeof payments?.total === "number" ? payments.total : Number.NaN;
@@ -153,6 +175,7 @@ function TripsCardsSkeleton({ count = 4 }) {
     <div className="cp-trips-skeleton-grid" aria-hidden="true">
       {Array.from({ length: count }).map((_, index) => (
         <div key={index} className="cp-trips-skeleton-card">
+          <span className="cp-trips-skeleton-hero" />
           <span className="cp-trips-skeleton-line is-eyebrow" />
           <span className="cp-trips-skeleton-line is-title" />
           <span className="cp-trips-skeleton-line is-copy" />
@@ -182,12 +205,35 @@ function TripCard({ trip, onOpen }) {
   const startLabel = formatTripDate(range.start);
   const endLabel = formatTripDate(range.end);
   const canPay = financials.hasPayments && financials.pendingAmount > 0.01;
+  const heroImageUrl = getTripHeroImage(trip);
+  const [heroReady, setHeroReady] = useState(!heroImageUrl);
+  const [heroError, setHeroError] = useState(false);
+
+  useEffect(() => {
+    setHeroReady(!heroImageUrl);
+    setHeroError(false);
+  }, [heroImageUrl]);
+
+  const showHeroImage = Boolean(heroImageUrl) && !heroError;
 
   return (
     <article className="cp-trip-card">
-      <div className="cp-trip-card__head">
-        <div className="cp-trip-card__reference">{reference}</div>
-        <BadgeLabel label={statusLabel} variant={statusVariant} className="cp-trip-card__status" />
+      <div className={`cp-trip-card__hero ${showHeroImage ? "has-image" : "is-fallback"} ${showHeroImage && !heroReady ? "is-loading" : ""}`.trim()}>
+        {showHeroImage ? (
+          <img
+            className={`cp-trip-card__hero-img ${heroReady ? "is-ready" : ""}`.trim()}
+            src={heroImageUrl}
+            alt=""
+            loading="lazy"
+            onLoad={() => setHeroReady(true)}
+            onError={() => setHeroError(true)}
+          />
+        ) : null}
+        <div className="cp-trip-card__hero-overlay" aria-hidden="true" />
+        <div className="cp-trip-card__hero-top">
+          <div className="cp-trip-card__reference">{reference}</div>
+          <BadgeLabel label={statusLabel} variant={statusVariant} className="cp-trip-card__status" />
+        </div>
       </div>
 
       <div className="cp-trip-card__title">{title}</div>
@@ -306,15 +352,33 @@ export default function TripsList({ mock, onOpen, dashboard }) {
     if (!mock) return;
 
     const allMockTrips = Array.isArray(dashboard?.trips) ? dashboard.trips : [];
+    const dashboardHeroTripId = Number(dashboard?.next_trip?.id || 0);
+    const dashboardHeroImage = pickHeroImageFromSummary(dashboard?.next_trip_summary);
     const extractedYears = Array.from(
       new Set(allMockTrips.map((trip) => getTripYear(trip)).filter(Boolean))
     ).sort((left, right) => right.localeCompare(left));
     const serverYears = extractedYears.length ? extractedYears : buildFallbackYears();
     const effectiveYear = serverYears.includes(year) ? year : serverYears[0];
-    const filteredTrips = allMockTrips.filter((trip) => {
-      const tripYear = getTripYear(trip);
-      return !effectiveYear || !tripYear || tripYear === effectiveYear;
-    });
+    const filteredTrips = allMockTrips
+      .filter((trip) => {
+        const tripYear = getTripYear(trip);
+        return !effectiveYear || !tripYear || tripYear === effectiveYear;
+      })
+      .map((trip) => {
+        if (
+          dashboardHeroImage &&
+          dashboardHeroTripId > 0 &&
+          Number(trip?.id || 0) === dashboardHeroTripId &&
+          !getTripHeroImage(trip)
+        ) {
+          return {
+            ...trip,
+            hero_image_url: dashboardHeroImage,
+          };
+        }
+
+        return trip;
+      });
 
     setYears(serverYears);
     if (effectiveYear !== year) {
