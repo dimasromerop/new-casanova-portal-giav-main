@@ -53,9 +53,9 @@ class Casanova_Dashboard_Service {
             if ($trip['payment_pending']) {
                 return [
                     'type' => 'payment',
-                    'label' => __('Pago pendiente', 'casanova'),
+                    'label' => __('Pago pendiente', 'casanova-portal'),
                     'description' => sprintf(
-                        __('Quedan %s € por abonar', 'casanova'),
+                        __('Quedan %s € por abonar', 'casanova-portal'),
                         $trip['amount_pending']
                     ),
                     'due_date' => $trip['payment_due_date'],
@@ -67,4 +67,3 @@ class Casanova_Dashboard_Service {
         return null;
     }
 }
-

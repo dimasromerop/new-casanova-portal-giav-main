@@ -332,7 +332,7 @@ class Casanova_Dashboard_Service {
         'url'        => $url,
         'days_left'  => $days_left,
         'calendar_url' => $ics_url,
-        // El dashboard solo necesita pagos completos para el prÃ³ximo viaje.
+        // El dashboard solo necesita pagos completos para el próximo viaje.
         // El resto se difiere a la vista detalle / expedientes.
         'payments'   => [],
         'bonuses'    => ['available' => null],

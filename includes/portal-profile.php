@@ -343,7 +343,7 @@ add_shortcode('casanova_mis_datos', function () {
     echo '<div class="casanova-subtitle">' . esc_html__('Dirección de facturación', 'casanova-portal') . '</div>';
 
       if ($read_only) {
-        echo '<div class="casanova-alert casanova-alert--warn"><strong>' . esc_html__('Vista cliente en modo solo lectura.', 'casanova-portal') . '</strong> ' . esc_html__('No se pueden guardar cambios mientras estÃ¡ activa la impersonaciÃ³n.', 'casanova-portal') . '</div>';
+        echo '<div class="casanova-alert casanova-alert--warn"><strong>' . esc_html__('Vista cliente en modo solo lectura.', 'casanova-portal') . '</strong> ' . esc_html__('No se pueden guardar cambios mientras está activa la impersonación.', 'casanova-portal') . '</div>';
       }
       echo '<form method="post" action="' . esc_url($action) . '" class="casanova-profile-form">';
   echo '<input type="hidden" name="action" value="casanova_update_address">';

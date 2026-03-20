@@ -77,7 +77,7 @@ class Casanova_Trip_Controller {
       if ($id <= 0) {
         $response = new WP_REST_Response([
           'status' => 'invalid',
-          'message' => __('Expediente invÃ¡lido', 'casanova-portal'),
+          'message' => __('Expediente inválido', 'casanova-portal'),
         ], 400);
         return $response;
       }

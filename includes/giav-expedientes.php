@@ -251,7 +251,7 @@ add_shortcode('casanova_expediente_header', function() {
 
   $html  = '<div class="casanova-exp-header'.($is_empty ? ' casanova-exp-header--empty' : '').'">';
   $html .= '  <button type="button" class="casanova-exp-header__btn" data-casanova-open-drawer aria-label="Abrir lista de expedientes">'
-        . ($is_empty ? 'Elegir expediente' : '' . esc_html__('Expedientes', 'casanova-portal') . '')
+        . ($is_empty ? esc_html__('Elegir expediente', 'casanova-portal') : '' . esc_html__('Expedientes', 'casanova-portal') . '')
         . ' <span class="casanova-exp-header__chev" aria-hidden="true">▾</span>'
         . '</button>';
   $html .= '  <div class="casanova-exp-header__text">';

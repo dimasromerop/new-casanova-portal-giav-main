@@ -561,7 +561,7 @@ function casanova_payments_render_settings_page(): void {
 
     if ($qclient !== '') {
       if (!function_exists('casanova_giav_cliente_search_simple')) {
-        echo '<div class="notice notice-error"><p>No estÃ¡ disponible la herramienta GIAV (falta <code>casanova_giav_cliente_search_simple</code>).</p></div>';
+        echo '<div class="notice notice-error"><p>No está disponible la herramienta GIAV (falta <code>casanova_giav_cliente_search_simple</code>).</p></div>';
       } else {
         $clients = casanova_giav_cliente_search_simple($qclient, 25, 0);
         if (is_wp_error($clients)) {

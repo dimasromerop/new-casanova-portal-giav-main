@@ -60,8 +60,8 @@ function casanova_portal_render_dashboard(int $user_id): string {
     }
   }
 
-  $next_html = '<p class="casanova-muted">No hay próximos viajes.</p>';
-  $pay_html  = '<p class="casanova-muted">No disponible.</p>';
+  $next_html = '<p class="casanova-muted">' . esc_html__('No hay próximos viajes.', 'casanova-portal') . '</p>';
+  $pay_html  = '<p class="casanova-muted">' . esc_html__('No disponible.', 'casanova-portal') . '</p>';
 
   if ($next) {
     $e = $next['obj'];

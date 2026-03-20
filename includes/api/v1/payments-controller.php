@@ -140,7 +140,7 @@ class Casanova_Payments_Controller {
     $amount = (float)($action['amount'] ?? 0);
     if ($amount <= 0) {
       return self::error_response(
-        esc_html__('Importe invÃ¡lido.', 'casanova-portal'),
+        esc_html__('Importe inválido.', 'casanova-portal'),
         'invalid_amount',
         400
       );
@@ -172,7 +172,7 @@ class Casanova_Payments_Controller {
     if ($method === 'aplazame') {
       if (!class_exists('Casanova_Aplazame_Service')) {
         return self::error_response(
-          esc_html__('Aplazame no estÃ¡ disponible en el servidor.', 'casanova-portal'),
+          esc_html__('Aplazame no está disponible en el servidor.', 'casanova-portal'),
           'aplazame_missing',
           500
         );
@@ -188,7 +188,7 @@ class Casanova_Payments_Controller {
       $public_cfg = Casanova_Aplazame_Service::public_checkout_config();
       if (is_wp_error($public_cfg)) {
         return self::error_response(
-          esc_html__('Aplazame no estÃ¡ configurado todavÃ­a.', 'casanova-portal'),
+          esc_html__('Aplazame no está configurado todavía.', 'casanova-portal'),
           'aplazame_config_missing',
           500
         );
@@ -393,15 +393,19 @@ class Casanova_Payments_Controller {
       'intent_id' => (int) $intent->id,
     ], home_url('/inespay/return/'));
 
+    $payment_label = $type === 'deposit'
+      ? __('Depósito', 'casanova-portal')
+      : __('Pago', 'casanova-portal');
+
     $req = [
       'amount' => (int)round($amount * 100),
-      'description' => ($mode === 'deposit' ? 'Depósito' : 'Pago') . ' Casanova Golf (' . (int)$expediente_id . ')',
-            'subject' => ($mode === 'deposit' ? 'Depósito' : 'Pago') . ' Casanova Golf (' . (int)$expediente_id . ')',
-'reference' => $reference,
+      'description' => $payment_label . ' Casanova Golf (' . (int)$expediente_id . ')',
+      'subject' => $payment_label . ' Casanova Golf (' . (int)$expediente_id . ')',
+      'reference' => $reference,
       'notifUrl' => $notif_url,
       'successLinkRedirect' => $success_link,
       'abortLinkRedirect' => $abort_link,
-            'urlNotif' => $notif_url,
+      'urlNotif' => $notif_url,
       'urlOk' => $success_link,
       'urlError' => $abort_link,
 'customData' => wp_json_encode([

@@ -1,0 +1,1712 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: casanova-portal\n"
+"POT-Creation-Date: 2026-03-20 12:21+0000\n"
+"PO-Revision-Date: 2026-03-20 12:21+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: casanova-portal i18n extractor\n"
+"X-Domain: casanova-portal\n"
+
+
+msgid "%d Pax"
+msgstr ""
+
+msgid "%d adultos"
+msgstr ""
+
+msgid "%d niños"
+msgstr ""
+
+msgid "%d pasajeros"
+msgstr ""
+
+msgid "%s años"
+msgstr ""
+
+msgid "%s nuevos"
+msgstr ""
+
+msgid "6 dígitos"
+msgstr ""
+
+msgid "Abre el portal usando el contexto real de este cliente, en modo solo lectura."
+msgstr ""
+
+msgid "Abrir"
+msgstr ""
+
+msgid "Abrir conversación"
+msgstr ""
+
+msgid "Abrir conversación en el admin"
+msgstr ""
+
+msgid "Abrir conversación en el portal"
+msgstr ""
+
+msgid "Abrir expediente"
+msgstr ""
+
+msgid "Acceder al portal"
+msgstr ""
+
+msgid "Acceso denegado"
+msgstr ""
+
+msgid "Accion"
+msgstr ""
+
+msgid "Acciones"
+msgstr ""
+
+msgid "Acción"
+msgstr ""
+
+msgid "Adjunto"
+msgstr ""
+
+msgid "Adjunto no válido."
+msgstr ""
+
+msgid "Ajuste"
+msgstr ""
+
+msgid "Alojamiento en: %s"
+msgstr ""
+
+msgid "Apellidos"
+msgstr ""
+
+msgid "Aplazame"
+msgstr ""
+
+msgid "Aplazame no está configurado todavía."
+msgstr ""
+
+msgid "Aplazame no está disponible en el servidor."
+msgstr ""
+
+msgid "Aplazame requiere direccion completa. Actualiza calle, codigo postal, poblacion y provincia en tu perfil antes de continuar."
+msgstr ""
+
+msgid "Aplazame requiere un email valido. Revísalo en tu perfil antes de continuar."
+msgstr ""
+
+msgid "Añadir a calendario"
+msgstr ""
+
+msgid "Año:"
+msgstr ""
+
+msgid "Aún no hay mensajes en esta conversación."
+msgstr ""
+
+msgid "Aún no tienes un viaje confirmado."
+msgstr ""
+
+msgid "Billetes"
+msgstr ""
+
+msgid "Bono"
+msgstr ""
+
+msgid "Bono / Voucher"
+msgstr ""
+
+msgid "Bono no disponible: el viaje tiene pagos pendientes"
+msgstr ""
+
+msgid "Bonos disponibles."
+msgstr ""
+
+msgid "Bonos no disponibles todavía."
+msgstr ""
+
+msgid "Bonos nuevos"
+msgstr ""
+
+msgid "Busca por nombre, email, usuario, ID de WordPress o GIAV ID. Para clientes sin acceso web, usa el GIAV ID o el DNI exacto."
+msgstr ""
+
+msgid "Buscar cliente"
+msgstr ""
+
+msgid "CP"
+msgstr ""
+
+msgid "Cada archivo puede ocupar como máximo %s."
+msgstr ""
+
+msgid "Calendario"
+msgstr ""
+
+msgid "Canje"
+msgstr ""
+
+msgid "Cerrar"
+msgstr ""
+
+msgid "Cerrar sesión"
+msgstr ""
+
+msgid "Check-in"
+msgstr ""
+
+msgid "Check-out"
+msgstr ""
+
+msgid "Check-out de: %s"
+msgstr ""
+
+msgid "Cliente"
+msgstr ""
+
+msgid "Cliente Casanova"
+msgstr ""
+
+msgid "Cliente GIAV #%d"
+msgstr ""
+
+msgid "Cliente encontrado en GIAV sin usuario WordPress vinculado. Puedes abrir una previsualizacion de su portal en modo solo lectura antes de darle acceso."
+msgstr ""
+
+msgid "Cliente encontrado en GIAV y ya vinculado al portal. Puedes abrir su portal directamente desde aqui."
+msgstr ""
+
+msgid "Cliente inválido."
+msgstr ""
+
+msgid "Cliente no encontrado."
+msgstr ""
+
+msgid "Cliente no vinculado"
+msgstr ""
+
+msgid "Cliente visto ahora mismo"
+msgstr ""
+
+msgid "Cliente:"
+msgstr ""
+
+msgid "Cobro"
+msgstr ""
+
+msgid "Concepto"
+msgstr ""
+
+msgid "Config Redsys incompleta"
+msgstr ""
+
+msgid "Config Redsys incompleta."
+msgstr ""
+
+msgid "Config Redsys no disponible"
+msgstr ""
+
+msgid "Config Redsys no disponible."
+msgstr ""
+
+msgid "Confirmación de pago recibido – Expediente %s"
+msgstr ""
+
+msgid "Contacto agencia:"
+msgstr ""
+
+msgid "Contacto proveedor:"
+msgstr ""
+
+msgid "Contenido del portal"
+msgstr ""
+
+msgid "Continuar al pago"
+msgstr ""
+
+msgid "Conversaciones propias del portal. GIAV sigue entrando en el timeline, pero aquí gestionas la parte bidireccional y las respuestas del equipo."
+msgstr ""
+
+msgid "Crear o vincular mi cuenta"
+msgstr ""
+
+msgid "Cuando tu reserva esté lista, aquí verás todos los detalles de tu viaje: hotel, campos de golf, pagos y documentación."
+msgstr ""
+
+msgid "Cuenta no vinculada."
+msgstr ""
+
+msgid "Código de verificación"
+msgstr ""
+
+msgid "Código:"
+msgstr ""
+
+msgid "DNI"
+msgstr ""
+
+msgid "DNI / NIF"
+msgstr ""
+
+msgid "DNI / NIF (obligatorio)"
+msgstr ""
+
+msgid "DNI inválido."
+msgstr ""
+
+msgid "Dashboard"
+msgstr ""
+
+msgid "Dashboard no disponible."
+msgstr ""
+
+msgid "Debes indicar Nombre y Apellidos."
+msgstr ""
+
+msgid "Debes indicar el DNI/NIF."
+msgstr ""
+
+msgid "Debes indicar email y DNI."
+msgstr ""
+
+msgid "Debes indicar un email valido."
+msgstr ""
+
+msgid "Debes indicar un email válido."
+msgstr ""
+
+msgid "Debes iniciar sesión."
+msgstr ""
+
+msgid "Debes iniciar sesión."
+msgstr ""
+
+msgid "Debes seleccionar al menos 1 persona."
+msgstr ""
+
+msgid "Demasiados intentos de pago. Espera unos minutos."
+msgstr ""
+
+msgid "Demasiados intentos. Espera unos minutos."
+msgstr ""
+
+msgid "Deposito viaje %s"
+msgstr ""
+
+msgid "Depósito"
+msgstr ""
+
+msgid "Depósito (Redsys %s)"
+msgstr ""
+
+msgid "Depósito no disponible"
+msgstr ""
+
+msgid "Descargar PDF"
+msgstr ""
+
+msgid "Descripción:"
+msgstr ""
+
+msgid "Destino:"
+msgstr ""
+
+msgid "Detalle"
+msgstr ""
+
+msgid "Detalle de reserva"
+msgstr ""
+
+msgid "Detalle del viaje"
+msgstr ""
+
+msgid "Detalles del servicio"
+msgstr ""
+
+msgid "Dirección"
+msgstr ""
+
+msgid "Dirección actualizada."
+msgstr ""
+
+msgid "Dirección de facturación"
+msgstr ""
+
+msgid "Distribución"
+msgstr ""
+
+msgid "Documentacion digital"
+msgstr ""
+
+msgid "Documento"
+msgstr ""
+
+msgid "Día %d - %s, %s"
+msgstr ""
+
+msgid "Edición desactivada en vista cliente"
+msgstr ""
+
+msgid "Ej.: 12345678Z"
+msgstr ""
+
+msgid "El adjunto ya no está disponible."
+msgstr ""
+
+msgid "El cliente de GIAV no existe o no se pudo cargar."
+msgstr ""
+
+msgid "El cliente lo verá dentro del portal y además recibirá un email con enlace a la conversación."
+msgstr ""
+
+msgid "El código caduca en 10 minutos."
+msgstr ""
+
+msgid "El código ha caducado. Solicita uno nuevo."
+msgstr ""
+
+msgid "El código no es válido. Revisa el email e inténtalo de nuevo."
+msgstr ""
+
+msgid "El depósito no está disponible para este expediente."
+msgstr ""
+
+msgid "El expediente no tiene importe pendiente en GIAV."
+msgstr ""
+
+msgid "El mensaje incluye %d adjunto."
+msgstr ""
+
+msgid "El mensaje incluye %d adjuntos."
+msgstr ""
+
+msgid "El mensaje no puede superar %d caracteres."
+msgstr ""
+
+msgid "El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses."
+msgstr ""
+
+msgid "El usuario seleccionado no tiene portal de cliente."
+msgstr ""
+
+msgid "Elegir expediente"
+msgstr ""
+
+msgid "Elegir otro cliente"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Email (obligatorio)"
+msgstr ""
+
+msgid "En %s días"
+msgstr ""
+
+msgid "En cada reserva podrás ver el bono y descargar el PDF."
+msgstr ""
+
+msgid "Enlace de grupo caducado."
+msgstr ""
+
+msgid "Enlace de grupo invalido."
+msgstr ""
+
+msgid "Enlace de grupo no disponible."
+msgstr ""
+
+msgid "Enlace de grupo no encontrado."
+msgstr ""
+
+msgid "Enlace de pago caducado."
+msgstr ""
+
+msgid "Enlace de pago invalido."
+msgstr ""
+
+msgid "Enlace de pago no disponible."
+msgstr ""
+
+msgid "Enlace de pago no encontrado."
+msgstr ""
+
+msgid "Enlace para completar tu pago – Expediente %s"
+msgstr ""
+
+msgid "Enviar código"
+msgstr ""
+
+msgid "Enviar enlace del resto"
+msgstr ""
+
+msgid "Enviar mensaje"
+msgstr ""
+
+msgid "Escribe aquí la respuesta para el cliente…"
+msgstr ""
+
+msgid "Escribe un mensaje o adjunta un archivo antes de enviarlo."
+msgstr ""
+
+msgid "Estado"
+msgstr ""
+
+msgid "Estado de pagos"
+msgstr ""
+
+msgid "Este bono es válido únicamente si el expediente no tiene pagos pendientes."
+msgstr ""
+
+msgid "Este cliente existe en GIAV, pero todavia no tiene usuario WordPress vinculado. La vista previa usa directamente su contexto de cliente."
+msgstr ""
+
+msgid "Estás enviando mensajes demasiado rápido. Espera un minuto."
+msgstr ""
+
+msgid "Estás viendo el portal como: %s"
+msgstr ""
+
+msgid "Expediente"
+msgstr ""
+
+msgid "Expediente #%s"
+msgstr ""
+
+msgid "Expediente %d"
+msgstr ""
+
+msgid "Expediente %s"
+msgstr ""
+
+msgid "Expediente GIAV"
+msgstr ""
+
+msgid "Expediente invalido."
+msgstr ""
+
+msgid "Expediente inválido"
+msgstr ""
+
+msgid "Expediente inválido"
+msgstr ""
+
+msgid "Expediente inválido."
+msgstr ""
+
+msgid "Expediente no encontrado."
+msgstr ""
+
+msgid "Expediente:"
+msgstr ""
+
+msgid "Expedientes"
+msgstr ""
+
+msgid "Factura"
+msgstr ""
+
+msgid "Factura #%s"
+msgstr ""
+
+msgid "Facturas"
+msgstr ""
+
+msgid "Falta CASANOVA_GIAV_APIKEY."
+msgstr ""
+
+msgid "Falta configurar la forma de pago de Aplazame en GIAV."
+msgstr ""
+
+msgid "Falta el expediente del mensaje."
+msgstr ""
+
+msgid "Fecha"
+msgstr ""
+
+msgid "Fecha emisión:"
+msgstr ""
+
+msgid "Fecha limite: %s"
+msgstr ""
+
+msgid "Fecha límite: %s"
+msgstr ""
+
+msgid "Fechas:"
+msgstr ""
+
+msgid "Firma Redsys invalida."
+msgstr ""
+
+msgid "Firma Redsys inválida"
+msgstr ""
+
+msgid "Función no disponible. Contacta con la agencia."
+msgstr ""
+
+msgid "GIAV #%d"
+msgstr ""
+
+msgid "GIAV no ha devuelto un PDF válido."
+msgstr ""
+
+msgid "Ganados"
+msgstr ""
+
+msgid "Gasto acumulado: <strong>%1$s</strong> · Ratio actual: <strong>x%2$s</strong>"
+msgstr ""
+
+msgid "Gasto confirmado"
+msgstr ""
+
+msgid "Gestión de Reservas"
+msgstr ""
+
+msgid "Golf"
+msgstr ""
+
+msgid "Gracias. Hemos recibido tu pago."
+msgstr ""
+
+msgid "Guardando…"
+msgstr ""
+
+msgid "Guardar dirección"
+msgstr ""
+
+msgid "Hace %s"
+msgstr ""
+
+msgid "Has hecho demasiados intentos. Espera unos minutos y vuelve a intentarlo."
+msgstr ""
+
+msgid "Has pagado %1$s de %2$s"
+msgstr ""
+
+msgid "Has superado el número de intentos. Solicita un código nuevo."
+msgstr ""
+
+msgid "Hemos registrado correctamente tu pago para el expediente <strong>%s</strong>."
+msgstr ""
+
+msgid "Hemos registrado un pago para tu expediente <strong>%s</strong>."
+msgstr ""
+
+msgid "Hilos recientes del portal"
+msgstr ""
+
+msgid "Histórico de cobros"
+msgstr ""
+
+msgid "Histórico de cobros (%s)"
+msgstr ""
+
+msgid "Hola %s,"
+msgstr ""
+
+msgid "Hola,"
+msgstr ""
+
+msgid "Hotel"
+msgstr ""
+
+msgid "ID de cliente inválido."
+msgstr ""
+
+msgid "IDs"
+msgstr ""
+
+msgid "Idioma actualizado."
+msgstr ""
+
+msgid "Idioma del portal"
+msgstr ""
+
+msgid "Idioma inválido."
+msgstr ""
+
+msgid "Importe"
+msgstr ""
+
+msgid "Importe inferior al minimo permitido."
+msgstr ""
+
+msgid "Importe invalido."
+msgstr ""
+
+msgid "Importe inválido."
+msgstr ""
+
+msgid "Importe inválido."
+msgstr ""
+
+msgid "Importe pendiente: %s"
+msgstr ""
+
+msgid "Importe por persona: %s EUR"
+msgstr ""
+
+msgid "Importe superior al pendiente."
+msgstr ""
+
+msgid "Inespay no devolvio un enlace de pago."
+msgstr ""
+
+msgid "Inespay no devolvió un enlace de pago."
+msgstr ""
+
+msgid "Inespay no disponible."
+msgstr ""
+
+msgid "Inespay no está disponible en el servidor."
+msgstr ""
+
+msgid "Info"
+msgstr ""
+
+msgid "Inicia sesión para vincular tu cuenta."
+msgstr ""
+
+msgid "Intent invalido."
+msgstr ""
+
+msgid "Intent inválido"
+msgstr ""
+
+msgid "Introduce el código que te hemos enviado."
+msgstr ""
+
+msgid "Introduce tu DNI."
+msgstr ""
+
+msgid "Introduce tu DNI. Te enviaremos un código al email asociado a tu reserva para verificar que eres el titular."
+msgstr ""
+
+msgid "Introduce un ID de expediente para ver la conversación completa y responder desde WordPress."
+msgstr ""
+
+msgid "Ir al portal"
+msgstr ""
+
+msgid "Jugadores"
+msgstr ""
+
+msgid "La contraseña actual no es correcta."
+msgstr ""
+
+msgid "La conversación no existe."
+msgstr ""
+
+msgid "La mensajería del portal no está disponible."
+msgstr ""
+
+msgid "La nueva contraseña debe tener al menos 8 caracteres."
+msgstr ""
+
+msgid "Las contraseñas no coinciden."
+msgstr ""
+
+msgid "Limpiar"
+msgstr ""
+
+msgid "Localizador"
+msgstr ""
+
+msgid "Localizador / Reference"
+msgstr ""
+
+msgid "Localizador:"
+msgstr ""
+
+msgid "Logo"
+msgstr ""
+
+msgid "Los adjuntos del portal no están disponibles."
+msgstr ""
+
+msgid "Mensaje enviado."
+msgstr ""
+
+msgid "Mensajes"
+msgstr ""
+
+msgid "Mensajes nuevos"
+msgstr ""
+
+msgid "Metodo de pago"
+msgstr ""
+
+msgid "Mi perfil"
+msgstr ""
+
+msgid "Mis datos"
+msgstr ""
+
+msgid "Modalidad"
+msgstr ""
+
+msgid "Modo de vista cliente activo. Solo lectura."
+msgstr ""
+
+msgid "Modo prueba"
+msgstr ""
+
+msgid "Modo solo lectura activo."
+msgstr ""
+
+msgid "Mostrando clientes recientes con portal activo. Usa el buscador para afinar la seleccion o introduce un GIAV ID/DNI exacto para previsualizar clientes sin acceso web."
+msgstr ""
+
+msgid "Movimiento"
+msgstr ""
+
+msgid "Movimientos"
+msgstr ""
+
+msgid "Mulligans"
+msgstr ""
+
+msgid "Mulligans usados"
+msgstr ""
+
+msgid "Método de pago"
+msgstr ""
+
+msgid "Método de pago inválido."
+msgstr ""
+
+msgid "Navegación del portal"
+msgstr ""
+
+msgid "Necesitas iniciar sesión para acceder al portal. <a href=\"%s\">Iniciar sesión</a>"
+msgstr ""
+
+msgid "Nivel: %s"
+msgstr ""
+
+msgid "No autorizado"
+msgstr ""
+
+msgid "No autorizado para este expediente."
+msgstr ""
+
+msgid "No autorizado."
+msgstr ""
+
+msgid "No disponible."
+msgstr ""
+
+msgid "No encontrado. Contacta con la agencia."
+msgstr ""
+
+msgid "No encontramos ninguna reserva asociada a ese DNI. Si ya has viajado con nosotros, escríbenos y lo revisamos."
+msgstr ""
+
+msgid "No encontramos un código activo. Solicita uno nuevo."
+msgstr ""
+
+msgid "No está disponible la actualización de perfil."
+msgstr ""
+
+msgid "No hay"
+msgstr ""
+
+msgid "No hay expediente seleccionado."
+msgstr ""
+
+msgid "No hay importe pendiente para pagar."
+msgstr ""
+
+msgid "No hay mensajes recientes."
+msgstr ""
+
+msgid "No hay mensajes."
+msgstr ""
+
+msgid "No hay movimientos todavía."
+msgstr ""
+
+msgid "No hay pagos pendientes."
+msgstr ""
+
+msgid "No hay pasajeros registrados en este expediente."
+msgstr ""
+
+msgid "No hay próximos viajes."
+msgstr ""
+
+msgid "No hay reservas en este expediente."
+msgstr ""
+
+msgid "No hay servicios programados."
+msgstr ""
+
+msgid "No hay un viaje activo o próximo para mostrar pagos."
+msgstr ""
+
+msgid "No hay viajes próximos para mostrar aquí."
+msgstr ""
+
+msgid "No hay viajes próximos."
+msgstr ""
+
+msgid "No hay viajes registrados en %s."
+msgstr ""
+
+msgid "No hemos encontrado clientes con portal para esa busqueda."
+msgstr ""
+
+msgid "No hemos podido consultar el sistema. Inténtalo más tarde."
+msgstr ""
+
+msgid "No hemos podido enviar el código porque no hay un email válido asociado a tu reserva. Escríbenos y lo revisamos."
+msgstr ""
+
+msgid "No hemos podido enviar el email. Inténtalo más tarde."
+msgstr ""
+
+msgid "No podemos consultar el sistema en este momento. Inténtalo más tarde."
+msgstr ""
+
+msgid "No se encontraron reservas para este expediente."
+msgstr ""
+
+msgid "No se encontro el expediente en GIAV."
+msgstr ""
+
+msgid "No se encontró el archivo del adjunto."
+msgstr ""
+
+msgid "No se ha encontrado el archivo temporal del adjunto."
+msgstr ""
+
+msgid "No se ha encontrado el usuario."
+msgstr ""
+
+msgid "No se ha podido cargar el expediente."
+msgstr ""
+
+msgid "No se ha podido iniciar la verificación. Contacta con nosotros."
+msgstr ""
+
+msgid "No se ha podido validar el código. Contacta con nosotros."
+msgstr ""
+
+msgid "No se han podido cargar las facturas. Inténtalo más tarde."
+msgstr ""
+
+msgid "No se han podido cargar las reservas"
+msgstr ""
+
+msgid "No se han podido cargar los datos del cliente."
+msgstr ""
+
+msgid "No se han podido cargar los expedientes. Inténtalo más tarde."
+msgstr ""
+
+msgid "No se han podido cargar los mensajes."
+msgstr ""
+
+msgid "No se han podido cargar los pagos. Inténtalo más tarde."
+msgstr ""
+
+msgid "No se han podido cargar tus Mulligans ahora mismo."
+msgstr ""
+
+msgid "No se han podido cargar tus datos. Inténtalo más tarde."
+msgstr ""
+
+msgid "No se pudieron cargar las reservas del expediente."
+msgstr ""
+
+msgid "No se pudieron cargar las reservas."
+msgstr ""
+
+msgid "No se pudieron cargar reservas"
+msgstr ""
+
+msgid "No se pudo actualizar el idioma."
+msgstr ""
+
+msgid "No se pudo actualizar la dirección."
+msgstr ""
+
+msgid "No se pudo calcular el estado de pago"
+msgstr ""
+
+msgid "No se pudo calcular el pago."
+msgstr ""
+
+msgid "No se pudo calcular el pendiente del expediente."
+msgstr ""
+
+msgid "No se pudo cargar el expediente."
+msgstr ""
+
+msgid "No se pudo cargar el viaje para generar el programa."
+msgstr ""
+
+msgid "No se pudo completar el pago"
+msgstr ""
+
+msgid "No se pudo consultar GIAV para calcular el importe."
+msgstr ""
+
+msgid "No se pudo consultar GIAV para calcular el pendiente."
+msgstr ""
+
+msgid "No se pudo crear el intento de pago."
+msgstr ""
+
+msgid "No se pudo crear la carpeta del adjunto."
+msgstr ""
+
+msgid "No se pudo crear la conversación."
+msgstr ""
+
+msgid "No se pudo determinar el importe por persona."
+msgstr ""
+
+msgid "No se pudo enviar el mensaje. Revisa el expediente y el contenido."
+msgstr ""
+
+msgid "No se pudo generar el PDF."
+msgstr ""
+
+msgid "No se pudo generar el programa del viaje."
+msgstr ""
+
+msgid "No se pudo generar la URL de pago."
+msgstr ""
+
+msgid "No se pudo guardar el mensaje."
+msgstr ""
+
+msgid "No se pudo guardar uno de los adjuntos."
+msgstr ""
+
+msgid "No se pudo identificar al usuario."
+msgstr ""
+
+msgid "No se pudo inicializar el pago (intents)."
+msgstr ""
+
+msgid "No se pudo iniciar Aplazame."
+msgstr ""
+
+msgid "No se pudo iniciar el pago por transferencia."
+msgstr ""
+
+msgid "No se pudo iniciar la conversación."
+msgstr ""
+
+msgid "No se pudo iniciar la vista cliente."
+msgstr ""
+
+msgid "No se pudo preparar la carpeta de adjuntos."
+msgstr ""
+
+msgid "No se pudo preparar la conversación."
+msgstr ""
+
+msgid "No se pudo recuperar el mensaje enviado."
+msgstr ""
+
+msgid "No se pudo recuperar la conversación."
+msgstr ""
+
+msgid "No se pudo reenviar el enlace. Contacta con la agencia."
+msgstr ""
+
+msgid "No se pudo registrar uno de los adjuntos."
+msgstr ""
+
+msgid "No se pudo resolver el cliente de este expediente. Si ya existe un hilo local, revisa los datos de GIAV."
+msgstr ""
+
+msgid "No se pudo resolver el cliente del expediente."
+msgstr ""
+
+msgid "No se pudo resolver el cliente del portal."
+msgstr ""
+
+msgid "No se pudo validar la factura."
+msgstr ""
+
+msgid "No se puede calcular el estado de pagos."
+msgstr ""
+
+msgid "No se puede verificar la propiedad del expediente."
+msgstr ""
+
+msgid "No se pueden cargar los datos del cliente para Aplazame."
+msgstr ""
+
+msgid "No se pueden guardar cambios mientras está activa la impersonación."
+msgstr ""
+
+msgid "No tienes acceso a esta factura."
+msgstr ""
+
+msgid "No tienes acceso a este adjunto."
+msgstr ""
+
+msgid "No tienes acceso a este expediente."
+msgstr ""
+
+msgid "No tienes la cuenta vinculada todavía."
+msgstr ""
+
+msgid "No tienes permiso para acceder a este expediente."
+msgstr ""
+
+msgid "No tienes permiso para ver este expediente."
+msgstr ""
+
+msgid "No tienes viajes próximos."
+msgstr ""
+
+msgid "Nombre"
+msgstr ""
+
+msgid "Nombre, email, usuario, WP ID, GIAV ID o DNI exacto"
+msgstr ""
+
+msgid "Nombres de viajeros (opcional)"
+msgstr ""
+
+msgid "Nonce inválido"
+msgstr ""
+
+msgid "Nota: este listado refleja los cobros registrados en el expediente (cobros y reembolsos)."
+msgstr ""
+
+msgid "Nuevo"
+msgstr ""
+
+msgid "Nuevo mensaje del cliente · %s"
+msgstr ""
+
+msgid "Nuevo mensaje sobre tu viaje · %s"
+msgstr ""
+
+msgid "Observaciones"
+msgstr ""
+
+msgid "Observaciones / Remarks"
+msgstr ""
+
+msgid "Observaciones:"
+msgstr ""
+
+msgid "Otro viaje"
+msgstr ""
+
+msgid "Otros servicios"
+msgstr ""
+
+msgid "PDF"
+msgstr ""
+
+msgid "PSD2 · Sin recargo."
+msgstr ""
+
+msgid "PVP:"
+msgstr ""
+
+msgid "Pagada"
+msgstr ""
+
+msgid "Pagado"
+msgstr ""
+
+msgid "Pagado:"
+msgstr ""
+
+msgid "Pagado: %s €"
+msgstr ""
+
+msgid "Pagador"
+msgstr ""
+
+msgid "Pagar"
+msgstr ""
+
+msgid "Pagar %s %s"
+msgstr ""
+
+msgid "Pagar ahora"
+msgstr ""
+
+msgid "Pagar ahora: %s"
+msgstr ""
+
+msgid "Pagar deposito"
+msgstr ""
+
+msgid "Pagar deposito: %s"
+msgstr ""
+
+msgid "Pagar depósito"
+msgstr ""
+
+msgid "Pagar depósito (%1$s%%): %2$s"
+msgstr ""
+
+msgid "Pagar el resto"
+msgstr ""
+
+msgid "Pagar el total pendiente: %s"
+msgstr ""
+
+msgid "Pagar total"
+msgstr ""
+
+msgid "Pagar total pendiente: %s"
+msgstr ""
+
+msgid "Pago"
+msgstr ""
+
+msgid "Pago (Redsys %s)"
+msgstr ""
+
+msgid "Pago completado"
+msgstr ""
+
+msgid "Pago completado – Documentación disponible – Expediente %s"
+msgstr ""
+
+msgid "Pago de expediente"
+msgstr ""
+
+msgid "Pago del viaje"
+msgstr ""
+
+msgid "Pago desactivado en vista cliente"
+msgstr ""
+
+msgid "Pago inmediato y seguro."
+msgstr ""
+
+msgid "Pago no completado."
+msgstr ""
+
+msgid "Pago pendiente"
+msgstr ""
+
+msgid "Pago recibido"
+msgstr ""
+
+msgid "Pago registrado"
+msgstr ""
+
+msgid "Pago registrado correctamente"
+msgstr ""
+
+msgid "Pago restante"
+msgstr ""
+
+msgid "Pago seguro"
+msgstr ""
+
+msgid "Pago total"
+msgstr ""
+
+msgid "Pago viaje %s"
+msgstr ""
+
+msgid "Pagos"
+msgstr ""
+
+msgid "Paquete"
+msgstr ""
+
+msgid "Para confirmar tu viaje, puedes pagar un depósito de %1$s hasta el %2$s"
+msgstr ""
+
+msgid "Para confirmar tu viaje, puedes pagar un depósito de %s"
+msgstr ""
+
+msgid "Para:"
+msgstr ""
+
+msgid "Pasajero"
+msgstr ""
+
+msgid "Pasajero #%d"
+msgstr ""
+
+msgid "Pasajeros"
+msgstr ""
+
+msgid "Pax:"
+msgstr ""
+
+msgid "País"
+msgstr ""
+
+msgid "Pendiente"
+msgstr ""
+
+msgid "Pendiente %s"
+msgstr ""
+
+msgid "Pendiente de pago: %s"
+msgstr ""
+
+msgid "Pendiente estimado:"
+msgstr ""
+
+msgid "Pendiente total: %s"
+msgstr ""
+
+msgid "Pendiente:"
+msgstr ""
+
+msgid "Pendiente: %s"
+msgstr ""
+
+msgid "Personas incluidas en este pago"
+msgstr ""
+
+msgid "Población"
+msgstr ""
+
+msgid "Por seguridad, el DNI y el email no se pueden modificar desde aquí."
+msgstr ""
+
+msgid "Portal"
+msgstr ""
+
+msgid "Portal cliente"
+msgstr ""
+
+msgid "Previsualizacion GIAV activa: %s"
+msgstr ""
+
+msgid "Previsualizacion de cliente activa. Solo lectura."
+msgstr ""
+
+msgid "Programa del viaje"
+msgstr ""
+
+msgid "Programa del viaje no disponible."
+msgstr ""
+
+msgid "Programa del viaje por expediente"
+msgstr ""
+
+msgid "Progreso Mulligans"
+msgstr ""
+
+msgid "Progreso de pago"
+msgstr ""
+
+msgid "Proveedor"
+msgstr ""
+
+msgid "Provincia"
+msgstr ""
+
+msgid "Próximo viaje"
+msgstr ""
+
+msgid "Puedes adjuntar como máximo %d archivos por mensaje."
+msgstr ""
+
+msgid "Puedes ver el estado actualizado aquí:"
+msgstr ""
+
+msgid "Quedan %s € por abonar"
+msgstr ""
+
+msgid "Quieres acceder a tus documentos y facturas?"
+msgstr ""
+
+msgid "Qué necesitas hacer ahora"
+msgstr ""
+
+msgid "Recibirás además un email con el enlace para completar el resto del pago."
+msgstr ""
+
+msgid "Redsys no disponible"
+msgstr ""
+
+msgid "Redsys no disponible."
+msgstr ""
+
+msgid "Reembolso"
+msgstr ""
+
+msgid "Reenviar código"
+msgstr ""
+
+msgid "Reservas"
+msgstr ""
+
+msgid "Reservas no disponibles."
+msgstr ""
+
+msgid "Responder desde WordPress"
+msgstr ""
+
+msgid "Respuesta Cliente_GET inesperada."
+msgstr ""
+
+msgid "Rooming"
+msgstr ""
+
+msgid "Régimen"
+msgstr ""
+
+msgid "Régimen:"
+msgstr ""
+
+msgid "Salir de vista cliente"
+msgstr ""
+
+msgid "Segmentos:"
+msgstr ""
+
+msgid "Seguridad"
+msgstr ""
+
+msgid "Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador."
+msgstr ""
+
+msgid "Selecciona un expediente para ver su detalle."
+msgstr ""
+
+msgid "Selecciona un expediente para ver sus facturas."
+msgstr ""
+
+msgid "Selecciona un expediente para ver sus mensajes."
+msgstr ""
+
+msgid "Servicio"
+msgstr ""
+
+msgid "Servicio degradado."
+msgstr ""
+
+msgid "Servicios"
+msgstr ""
+
+msgid "Servicios incluidos"
+msgstr ""
+
+msgid "Si necesitas ayuda con el pago, contacta con la agencia."
+msgstr ""
+
+msgid "Si no has solicitado este enlace, puedes ignorar este email."
+msgstr ""
+
+msgid "Si persiste, lo revisamos."
+msgstr ""
+
+msgid "Si quedaba importe pendiente, recibiras ademas un enlace por email para completar el pago mas adelante."
+msgstr ""
+
+msgid "Si tienes dudas, contacta con la agencia antes de pagar."
+msgstr ""
+
+msgid "Sin leer"
+msgstr ""
+
+msgid "Sin portal"
+msgstr ""
+
+msgid "Sin servicios programados para este día."
+msgstr ""
+
+msgid "Sistema GIAV no disponible."
+msgstr ""
+
+msgid "Sistema de grupos no disponible."
+msgstr ""
+
+msgid "Sistema de pago no disponible"
+msgstr ""
+
+msgid "Sistema de pago no disponible."
+msgstr ""
+
+msgid "Sistema de pagos no disponible"
+msgstr ""
+
+msgid "Sistema de reservas no disponible"
+msgstr ""
+
+msgid "Solicitud no valida."
+msgstr ""
+
+msgid "Solo para referencia de la agencia. 1 nombre por línea."
+msgstr ""
+
+msgid "Solo se admiten PDF, JPG, PNG o WEBP."
+msgstr ""
+
+msgid "Solo tarjeta disponible."
+msgstr ""
+
+msgid "Sí, eres oficialmente peligroso."
+msgstr ""
+
+msgid "También tienes otro viaje a la vista: <a href=\"%s\">%s</a>.%s"
+msgstr ""
+
+msgid "Tarjeta"
+msgstr ""
+
+msgid "Te faltan <strong>%1$s</strong> para subir a <strong>%2$s</strong>."
+msgstr ""
+
+msgid "Te hemos enviado la confirmacion a %s."
+msgstr ""
+
+msgid "Te hemos reenviado el enlace de pago final si existía un depósito registrado."
+msgstr ""
+
+msgid "Teléfono"
+msgstr ""
+
+msgid "Texto adicional (bono):"
+msgstr ""
+
+msgid "Texto: máximo %d caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP."
+msgstr ""
+
+msgid "Tienes %d facturas disponibles."
+msgstr ""
+
+msgid "Tienes <strong>%s</strong> factura disponible."
+msgstr ""
+
+msgid "Tienes <strong>%s</strong> facturas disponibles."
+msgstr ""
+
+msgid "Tienes un nuevo mensaje de Casanova Golf en tu portal de cliente."
+msgstr ""
+
+msgid "Tienes un pago pendiente de %s."
+msgstr ""
+
+msgid "Tienes un pago pendiente de <strong>%s</strong> para este viaje."
+msgstr ""
+
+msgid "Tipo"
+msgstr ""
+
+msgid "Tipo de pago inválido."
+msgstr ""
+
+msgid "Tipo:"
+msgstr ""
+
+msgid "Todavia no hay clientes con portal listados."
+msgstr ""
+
+msgid "Todavía no has realizado ningún pago en este viaje."
+msgstr ""
+
+msgid "Todavía no hay facturas emitidas."
+msgstr ""
+
+msgid "Todavía no hay mensajes propios del portal."
+msgstr ""
+
+msgid "Todo listo"
+msgstr ""
+
+msgid "Todo pagado"
+msgstr ""
+
+msgid "Total"
+msgstr ""
+
+msgid "Total expediente"
+msgstr ""
+
+msgid "Total pagado"
+msgstr ""
+
+msgid "Total viaje"
+msgstr ""
+
+msgid "Total:"
+msgstr ""
+
+msgid "Transferencia bancaria"
+msgstr ""
+
+msgid "Transferencia bancaria online"
+msgstr ""
+
+msgid "Transferencia no disponible."
+msgstr ""
+
+msgid "Tu cuenta"
+msgstr ""
+
+msgid "Tu cuenta no está vinculada todavía."
+msgstr ""
+
+msgid "Tu cuenta no está vinculada a un cliente casanova."
+msgstr ""
+
+msgid "Tu cuenta no está vinculada a un cliente."
+msgstr ""
+
+msgid "Tu cuenta no está vinculada todavía."
+msgstr ""
+
+msgid "Tu cuenta ya está vinculada."
+msgstr ""
+
+msgid "Tu código de verificación"
+msgstr ""
+
+msgid "Tu código de verificación para vincular tu cuenta es: %s\\n\\nCaduca en 10 minutos.\\n\\nSi no has solicitado este código, puedes ignorar este email."
+msgstr ""
+
+msgid "Tu expediente <strong>%s</strong> está <strong>completamente pagado</strong>."
+msgstr ""
+
+msgid "Tu próximo viaje está al día. No tienes acciones pendientes ahora mismo."
+msgstr ""
+
+msgid "Tu viaje"
+msgstr ""
+
+msgid "Tus Mulligans"
+msgstr ""
+
+msgid "Uno de los archivos adjuntos está vacío."
+msgstr ""
+
+msgid "Uno de los archivos no se ha podido subir."
+msgstr ""
+
+msgid "Usa el botón para ver tu lista de expedientes."
+msgstr ""
+
+msgid "Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos el enlace del pago restante."
+msgstr ""
+
+msgid "Usuario"
+msgstr ""
+
+msgid "Ver"
+msgstr ""
+
+msgid "Ver bono"
+msgstr ""
+
+msgid "Ver detalle"
+msgstr ""
+
+msgid "Ver detalles"
+msgstr ""
+
+msgid "Ver expediente"
+msgstr ""
+
+msgid "Ver facturas"
+msgstr ""
+
+msgid "Ver mensajes"
+msgstr ""
+
+msgid "Ver movimientos"
+msgstr ""
+
+msgid "Ver opciones de pago"
+msgstr ""
+
+msgid "Ver pagos"
+msgstr ""
+
+msgid "Ver portal como cliente"
+msgstr ""
+
+msgid "Ver viaje"
+msgstr ""
+
+msgid "Ver últimos movimientos"
+msgstr ""
+
+msgid "Verificar y continuar"
+msgstr ""
+
+msgid "Viaje"
+msgstr ""
+
+msgid "Viaje: %s"
+msgstr ""
+
+msgid "Viaje: <strong>%1$s</strong>%2$s"
+msgstr ""
+
+msgid "Viajes"
+msgstr ""
+
+msgid "Vincula tu cuenta"
+msgstr ""
+
+msgid "Vista cliente"
+msgstr ""
+
+msgid "Vista cliente activa: %s"
+msgstr ""
+
+msgid "Vista cliente en modo solo lectura."
+msgstr ""
+
+msgid "Vista solo lectura"
+msgstr ""
+
+msgid "Volver"
+msgstr ""
+
+msgid "Voucher no disponible."
+msgstr ""
+
+msgid "Vuelo"
+msgstr ""
+
+msgid "Vuelos"
+msgstr ""
+
+msgid "WP #%d"
+msgstr ""
+
+msgid "Ya hemos registrado tu depósito. Cuando quieras, puedes completar el resto del pago desde este enlace seguro:"
+msgstr ""
+
+msgid "Ya puedes acceder a tu documentación (bonos y facturas) desde el portal:"
+msgstr ""
+
+msgid "ha enviado un mensaje desde el portal de cliente."
+msgstr ""
+
+msgid "¿No tienes acceso a ese email? Escríbenos y lo solucionamos."
+msgstr ""
+
+msgid "¿Ya pagaste el depósito? Reenviar enlace para pagar el resto"
+msgstr ""
+
+msgid "Última actualización hace %s"
+msgstr ""
+
+msgid "Última sincronización:"
+msgstr ""
+
+msgid "Último mensaje"
+msgstr ""
+
+msgid "← Volver a mis expedientes"
+msgstr ""

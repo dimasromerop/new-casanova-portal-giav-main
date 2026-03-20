@@ -644,10 +644,14 @@ function casanova_handle_payment_link_request(string $token): void {
         'intent_id' => (int)$intent->id,
       ], casanova_payment_link_url((string)$link->token));
 
+      $payment_label = $mode === 'deposit'
+        ? __('Depósito', 'casanova-portal')
+        : __('Pago', 'casanova-portal');
+
       $req = [
         'amount' => (int)round($amount_to_pay * 100),
-        'description' => ($mode === 'deposit' ? 'Deposito' : 'Pago') . ' Casanova Golf (' . (int)$idExpediente . ')',
-        'subject' => ($mode === 'deposit' ? 'Deposito' : 'Pago') . ' Casanova Golf (' . (int)$idExpediente . ')',
+        'description' => $payment_label . ' Casanova Golf (' . (int)$idExpediente . ')',
+        'subject' => $payment_label . ' Casanova Golf (' . (int)$idExpediente . ')',
         'reference' => $reference,
         'notifUrl' => $notif_url,
         'successLinkRedirect' => $success_link,
