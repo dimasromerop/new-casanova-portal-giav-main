@@ -38,6 +38,9 @@ add_action('template_redirect', function () {
 
 function casanova_handle_group_pay_request(string $token): void {
   $token = sanitize_text_field($token);
+  if (function_exists('casanova_portal_maybe_switch_public_locale')) {
+    casanova_portal_maybe_switch_public_locale();
+  }
   if ($token === '') {
     wp_die(esc_html__('Enlace de grupo invalido.', 'casanova-portal'), 404);
   }
@@ -130,6 +133,9 @@ function casanova_handle_group_pay_request(string $token): void {
     $cfg = Casanova_Inespay_Service::config();
     $inespay_enabled = !is_wp_error($cfg);
   }
+  $public_locale = function_exists('casanova_portal_get_public_requested_locale')
+    ? casanova_portal_get_public_requested_locale()
+    : '';
 
   $flash_msg = '';
   $flash_type = 'info';
@@ -274,6 +280,7 @@ function casanova_handle_group_pay_request(string $token): void {
         'auto_start' => true,
         'total_due' => $total_due,
         'deposit_total' => ($mode === 'deposit') ? $deposit_total : 0,
+        'locale' => $public_locale,
       ],
     ]);
 
@@ -283,6 +290,9 @@ function casanova_handle_group_pay_request(string $token): void {
     }
 
     $url = add_query_arg(['autostart' => '1'], casanova_payment_link_url((string)($link->token ?? '')));
+    if (function_exists('casanova_portal_add_public_locale_arg')) {
+      $url = casanova_portal_add_public_locale_arg($url, $public_locale);
+    }
     wp_safe_redirect($url);
     exit;
     }
@@ -305,10 +315,40 @@ function casanova_handle_group_pay_request(string $token): void {
     }
   }
 
+  $unit_deposit_preview = $deposit_allowed && function_exists('casanova_payments_calc_deposit_amount')
+    ? round((float) casanova_payments_calc_deposit_amount($unit_total, $idExpediente), 2)
+    : 0.0;
+
+  $default_amount = $deposit_allowed && $unit_deposit_preview > 0.009 && $unit_deposit_preview + 0.01 < $unit_total
+    ? $unit_deposit_preview
+    : $unit_total;
+  $transfer_note = __('El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
+  $group_page_url = function_exists('casanova_group_pay_url') ? casanova_group_pay_url((string)$group->token) : home_url('/');
+  if (function_exists('casanova_portal_add_public_locale_arg')) {
+    $group_page_url = casanova_portal_add_public_locale_arg($group_page_url, $public_locale);
+  }
+  $selector_html = function_exists('casanova_portal_public_language_selector_html')
+    ? casanova_portal_public_language_selector_html($group_page_url)
+    : '';
+  $public_locale_tag = function_exists('casanova_portal_normalize_locale_tag')
+    ? casanova_portal_normalize_locale_tag($public_locale)
+    : str_replace('_', '-', $public_locale);
+  if ($public_locale_tag === '') {
+    $public_locale_tag = 'es-ES';
+  }
+  $js_summary_amount_template = sprintf(__('Importe por persona: %s EUR', 'casanova-portal'), '__AMOUNT__');
+  $js_people_label = __('Personas incluidas en este pago', 'casanova-portal');
+  $js_deposit_label = __('Depósito', 'casanova-portal');
+  $js_total_label = __('Total', 'casanova-portal');
+  $js_pay_label = __('Pagar', 'casanova-portal');
+
   $nonce = wp_create_nonce('casanova_group_pay_' . (int)$group->id);
 
   casanova_portal_render_public_document_start(__('Pago del viaje', 'casanova-portal'));
   echo '<section class="casanova-public-page">';
+  if ($selector_html !== '') {
+    echo '<div class="casanova-public-page__toolbar">' . $selector_html . '</div>';
+  }
   echo casanova_portal_public_logo_html();
   echo '<h2 class="casanova-public-page__title">' . esc_html__('Pago del viaje', 'casanova-portal') . '</h2>';
   echo '<p class="casanova-public-page__intro">' . esc_html__('Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador.', 'casanova-portal') . '</p>';
@@ -318,20 +358,11 @@ function casanova_handle_group_pay_request(string $token): void {
   ) . '</p>';
 
   echo '<div class="casanova-public-page__summary">';
-  echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Importe por persona: %s EUR', 'casanova-portal'), number_format($unit_total, 2, ',', '.'))) . '</div>';
+  echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Importe por persona: %s EUR', 'casanova-portal'), number_format_i18n($unit_total, 2))) . '</div>';
   if ($deadline_txt !== '') {
     echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Fecha limite: %s', 'casanova-portal'), $deadline_txt)) . '</div>';
   }
   echo '</div>';
-
-  $unit_deposit_preview = $deposit_allowed && function_exists('casanova_payments_calc_deposit_amount')
-    ? round((float) casanova_payments_calc_deposit_amount($unit_total, $idExpediente), 2)
-    : 0.0;
-
-  $default_amount = $deposit_allowed && $unit_deposit_preview > 0.009 && $unit_deposit_preview + 0.01 < $unit_total
-    ? $unit_deposit_preview
-    : $unit_total;
-  $transfer_note = __('El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
 
   if ($flash_msg !== '') {
     $notice_class = 'casanova-public-page__notice casanova-public-page__notice--info';
@@ -346,7 +377,7 @@ function casanova_handle_group_pay_request(string $token): void {
   echo '<details class="casanova-public-page__disclosure">';
   echo '<summary class="casanova-public-page__disclosure-summary">' . esc_html__('¿Ya pagaste el depósito? Reenviar enlace para pagar el resto', 'casanova-portal') . '</summary>';
   echo '<div class="casanova-public-page__disclosure-text">' . esc_html__('Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos el enlace del pago restante.', 'casanova-portal') . '</div>';
-  echo '<form class="casanova-public-form" method="post" action="' . esc_url(casanova_group_pay_url((string)$group->token)) . '">';
+  echo '<form class="casanova-public-form" method="post" action="' . esc_url($group_page_url) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
   echo '<input type="hidden" name="action" value="resend_magic" />';
   echo '<div class="casanova-public-form__grid">';
@@ -363,7 +394,7 @@ function casanova_handle_group_pay_request(string $token): void {
   echo '</form>';
   echo '</details>';
 
-  echo '<form id="casanova-group-pay-form" class="casanova-public-form" method="post" action="' . esc_url(casanova_group_pay_url((string)$group->token)) . '">';
+  echo '<form id="casanova-group-pay-form" class="casanova-public-form" method="post" action="' . esc_url($group_page_url) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
   echo '<input type="hidden" name="action" value="pay" />';
 
@@ -435,7 +466,7 @@ function casanova_handle_group_pay_request(string $token): void {
   echo '<div id="casanova-group-summary" class="casanova-public-page__summary"></div>';
   echo '<div class="casanova-public-page__actions">';
   echo '<button id="casanova-group-pay-button" class="casanova-public-button" type="submit">'
-    . esc_html(sprintf(__('Pagar %s %s', 'casanova-portal'), number_format($default_amount, 2, ',', '.'), $euro_symbol))
+    . esc_html(sprintf(__('Pagar %s %s', 'casanova-portal'), number_format_i18n($default_amount, 2), $euro_symbol))
     . '</button>';
   echo '</div>';
 
@@ -445,12 +476,20 @@ function casanova_handle_group_pay_request(string $token): void {
     (function(){
       const unitTotal = ' . wp_json_encode(round($unit_total, 2)) . ';
       const unitDeposit = ' . wp_json_encode(round($unit_deposit_preview, 2)) . ';
+      const locale = ' . wp_json_encode($public_locale_tag) . ';
+      const amountTemplate = ' . wp_json_encode($js_summary_amount_template) . ';
+      const peopleLabel = ' . wp_json_encode($js_people_label) . ';
+      const depositLabel = ' . wp_json_encode($js_deposit_label) . ';
+      const totalLabel = ' . wp_json_encode($js_total_label) . ';
+      const payLabel = ' . wp_json_encode($js_pay_label) . ';
 
       function fmt(n){
         if (!isFinite(n)) n = 0;
-        const parts = n.toFixed(2).split(".");
-        const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        return intPart + "," + parts[1];
+        try {
+          return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+        } catch (e) {
+          return String(Math.round(n * 100) / 100);
+        }
       }
 
       function init(){
@@ -493,18 +532,18 @@ function casanova_handle_group_pay_request(string $token): void {
           if (methodNote) methodNote.classList.toggle("casanova-hidden", method !== "bank_transfer");
           if (summary) {
             const lines = [
-              "Importe por persona: " + fmt(unitTotal) + " \\u20AC",
-              "Personas: " + String(units)
+              amountTemplate.replace("__AMOUNT__", fmt(unitTotal)),
+              peopleLabel + ": " + String(units)
             ];
             if (isDeposit) {
-              lines.push("Dep\\u00f3sito por persona: " + fmt(unitDeposit) + " \\u20AC");
+              lines.push(depositLabel + ": " + fmt(unitDeposit) + " EUR");
             }
-            lines.push("Total a pagar hoy: " + fmt(amount) + " \\u20AC");
+            lines.push(totalLabel + ": " + fmt(amount) + " EUR");
             summary.innerHTML = lines.map(function(line){
               return "<div class=\"casanova-public-page__summary-line\">" + line + "</div>";
             }).join("");
           }
-          if (btn) btn.textContent = "Pagar " + fmt(amount) + " \\u20AC";
+          if (btn) btn.textContent = payLabel + " " + fmt(amount) + " \\u20AC";
         }
 
         form.addEventListener("change", update);

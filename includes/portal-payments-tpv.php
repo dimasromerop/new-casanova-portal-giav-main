@@ -111,13 +111,18 @@ if (!function_exists('casanova_tpv_redirect_url_for_intent')) {
     }
     $link = is_array($payload['payment_link'] ?? null) ? $payload['payment_link'] : [];
     $link_token = (string)($link['token'] ?? '');
+    $public_locale = trim((string)($payload['locale'] ?? ''));
 
     if ($link_token !== '' && function_exists('casanova_payment_link_url')) {
       $url = casanova_payment_link_url($link_token);
-      return add_query_arg([
+      $url = add_query_arg([
         'pay_status' => $ok ? 'checking' : 'ko',
         'payment' => $ok ? 'success' : 'failed',
       ], $url);
+      if (function_exists('casanova_portal_add_public_locale_arg')) {
+        $url = casanova_portal_add_public_locale_arg($url, $public_locale);
+      }
+      return $url;
     }
 
     $base = function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/portal-app/');

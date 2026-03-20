@@ -323,6 +323,9 @@ add_action('template_redirect', function () {
 
 function casanova_handle_payment_link_request(string $token): void {
   $token = sanitize_text_field($token);
+  if (function_exists('casanova_portal_maybe_switch_public_locale')) {
+    casanova_portal_maybe_switch_public_locale();
+  }
   if ($token === '') {
     wp_die(esc_html__('Enlace de pago invalido.', 'casanova-portal'), 404);
   }
@@ -379,6 +382,9 @@ function casanova_handle_payment_link_request(string $token): void {
   $prefill_mode = !empty($meta_prefill['mode']) ? strtolower((string)$meta_prefill['mode']) : '';
   $prefill_method = !empty($meta_prefill['preferred_method']) ? strtolower((string)$meta_prefill['preferred_method']) : '';
   $auto_start = !empty($meta_prefill['auto_start']);
+  $public_locale = function_exists('casanova_portal_get_public_requested_locale')
+    ? casanova_portal_get_public_requested_locale()
+    : '';
 
   $idExpediente = (int)($link->id_expediente ?? 0);
   if ($idExpediente <= 0) {
@@ -480,9 +486,13 @@ function casanova_handle_payment_link_request(string $token): void {
     $mode_prefill = $autostart_mode !== '' ? $autostart_mode : $prefill_mode;
     $mode = ($mode_prefill === 'deposit' && $deposit_effective) ? 'deposit' : 'full';
     $nonce = wp_create_nonce('casanova_pay_link_' . (int)$link->id);
+    $autostart_url = casanova_payment_link_url((string)$link->token);
+    if (function_exists('casanova_portal_add_public_locale_arg')) {
+      $autostart_url = casanova_portal_add_public_locale_arg($autostart_url, $public_locale);
+    }
 
     header('Content-Type: text/html; charset=' . get_bloginfo('charset'));
-    echo '<form id="casanova-auto" method="post" action="' . esc_url(casanova_payment_link_url((string)$link->token)) . '">';
+    echo '<form id="casanova-auto" method="post" action="' . esc_url($autostart_url) . '">';
     echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
     echo '<input type="hidden" name="billing_name" value="' . esc_attr($prefill_name) . '" />';
     echo '<input type="hidden" name="billing_lastname" value="' . esc_attr($prefill_lastname) . '" />';
@@ -573,6 +583,7 @@ function casanova_handle_payment_link_request(string $token): void {
       'billing_email' => $billing_email,
       'mode' => $mode,
       'preferred_method' => $selected_method,
+      'locale' => $public_locale,
     ];
     if ($scope === 'individual_link') {
       $link_meta_updates['auto_start'] = true;
@@ -594,6 +605,7 @@ function casanova_handle_payment_link_request(string $token): void {
       'billing_lastname' => $billing_lastname,
       'billing_fullname' => $billing_fullname,
       'billing_email' => $billing_email,
+      'locale' => $public_locale,
       'payment_link' => [
         'id' => (int)$link->id,
         'token' => (string)$link->token,
@@ -643,6 +655,10 @@ function casanova_handle_payment_link_request(string $token): void {
         'payment' => 'failed',
         'intent_id' => (int)$intent->id,
       ], casanova_payment_link_url((string)$link->token));
+      if (function_exists('casanova_portal_add_public_locale_arg')) {
+        $success_link = casanova_portal_add_public_locale_arg($success_link, $public_locale);
+        $abort_link = casanova_portal_add_public_locale_arg($abort_link, $public_locale);
+      }
 
       $payment_label = $mode === 'deposit'
         ? __('Depósito', 'casanova-portal')
@@ -853,9 +869,19 @@ function casanova_handle_payment_link_request(string $token): void {
   $checked_deposit = ($deposit_effective && ($pref_mode === 'deposit' || $pref_mode === ''));
   $checked_full = !$checked_deposit;
   $transfer_note = __('El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
+  $payment_page_url = casanova_payment_link_url((string)$link->token);
+  if (function_exists('casanova_portal_add_public_locale_arg')) {
+    $payment_page_url = casanova_portal_add_public_locale_arg($payment_page_url, $public_locale);
+  }
+  $selector_html = function_exists('casanova_portal_public_language_selector_html')
+    ? casanova_portal_public_language_selector_html($payment_page_url, $pref_mode !== '' ? ['mode' => $pref_mode] : [])
+    : '';
 
   casanova_portal_render_public_document_start(__('Pago seguro', 'casanova-portal'));
   echo '<section class="casanova-public-page">';
+  if ($selector_html !== '') {
+    echo '<div class="casanova-public-page__toolbar">' . $selector_html . '</div>';
+  }
   echo casanova_portal_public_logo_html();
   echo '<h2 class="casanova-public-page__title">' . esc_html__('Pago seguro', 'casanova-portal') . '</h2>';
 
@@ -873,7 +899,7 @@ function casanova_handle_payment_link_request(string $token): void {
 
   echo '<div class="casanova-public-page__summary">';
 
-  $pendiente_html = '<strong>' . esc_html(number_format($pending, 2, ',', '.')) . ' EUR</strong>';
+  $pendiente_html = '<strong>' . esc_html(number_format_i18n($pending, 2)) . ' EUR</strong>';
   echo '<div class="casanova-public-page__summary-line">' . wp_kses_post(
     sprintf(
       __('Pendiente total: %s', 'casanova-portal'),
@@ -892,7 +918,7 @@ function casanova_handle_payment_link_request(string $token): void {
 
   echo '</div>';
 
-  echo '<form class="casanova-public-form" method="post" action="' . esc_url(casanova_payment_link_url((string)$link->token)) . '">';
+  echo '<form class="casanova-public-form" method="post" action="' . esc_url($payment_page_url) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
 
   echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombre', 'casanova-portal') . '</span>';
@@ -938,7 +964,7 @@ function casanova_handle_payment_link_request(string $token): void {
   if ($deposit_effective) {
     echo '<label class="casanova-public-choice">';
     echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="deposit" ' . ($checked_deposit ? 'checked' : '') . ' />';
-    $deposit_amount_html = '<strong>' . esc_html(number_format($deposit_amount, 2, ',', '.')) . ' EUR</strong>';
+    $deposit_amount_html = '<strong>' . esc_html(number_format_i18n($deposit_amount, 2)) . ' EUR</strong>';
     echo wp_kses_post(
       sprintf(
         __('Pagar deposito: %s', 'casanova-portal'),
@@ -952,7 +978,7 @@ function casanova_handle_payment_link_request(string $token): void {
 
   echo '<label class="casanova-public-choice">';
   echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="full" ' . ($checked_full ? 'checked' : '') . ' />';
-  $amount_html = '<strong>' . esc_html(number_format($authorized, 2, ',', '.')) . ' EUR</strong>';
+  $amount_html = '<strong>' . esc_html(number_format_i18n($authorized, 2)) . ' EUR</strong>';
   echo wp_kses_post(
     sprintf(
       __('Pagar ahora: %s', 'casanova-portal'),
@@ -1114,12 +1140,12 @@ function casanova_maybe_send_magic_resto_link(int $intent_id): void {
 
   if (!function_exists('casanova_mail_send') || !function_exists('casanova_tpl_email_resto_pago_magic_link')) return;
 
-  if ($payment_link_scope === 'individual_link') {
-    $meta['rest_magic_link_id'] = (int)$link->id;
-    $meta['rest_magic_token'] = (string)($link->token ?? '');
-    $meta['rest_magic_sent_at'] = current_time('mysql');
-    $meta['remaining'] = $remaining;
-    $meta['auto_start'] = true;
+    if ($payment_link_scope === 'individual_link') {
+      $meta['rest_magic_link_id'] = (int)$link->id;
+      $meta['rest_magic_token'] = (string)($link->token ?? '');
+      $meta['rest_magic_sent_at'] = current_time('mysql');
+      $meta['remaining'] = $remaining;
+      $meta['auto_start'] = true;
 
     if (function_exists('casanova_payment_link_update')) {
       casanova_payment_link_update((int)$link->id, [
@@ -1133,6 +1159,9 @@ function casanova_maybe_send_magic_resto_link(int $intent_id): void {
       'autostart' => '1',
       'mode' => 'full',
     ], casanova_payment_link_url((string)$link->token));
+    if (function_exists('casanova_portal_add_public_locale_arg')) {
+      $url_pago = casanova_portal_add_public_locale_arg($url_pago, (string)($meta['locale'] ?? ''));
+    }
   } else {
     $expires_at = date('Y-m-d H:i:s', time() + (14 * DAY_IN_SECONDS));
 
@@ -1168,6 +1197,9 @@ function casanova_maybe_send_magic_resto_link(int $intent_id): void {
     }
 
     $url_pago = casanova_payment_link_url((string)$new->token);
+    if (function_exists('casanova_portal_add_public_locale_arg')) {
+      $url_pago = casanova_portal_add_public_locale_arg($url_pago, (string)($meta['locale'] ?? ''));
+    }
   }
 
   $codExp = '';
@@ -1256,6 +1288,9 @@ function casanova_payment_links_resend_rest_magic($deposit_row, string $email): 
   if ($rest_token === '') return false;
 
   $url_pago = casanova_payment_link_url($rest_token);
+  if (function_exists('casanova_portal_add_public_locale_arg')) {
+    $url_pago = casanova_portal_add_public_locale_arg($url_pago, (string)($meta['locale'] ?? ''));
+  }
 
   $codExp = '';
   $exp_id = (int)($deposit_row->id_expediente ?? 0);

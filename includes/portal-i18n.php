@@ -167,6 +167,142 @@ function casanova_portal_get_available_languages(): array {
   return array_values($items);
 }
 
+function casanova_portal_resolve_available_locale(string $value, ?array $languages = null): string {
+  $languages = is_array($languages) ? $languages : casanova_portal_get_available_languages();
+  $normalized = casanova_portal_normalize_locale_code($value);
+  $normalizedLang = strtolower(trim($value));
+
+  foreach ($languages as $item) {
+    $locale = casanova_portal_normalize_locale_code((string) ($item['locale'] ?? ''));
+    if ($locale !== '' && $locale === $normalized) {
+      return $locale;
+    }
+  }
+
+  if ($normalizedLang === '') return '';
+
+  $matches = [];
+  foreach ($languages as $item) {
+    $lang = strtolower(trim((string) ($item['lang'] ?? '')));
+    $locale = casanova_portal_normalize_locale_code((string) ($item['locale'] ?? ''));
+    if ($lang !== '' && $lang === $normalizedLang && $locale !== '') {
+      $matches[$locale] = $locale;
+    }
+  }
+
+  return count($matches) === 1 ? array_shift($matches) : '';
+}
+
+function casanova_portal_get_public_requested_locale(): string {
+  static $locale = null;
+  if (is_string($locale)) return $locale;
+
+  $languages = casanova_portal_get_available_languages();
+  $requested = '';
+
+  if (isset($_GET['locale'])) {
+    $requested = sanitize_text_field(wp_unslash((string) $_GET['locale']));
+  }
+  if ($requested === '' && isset($_GET['lang'])) {
+    $requested = sanitize_text_field(wp_unslash((string) $_GET['lang']));
+  }
+
+  $resolved = $requested !== '' ? casanova_portal_resolve_available_locale($requested, $languages) : '';
+  if ($resolved === '') {
+    $resolved = casanova_portal_resolve_available_locale(casanova_portal_get_frontend_locale_code(), $languages);
+  }
+  if ($resolved === '') {
+    $resolved = 'es_ES';
+  }
+
+  $locale = $resolved;
+  return $locale;
+}
+
+function casanova_portal_add_public_locale_arg(string $url, ?string $locale = null): string {
+  if ($url === '') return $url;
+
+  $resolved = $locale !== null && $locale !== ''
+    ? casanova_portal_resolve_available_locale($locale)
+    : casanova_portal_get_public_requested_locale();
+
+  if ($resolved === '') return $url;
+  return add_query_arg(['locale' => $resolved], $url);
+}
+
+function casanova_portal_maybe_switch_public_locale(): string {
+  static $resolved = null;
+  if (is_string($resolved)) return $resolved;
+
+  $resolved = casanova_portal_get_public_requested_locale();
+  if ($resolved === '') {
+    return $resolved;
+  }
+
+  $current = '';
+  if (function_exists('determine_locale')) {
+    $current = casanova_portal_normalize_locale_code((string) determine_locale());
+  }
+  if ($current === '') {
+    $current = casanova_portal_normalize_locale_code((string) get_locale());
+  }
+
+  if ($resolved !== $current && function_exists('switch_to_locale')) {
+    switch_to_locale($resolved);
+  }
+
+  $mofile = CASANOVA_GIAV_PLUGIN_PATH . 'languages/casanova-portal-' . $resolved . '.mo';
+  if (function_exists('unload_textdomain') && is_textdomain_loaded('casanova-portal')) {
+    unload_textdomain('casanova-portal');
+  }
+  if (function_exists('load_textdomain') && file_exists($mofile)) {
+    load_textdomain('casanova-portal', $mofile);
+  } elseif (function_exists('load_plugin_textdomain')) {
+    load_plugin_textdomain('casanova-portal', false, basename(rtrim(CASANOVA_GIAV_PLUGIN_PATH, '/\\')) . '/languages');
+  }
+
+  return $resolved;
+}
+
+function casanova_portal_public_language_selector_html(string $actionUrl, array $queryArgs = []): string {
+  $languages = casanova_portal_get_available_languages();
+  if (count($languages) < 2) return '';
+
+  $currentLocale = casanova_portal_get_public_requested_locale();
+  $html = '<form class="casanova-public-locale-form" method="get" action="' . esc_url($actionUrl) . '">';
+
+  foreach ($queryArgs as $key => $value) {
+    $key = sanitize_key((string) $key);
+    if ($key === '' || $key === 'locale') continue;
+    if ($value === null || $value === '') continue;
+
+    $html .= '<input type="hidden" name="' . esc_attr($key) . '" value="' . esc_attr((string) $value) . '" />';
+  }
+
+  $html .= '<label class="casanova-public-field casanova-public-locale-form__field">';
+  $html .= '<span class="casanova-public-field__label">' . esc_html__('Idioma', 'casanova-portal') . '</span>';
+  $html .= '<select class="casanova-public-field__control casanova-public-locale-form__control" name="locale" onchange="this.form.submit()">';
+
+  foreach ($languages as $item) {
+    $locale = casanova_portal_normalize_locale_code((string) ($item['locale'] ?? ''));
+    if ($locale === '') continue;
+
+    $name = trim((string) ($item['name'] ?? ''));
+    if ($name === '') {
+      $name = casanova_portal_locale_display_name($locale);
+    }
+
+    $html .= '<option value="' . esc_attr($locale) . '" ' . selected($locale, $currentLocale, false) . '>' . esc_html($name) . '</option>';
+  }
+
+  $html .= '</select>';
+  $html .= '</label>';
+  $html .= '<noscript><button class="casanova-public-button casanova-public-button--ghost" type="submit">' . esc_html__('Actualizar', 'casanova-portal') . '</button></noscript>';
+  $html .= '</form>';
+
+  return $html;
+}
+
 function casanova_portal_get_frontend_locale_code(): string {
   $locale = '';
 
