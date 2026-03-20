@@ -7,6 +7,15 @@ if (!defined('ABSPATH')) exit;
  */
 class Casanova_Messages_Controller {
 
+  private static function degraded_response(string $message = ''): WP_REST_Response {
+    return new WP_REST_Response([
+      'status' => 'degraded',
+      'giav'   => ['ok' => false, 'source' => 'live', 'error' => $message],
+      'unread' => 0,
+      'items'  => [],
+    ], 503);
+  }
+
   public static function register_routes(): void {
     register_rest_route('casanova/v1', '/messages', [
       'methods'             => WP_REST_Server::READABLE,
@@ -110,6 +119,12 @@ class Casanova_Messages_Controller {
 
     try {
       $data = Casanova_Messages_Service::get_messages_for_user($user_id, $request);
+      if (($data['status'] ?? '') === 'degraded') {
+        $perf_error = new RuntimeException((string) ($data['giav']['error'] ?? __('Servicio degradado.', 'casanova-portal')));
+        $response = self::degraded_response((string) ($data['giav']['error'] ?? ''));
+        return $response;
+      }
+
       $perf_context['item_count'] = count((array) ($data['items'] ?? []));
       $perf_context['unread'] = (int) ($data['unread'] ?? 0);
 
@@ -117,12 +132,14 @@ class Casanova_Messages_Controller {
       return $response;
     } catch (Throwable $e) {
       $perf_error = $e;
-      $response = new WP_REST_Response([
-        'status' => 'degraded',
-        'giav'   => ['ok' => false, 'source' => 'live', 'error' => $e->getMessage()],
-        'unread' => 0,
-        'items'  => [],
-      ], 200);
+      if (function_exists('casanova_portal_messages_log')) {
+        casanova_portal_messages_log('messages endpoint failed', [
+          'user_id' => $user_id,
+          'expediente_id' => (int) $request->get_param('expediente'),
+          'exception' => $e->getMessage(),
+        ], 'error');
+      }
+      $response = self::degraded_response($e->getMessage());
       return $response;
     } finally {
       if (function_exists('casanova_perf_observe_rest')) {

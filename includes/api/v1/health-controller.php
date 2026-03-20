@@ -17,13 +17,13 @@ class Casanova_Health_Controller {
       'callback'            => [self::class, 'handle'],
       'permission_callback' => [self::class, 'permissions_check'],
     ]);
-  }
+
     register_rest_route('casanova/v1', '/health/inespay', [
       'methods'             => WP_REST_Server::READABLE,
       'callback'            => [self::class, 'handle_inespay'],
       'permission_callback' => [self::class, 'permissions_check'],
     ]);
-
+  }
 
   public static function permissions_check(): bool {
     return current_user_can('manage_options');
@@ -53,7 +53,9 @@ class Casanova_Health_Controller {
 
     return rest_ensure_response([
       'plugin' => [
-        'version' => defined('CASANOVA_GIAV_VERSION') ? CASANOVA_GIAV_VERSION : 'unknown',
+        'version' => function_exists('casanova_portal_giav_current_version')
+          ? casanova_portal_giav_current_version()
+          : 'unknown',
       ],
       'giav' => [
         'ok' => $giav_ok,
@@ -65,6 +67,26 @@ class Casanova_Health_Controller {
         'timestamp' => time(),
         'site_url'  => home_url('/'),
       ],
+    ]);
+  }
+
+  public static function handle_inespay(WP_REST_Request $request) {
+    casanova_portal_clear_rest_output();
+
+    $t0 = microtime(true);
+    $cfg = class_exists('Casanova_Inespay_Service')
+      ? Casanova_Inespay_Service::config()
+      : new WP_Error('inespay_service_missing', 'Inespay service no disponible');
+
+    $latency_ms = (int) round((microtime(true) - $t0) * 1000);
+    $ok = !is_wp_error($cfg);
+
+    return rest_ensure_response([
+      'provider' => 'inespay',
+      'ok' => $ok,
+      'latency_ms' => $latency_ms,
+      'error' => $ok ? null : $cfg->get_error_message(),
+      'configured' => $ok,
     ]);
   }
 }

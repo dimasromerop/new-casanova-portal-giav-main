@@ -7,6 +7,21 @@ if (!defined('ABSPATH')) exit;
  */
 class Casanova_Trip_Controller {
 
+  private static function degraded_response(string $message = ''): WP_REST_Response {
+    return new WP_REST_Response([
+      'status' => 'degraded',
+      'giav'   => ['ok' => false, 'source' => 'live', 'error' => $message],
+      'trip'   => null,
+      'package' => null,
+      'extras' => [],
+      'passengers' => [],
+      'payments' => null,
+      'invoices' => [],
+      'vouchers' => [],
+      'messages_meta' => ['unread_count' => 0, 'last_message_at' => null],
+    ], 503);
+  }
+
   public static function register_routes(): void {
     register_rest_route('casanova/v1', '/trip', [
       'methods'             => WP_REST_Server::READABLE,
@@ -78,6 +93,12 @@ class Casanova_Trip_Controller {
         return $response;
       }
 
+      if (($data['status'] ?? '') === 'degraded') {
+        $perf_error = new RuntimeException((string) ($data['giav']['error'] ?? __('Servicio degradado.', 'casanova-portal')));
+        $response = self::degraded_response((string) ($data['giav']['error'] ?? ''));
+        return $response;
+      }
+
       $perf_context['has_trip'] = !empty($data['trip']) ? 1 : 0;
       $perf_context['has_package'] = !empty($data['package']) ? 1 : 0;
       $perf_context['extras_count'] = count((array) ($data['extras'] ?? []));
@@ -93,18 +114,17 @@ class Casanova_Trip_Controller {
       return $response;
     } catch (Throwable $e) {
       $perf_error = $e;
-      $response = new WP_REST_Response([
-        'status' => 'degraded',
-        'giav'   => ['ok' => false, 'source' => 'live', 'error' => $e->getMessage()],
-        'trip'   => null,
-        'package' => null,
-        'extras' => [],
-        'passengers' => [],
-        'payments' => null,
-        'invoices' => [],
-        'vouchers' => [],
-        'messages_meta' => ['unread_count' => 0, 'last_message_at' => null],
-      ], 200);
+      if (function_exists('casanova_log')) {
+        casanova_log('trip', 'trip endpoint failed', [
+          'user_id' => (int) $user_id,
+          'idCliente' => (int) $idCliente,
+          'expediente_id' => (int) $id,
+          'mock' => (int) ($perf_context['mock'] ?? 0),
+          'refresh' => (int) ($perf_context['refresh'] ?? 0),
+          'exception' => $e->getMessage(),
+        ], 'error');
+      }
+      $response = self::degraded_response($e->getMessage());
       return $response;
     } finally {
       if (function_exists('casanova_perf_observe_rest')) {

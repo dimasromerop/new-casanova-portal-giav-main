@@ -24,6 +24,9 @@ export function api(path, options = {}) {
 
   return fetch(base + path, init).then(async (response) => {
     const json = await response.json().catch(() => ({}));
+    if (response.ok && json?.status === "degraded") {
+      throw json;
+    }
     if (!response.ok) throw json;
     return json;
   });

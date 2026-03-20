@@ -31,51 +31,111 @@ if (!defined('CASANOVA_LOG_LEVEL')) {
  * Puedes sobreescribirlo con:
  *   add_filter('casanova_portal_base_url', fn() => home_url('/tu-pagina/'));
  */
+function casanova_portal_shortcode_page_id(string $shortcode): int {
+  static $cache = [];
+
+  $shortcode = trim($shortcode);
+  if ($shortcode === '') {
+    return 0;
+  }
+
+  if (array_key_exists($shortcode, $cache)) {
+    return (int) $cache[$shortcode];
+  }
+
+  $cache[$shortcode] = 0;
+  $q = new WP_Query([
+    'post_type' => 'page',
+    'post_status' => 'publish',
+    'posts_per_page' => 10,
+    'no_found_rows' => true,
+    'fields' => 'ids',
+    's' => $shortcode,
+  ]);
+
+  if (!empty($q->posts) && is_array($q->posts)) {
+    foreach ($q->posts as $pid) {
+      $pid = (int) $pid;
+      if ($pid <= 0) continue;
+
+      $content = get_post_field('post_content', $pid);
+      if (is_string($content) && has_shortcode($content, $shortcode)) {
+        $cache[$shortcode] = $pid;
+        break;
+      }
+    }
+  }
+
+  wp_reset_postdata();
+  return (int) $cache[$shortcode];
+}
+
+function casanova_portal_shortcode_page_url(string $shortcode): string {
+  $page_id = casanova_portal_shortcode_page_id($shortcode);
+  if ($page_id <= 0) {
+    return '';
+  }
+
+  $url = get_permalink($page_id);
+  return is_string($url) ? $url : '';
+}
+
 function casanova_portal_base_url(): string {
+  static $resolved = null;
+
+  if (is_string($resolved)) {
+    return $resolved;
+  }
+
   // 1) Hard default (legacy)
   $default = home_url('/portal-app/');
 
   // 2) Explicit override via constant (wp-config.php)
   if (defined('CASANOVA_PORTAL_BASE_URL')) {
     $c = trim((string) CASANOVA_PORTAL_BASE_URL);
-    if ($c !== '') return $c;
+    if ($c !== '') {
+      $resolved = $c;
+      return $resolved;
+    }
   }
 
   // 3) Auto-detect: find the first published page that contains [casanova_portal_app]
   //    This prevents bad redirects on payments when the slug differs between envs.
-  $cached = (string) get_option('casanova_portal_base_url_cached', '');
-  if ($cached !== '') return $cached;
-
-  $url = '';
-  $q = new WP_Query([
-    'post_type' => 'page',
-    'post_status' => 'publish',
-    'posts_per_page' => 1,
-    's' => 'casanova_portal_app',
-    'no_found_rows' => true,
-    'fields' => 'ids',
-  ]);
-  if (!empty($q->posts) && is_array($q->posts)) {
-    $pid = (int) $q->posts[0];
-    if ($pid > 0) {
-      $content = get_post_field('post_content', $pid);
-      if (is_string($content) && has_shortcode($content, 'casanova_portal_app')) {
-        $p = get_permalink($pid);
-        if ($p) $url = (string) $p;
-      }
-    }
-  }
-  wp_reset_postdata();
+  $url = casanova_portal_shortcode_page_url('casanova_portal_app');
 
   if ($url === '') {
     // 4) Filter override (advanced)
     $url = (string) apply_filters('casanova_portal_base_url', $default);
-  } else {
-    // Cache for future requests.
-    update_option('casanova_portal_base_url_cached', $url, false);
   }
 
-  return $url ?: $default;
+  $resolved = $url ?: $default;
+  return $resolved;
+}
+
+function casanova_portal_link_account_url(): string {
+  static $resolved = null;
+
+  if (is_string($resolved)) {
+    return $resolved;
+  }
+
+  $default = home_url('/area-usuario/');
+
+  if (defined('CASANOVA_PORTAL_LINK_ACCOUNT_URL')) {
+    $configured = trim((string) CASANOVA_PORTAL_LINK_ACCOUNT_URL);
+    if ($configured !== '') {
+      $resolved = $configured;
+      return $resolved;
+    }
+  }
+
+  $url = casanova_portal_shortcode_page_url('casanova_link_account');
+  if ($url === '') {
+    $url = (string) apply_filters('casanova_portal_link_account_url', $default);
+  }
+
+  $resolved = $url ?: $default;
+  return $resolved;
 }
 
 // ===== Logging =====
