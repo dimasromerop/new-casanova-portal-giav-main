@@ -116,6 +116,7 @@ add_action('plugins_loaded', function () {
 
 add_action('wp_enqueue_scripts', function () {
   if (is_admin()) return;
+  casanova_portal_register_i18n_runtime();
 
   $file = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal.css';
   $ver  = file_exists($file) ? (string) filemtime($file) : '0';
@@ -143,15 +144,12 @@ add_action('wp_enqueue_scripts', function () {
   wp_enqueue_script(
     'casanova-portal-giav',
     CASANOVA_GIAV_PLUGIN_URL . 'assets/portal.js',
-    [],
+    [casanova_portal_i18n_runtime_handle()],
     $js_ver,
     true
   );
-
-  // i18n strings for JS
-  wp_localize_script('casanova-portal-giav', 'casanovaPortalI18n', [
-    'saving' => __('Guardando…', 'casanova-portal'),
-  ]);
+  wp_enqueue_script(casanova_portal_i18n_runtime_handle());
+  casanova_portal_localize_i18n_runtime();
 
   // ==========================
   // React App (opcional)
@@ -178,7 +176,7 @@ add_action('wp_enqueue_scripts', function () {
 
     if ($use_build) {
       $ver = (string) filemtime($app_js);
-      wp_enqueue_script($handle, CASANOVA_GIAV_PLUGIN_URL . 'react-app-template/dist/portal-app.js', [], $ver, true);
+      wp_enqueue_script($handle, CASANOVA_GIAV_PLUGIN_URL . 'react-app-template/dist/portal-app.js', [casanova_portal_i18n_runtime_handle()], $ver, true);
       if (file_exists($app_css)) {
         wp_enqueue_style($handle, CASANOVA_GIAV_PLUGIN_URL . 'react-app-template/dist/portal-app.css', [], (string) filemtime($app_css));
       }
@@ -187,7 +185,7 @@ add_action('wp_enqueue_scripts', function () {
       if (file_exists($fallback)) {
         wp_enqueue_script('wp-element');
         $ver = (string) filemtime($fallback);
-        wp_enqueue_script($handle, CASANOVA_GIAV_PLUGIN_URL . 'assets/portal-react.js', ['wp-element'], $ver, true);
+        wp_enqueue_script($handle, CASANOVA_GIAV_PLUGIN_URL . 'assets/portal-react.js', ['wp-element', casanova_portal_i18n_runtime_handle()], $ver, true);
 
         $fallback_css = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal-react.css';
         if (file_exists($fallback_css)) {
@@ -217,9 +215,7 @@ add_action('wp_enqueue_scripts', function () {
       ],
 
     ]);
-
-    // Translatable strings for the React app (WPML reads these from PHP)
-    wp_localize_script($handle, 'CASANOVA_I18N', casanova_portal_get_js_i18n());
+    casanova_portal_localize_i18n_runtime();
   }
 
 

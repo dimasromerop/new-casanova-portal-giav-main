@@ -5,7 +5,7 @@ import MessagesTimeline from "../MessagesTimeline.jsx";
 import { Notice, Skeleton } from "../ui.jsx";
 import { tt, ttf } from "../../i18n/t.js";
 import { api } from "../../lib/api.js";
-import { euro, formatDateES } from "../../lib/formatters.js";
+import { euro, formatDateES, formatNumberUi } from "../../lib/formatters.js";
 import { readParams, setParam } from "../../lib/params.js";
 import { getHistoryBadge, getInvoiceVariant } from "../../lib/statusBadges.js";
 import PaymentActions from "./PaymentActions.jsx";
@@ -110,14 +110,14 @@ export default function TripDetailView({
 
   const paymentKpiItems = payments
     ? [
-        { key: "total", label: "Total", value: totalLabel, icon: <BriefcaseIcon />, colorClass: "is-salmon" },
+        { key: "total", label: tt("Total"), value: totalLabel, icon: <BriefcaseIcon />, colorClass: "is-salmon" },
         { key: "paid", label: tt("Pagado"), value: paidLabel, icon: <ShieldCheckIcon />, colorClass: "is-blue" },
         { key: "pending", label: tt("Pendiente"), value: pendingLabel, icon: <ClockArrowIcon />, colorClass: "is-green" },
         ...(mulligansEnabled
           ? [{
               key: "mulligans",
-              label: "Mulligans usados",
-              value: mulligansUsed.toLocaleString("es-ES"),
+              label: tt("Mulligans usados"),
+              value: formatNumberUi(mulligansUsed),
               icon: <SparkleIcon />,
               colorClass: "is-lilac",
             }]
@@ -126,10 +126,10 @@ export default function TripDetailView({
     : [];
 
   const bonusDisabledReason = (type) => {
-    if (!isPaid) return "El viaje debe estar pagado para descargar los bonos.";
+    if (!isPaid) return tt("El viaje debe estar pagado para descargar los bonos.");
     return type === "view"
-      ? "No hay una vista previa disponible para este bono."
-      : "No hay un PDF disponible para este bono.";
+      ? tt("No hay una vista previa disponible para este bono.")
+      : tt("No hay un PDF disponible para este bono.");
   };
 
   const renderBonusButton = (label, url, type) => {
@@ -180,7 +180,7 @@ export default function TripDetailView({
           {tt("← Viajes")}
         </button>
         <div className="cp-meta cp-trip-detail__breadcrumb">
-          {tt("Viajes &gt;")} <span className="cp-strong">{title}</span>
+          {tt("Viajes >")} <span className="cp-strong">{title}</span>
         </div>
       </div>
 
@@ -234,7 +234,7 @@ export default function TripDetailView({
                 ) : null}
                 {extras.length > 0 ? (
                   <div className="cp-service-section">
-                    <div className="cp-service-section__heading">{pkg ? "Extras" : "Servicios"}</div>
+                    <div className="cp-service-section__heading">{pkg ? tt("Extras") : tt("Servicios")}</div>
                     <ServiceList services={extras} />
                   </div>
                 ) : null}
@@ -349,7 +349,7 @@ export default function TripDetailView({
                       const statusRaw = String(inv.status || "").trim();
                       return (
                         <tr key={inv.id}>
-                          <td>{inv.title || `Factura #${inv.id}`}</td>
+                          <td>{inv.title || ttf("Factura #{id}", { id: inv.id })}</td>
                           <td>{formatDateES(inv.date)}</td>
                           <td className="num">
                             {typeof inv.amount === "number" ? euro(inv.amount, inv.currency || "EUR") : "—"}
@@ -389,8 +389,8 @@ export default function TripDetailView({
             {voucherItems.length === 0 ? (
               <div className="cp-meta cp-mt-10">
                 {isPaid
-                  ? "No hay bonos disponibles para este viaje."
-                  : "Los bonos aparecerán cuando el viaje esté pagado."}
+                  ? tt("No hay bonos disponibles para este viaje.")
+                  : tt("Los bonos aparecerán cuando el viaje esté pagado.")}
               </div>
             ) : (
               <div className="cp-bonus-list">
@@ -398,11 +398,11 @@ export default function TripDetailView({
                   <div key={item.id} className="cp-bonus-card">
                     <div>
                       <div className="cp-bonus-title">{item.label}</div>
-                      <div className="cp-bonus-meta">{item.date_range || "Sin fechas"}</div>
+                      <div className="cp-bonus-meta">{item.date_range || tt("Sin fechas")}</div>
                     </div>
                     <div className="cp-bonus-actions">
                       {renderBonusButton(tt("Ver bono"), item.view_url, "view")}
-                      {renderBonusButton("PDF", item.pdf_url, "pdf")}
+                      {renderBonusButton(tt("PDF"), item.pdf_url, "pdf")}
                     </div>
                   </div>
                 ))}

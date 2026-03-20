@@ -1,7 +1,7 @@
 import React from "react";
 
 import { tt, ttf } from "../../i18n/t.js";
-import { formatDateES, normalizeTripDates } from "../../lib/formatters.js";
+import { formatDateES, formatWeekdayShort, normalizeTripDates } from "../../lib/formatters.js";
 import { setParam } from "../../lib/params.js";
 
 function weatherIconFor(code) {
@@ -18,23 +18,11 @@ function weatherIconFor(code) {
   return "🌤️";
 }
 
-function weekdayShortES(isoDate) {
-  if (!isoDate) return "";
-  try {
-    const d = new Date(String(isoDate));
-    return new Intl.DateTimeFormat("es-ES", { weekday: "short" }).format(d);
-  } catch {
-    return "";
-  }
-}
-
 function TripWeather({ weather }) {
   const days = Array.isArray(weather?.daily) ? weather.daily : [];
   const slice = days.slice(0, 5);
   const provider = String(weather?.provider || "");
   if (!slice.length) return null;
-
-  const title = "Previsión en destino";
 
   function iconNode(day) {
     const base = day?.icon_base_uri || day?.iconBaseUri || "";
@@ -46,7 +34,7 @@ function TripWeather({ weather }) {
   }
 
   return (
-    <div className="cp-weather" title={title}>
+    <div className="cp-weather" title={tt("Previsión en destino")}>
       <div className="cp-weather__title">{tt("Tiempo")}</div>
       <div className="cp-weather__row">
         {slice.map((day, idx) => {
@@ -54,7 +42,7 @@ function TripWeather({ weather }) {
           const tmax = Number(day?.t_max);
           return (
             <div key={idx} className="cp-weather__day">
-              <div className="cp-weather__dow">{weekdayShortES(day?.date)}</div>
+              <div className="cp-weather__dow">{formatWeekdayShort(day?.date)}</div>
               <div className="cp-weather__icon">{iconNode(day)}</div>
               <div className="cp-weather__temp">
                 {Number.isFinite(tmax) ? Math.round(tmax) : "–"}° /{" "}

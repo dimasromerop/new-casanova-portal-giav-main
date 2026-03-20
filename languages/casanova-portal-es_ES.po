@@ -1,19 +1,16 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: casanova-portal\n"
-"POT-Creation-Date: 2026-03-20 12:21+0000\n"
-"PO-Revision-Date: 2026-03-20 13:44+0100\n"
+"POT-Creation-Date: 2026-03-20 16:34+0000\n"
+"PO-Revision-Date: 2026-03-20 17:34+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: es_ES\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.8\n"
+"X-Generator: casanova-portal catalog sync\n"
 "X-Domain: casanova-portal\n"
-
-msgid "%d Pax"
-msgstr "%d Pax"
 
 msgid "%d adultos"
 msgstr "%d adultos"
@@ -24,19 +21,23 @@ msgstr "%d niños"
 msgid "%d pasajeros"
 msgstr "%d pasajeros"
 
+msgid "%d Pax"
+msgstr "%d Pax"
+
 msgid "%s años"
 msgstr "%s años"
 
 msgid "%s nuevos"
 msgstr "%s nuevos"
 
+msgid "(Opcional, según datos de facturación)"
+msgstr "(Opcional, según datos de facturación)"
+
 msgid "6 dígitos"
 msgstr "6 dígitos"
 
-msgid ""
-"Abre el portal usando el contexto real de este cliente, en modo solo lectura."
-msgstr ""
-"Abre el portal usando el contexto real de este cliente, en modo solo lectura."
+msgid "Abre el portal usando el contexto real de este cliente, en modo solo lectura."
+msgstr "Abre el portal usando el contexto real de este cliente, en modo solo lectura."
 
 msgid "Abrir"
 msgstr "Abrir"
@@ -53,6 +54,9 @@ msgstr "Abrir conversación en el portal"
 msgid "Abrir expediente"
 msgstr "Abrir expediente"
 
+msgid "Abrir mensajes"
+msgstr "Abrir mensajes"
+
 msgid "Acceder al portal"
 msgstr "Acceder al portal"
 
@@ -68,11 +72,29 @@ msgstr "Acciones"
 msgid "Acción"
 msgstr "Acción"
 
+msgid "Activado"
+msgstr "Activado"
+
+msgid "Actualización desactivada"
+msgstr "Actualización desactivada"
+
+msgid "Actualizado"
+msgstr "Actualizado"
+
+msgid "Actualizando…"
+msgstr "Actualizando…"
+
+msgid "Actualizar"
+msgstr "Actualizar"
+
 msgid "Adjunto"
 msgstr "Adjunto"
 
 msgid "Adjunto no válido."
 msgstr "Adjunto no válido."
+
+msgid "Ahora mismo no podemos cargar tus datos. Si es urgente, escríbenos y lo revisamos."
+msgstr "Ahora mismo no podemos cargar tus datos. Si es urgente, escríbenos y lo revisamos."
 
 msgid "Ajuste"
 msgstr "Ajuste"
@@ -86,35 +108,68 @@ msgstr "Apellidos"
 msgid "Aplazame"
 msgstr "Aplazame"
 
+msgid "Aplazame no esta configurado correctamente."
+msgstr "Aplazame no esta configurado correctamente."
+
 msgid "Aplazame no está configurado todavía."
 msgstr "Aplazame no está configurado todavía."
 
 msgid "Aplazame no está disponible en el servidor."
 msgstr "Aplazame no está disponible en el servidor."
 
-msgid ""
-"Aplazame requiere direccion completa. Actualiza calle, codigo postal, "
-"poblacion y provincia en tu perfil antes de continuar."
-msgstr ""
-"Aplazame requiere direccion completa. Actualiza calle, codigo postal, "
-"poblacion y provincia en tu perfil antes de continuar."
+msgid "Aplazame requiere direccion completa. Actualiza calle, codigo postal, poblacion y provincia en tu perfil antes de continuar."
+msgstr "Aplazame requiere direccion completa. Actualiza calle, codigo postal, poblacion y provincia en tu perfil antes de continuar."
 
-msgid ""
-"Aplazame requiere un email valido. Revísalo en tu perfil antes de continuar."
-msgstr ""
-"Aplazame requiere un email valido. Revísalo en tu perfil antes de continuar."
+msgid "Aplazame requiere un email valido. Revísalo en tu perfil antes de continuar."
+msgstr "Aplazame requiere un email valido. Revísalo en tu perfil antes de continuar."
+
+msgid "Aplazame te permite fraccionar el pago del viaje. Al continuar se abrira su checkout seguro para completar la financiacion en cuotas."
+msgstr "Aplazame te permite fraccionar el pago del viaje. Al continuar se abrira su checkout seguro para completar la financiacion en cuotas."
+
+msgid "Aquí tienes tu avance y un acceso rápido a los movimientos, sin recargar la portada."
+msgstr "Aquí tienes tu avance y un acceso rápido a los movimientos, sin recargar la portada."
+
+msgid "Aquí verás el siguiente paso importante de tu viaje."
+msgstr "Aquí verás el siguiente paso importante de tu viaje."
+
+msgid "Aquí verás los últimos mensajes sobre tu viaje: horarios de salida, pagos o cualquier actualización."
+msgstr "Aquí verás los últimos mensajes sobre tu viaje: horarios de salida, pagos o cualquier actualización."
+
+msgid "asistencia Casanova Golf"
+msgstr "asistencia Casanova Golf"
 
 msgid "Añadir a calendario"
 msgstr "Añadir a calendario"
 
+msgid "Año"
+msgstr "Año"
+
 msgid "Año:"
 msgstr "Año:"
+
+msgid "Aún no hay cobros registrados en este viaje."
+msgstr "Aún no hay cobros registrados en este viaje."
 
 msgid "Aún no hay mensajes en esta conversación."
 msgstr "Aún no hay mensajes en esta conversación."
 
+msgid "Aún no hay movimientos"
+msgstr "Aún no hay movimientos"
+
+msgid "Aún no hay pagos asociados a este viaje."
+msgstr "Aún no hay pagos asociados a este viaje."
+
+msgid "Aún no hay pagos disponibles para este viaje."
+msgstr "Aún no hay pagos disponibles para este viaje."
+
 msgid "Aún no tienes un viaje confirmado."
 msgstr "Aún no tienes un viaje confirmado."
+
+msgid "Balance"
+msgstr "Balance"
+
+msgid "Bienvenido de nuevo"
+msgstr "Bienvenido de nuevo"
 
 msgid "Billetes"
 msgstr "Billetes"
@@ -128,6 +183,12 @@ msgstr "Bono / Voucher"
 msgid "Bono no disponible: el viaje tiene pagos pendientes"
 msgstr "Bono no disponible: el viaje tiene pagos pendientes"
 
+msgid "Bonos"
+msgstr "Bonos"
+
+msgid "Bonos disponibles"
+msgstr "Bonos disponibles"
+
 msgid "Bonos disponibles."
 msgstr "Bonos disponibles."
 
@@ -137,18 +198,14 @@ msgstr "Bonos no disponibles todavía."
 msgid "Bonos nuevos"
 msgstr "Bonos nuevos"
 
-msgid ""
-"Busca por nombre, email, usuario, ID de WordPress o GIAV ID. Para clientes "
-"sin acceso web, usa el GIAV ID o el DNI exacto."
-msgstr ""
-"Busca por nombre, email, usuario, ID de WordPress o GIAV ID. Para clientes "
-"sin acceso web, usa el GIAV ID o el DNI exacto."
+msgid "Bonus"
+msgstr "Bonus"
+
+msgid "Busca por nombre, email, usuario, ID de WordPress o GIAV ID. Para clientes sin acceso web, usa el GIAV ID o el DNI exacto."
+msgstr "Busca por nombre, email, usuario, ID de WordPress o GIAV ID. Para clientes sin acceso web, usa el GIAV ID o el DNI exacto."
 
 msgid "Buscar cliente"
 msgstr "Buscar cliente"
-
-msgid "CP"
-msgstr "CP"
 
 msgid "Cada archivo puede ocupar como máximo %s."
 msgstr "Cada archivo puede ocupar como máximo %s."
@@ -156,8 +213,35 @@ msgstr "Cada archivo puede ocupar como máximo %s."
 msgid "Calendario"
 msgstr "Calendario"
 
+msgid "Cambiar contraseña"
+msgstr "Cambiar contraseña"
+
+msgid "Cambiar vista de viajes"
+msgstr "Cambiar vista de viajes"
+
+msgid "Cambio de contraseña desactivado"
+msgstr "Cambio de contraseña desactivado"
+
+msgid "Campos por confirmar"
+msgstr "Campos por confirmar"
+
 msgid "Canje"
 msgstr "Canje"
+
+msgid "Cargando"
+msgstr "Cargando"
+
+msgid "Cargando expediente"
+msgstr "Cargando expediente"
+
+msgid "Cargando mensajes"
+msgstr "Cargando mensajes"
+
+msgid "Cargando…"
+msgstr "Cargando…"
+
+msgid "Casanova Portal"
+msgstr "Casanova Portal"
 
 msgid "Cerrar"
 msgstr "Cerrar"
@@ -177,25 +261,20 @@ msgstr "Check-out de: %s"
 msgid "Cliente"
 msgstr "Cliente"
 
+msgid "Cliente:"
+msgstr "Cliente:"
+
 msgid "Cliente Casanova"
 msgstr "Cliente Casanova"
 
+msgid "Cliente encontrado en GIAV sin usuario WordPress vinculado. Puedes abrir una previsualizacion de su portal en modo solo lectura antes de darle acceso."
+msgstr "Cliente encontrado en GIAV sin usuario WordPress vinculado. Puedes abrir una previsualizacion de su portal en modo solo lectura antes de darle acceso."
+
+msgid "Cliente encontrado en GIAV y ya vinculado al portal. Puedes abrir su portal directamente desde aqui."
+msgstr "Cliente encontrado en GIAV y ya vinculado al portal. Puedes abrir su portal directamente desde aqui."
+
 msgid "Cliente GIAV #%d"
 msgstr "Cliente GIAV #%d"
-
-msgid ""
-"Cliente encontrado en GIAV sin usuario WordPress vinculado. Puedes abrir una "
-"previsualizacion de su portal en modo solo lectura antes de darle acceso."
-msgstr ""
-"Cliente encontrado en GIAV sin usuario WordPress vinculado. Puedes abrir una "
-"previsualizacion de su portal en modo solo lectura antes de darle acceso."
-
-msgid ""
-"Cliente encontrado en GIAV y ya vinculado al portal. Puedes abrir su portal "
-"directamente desde aqui."
-msgstr ""
-"Cliente encontrado en GIAV y ya vinculado al portal. Puedes abrir su portal "
-"directamente desde aqui."
 
 msgid "Cliente inválido."
 msgstr "Cliente inválido."
@@ -208,9 +287,6 @@ msgstr "Cliente no vinculado"
 
 msgid "Cliente visto ahora mismo"
 msgstr "Cliente visto ahora mismo"
-
-msgid "Cliente:"
-msgstr "Cliente:"
 
 msgid "Cobro"
 msgstr "Cobro"
@@ -233,11 +309,20 @@ msgstr "Config Redsys no disponible."
 msgid "Confirmación de pago recibido – Expediente %s"
 msgstr "Confirmación de pago recibido – Expediente %s"
 
+msgid "Confirmar nueva contraseña"
+msgstr "Confirmar nueva contraseña"
+
+msgid "Consulta fechas, pagos y estado de cada expediente sin perder legibilidad en móvil."
+msgstr "Consulta fechas, pagos y estado de cada expediente sin perder legibilidad en móvil."
+
 msgid "Contacto agencia:"
 msgstr "Contacto agencia:"
 
 msgid "Contacto proveedor:"
 msgstr "Contacto proveedor:"
+
+msgid "Contacto y acceso"
+msgstr "Contacto y acceso"
 
 msgid "Contenido del portal"
 msgstr "Contenido del portal"
@@ -245,43 +330,65 @@ msgstr "Contenido del portal"
 msgid "Continuar al pago"
 msgstr "Continuar al pago"
 
-msgid ""
-"Conversaciones propias del portal. GIAV sigue entrando en el timeline, pero "
-"aquí gestionas la parte bidireccional y las respuestas del equipo."
-msgstr ""
-"Conversaciones propias del portal. GIAV sigue entrando en el timeline, pero "
-"aquí gestionas la parte bidireccional y las respuestas del equipo."
+msgid "Contraseña actual"
+msgstr "Contraseña actual"
+
+msgid "Contraseña actualizada."
+msgstr "Contraseña actualizada."
+
+msgid "Conversaciones propias del portal. GIAV sigue entrando en el timeline, pero aquí gestionas la parte bidireccional y las respuestas del equipo."
+msgstr "Conversaciones propias del portal. GIAV sigue entrando en el timeline, pero aquí gestionas la parte bidireccional y las respuestas del equipo."
+
+msgid "Conversación sobre este viaje"
+msgstr "Conversación sobre este viaje"
+
+msgid "Coordinación y asistencia de Casanova Golf durante tu viaje"
+msgstr "Coordinación y asistencia de Casanova Golf durante tu viaje"
+
+msgid "CP"
+msgstr "CP"
 
 msgid "Crear o vincular mi cuenta"
 msgstr "Crear o vincular mi cuenta"
 
-msgid ""
-"Cuando tu reserva esté lista, aquí verás todos los detalles de tu viaje: "
-"hotel, campos de golf, pagos y documentación."
-msgstr ""
-"Cuando tu reserva esté lista, aquí verás todos los detalles de tu viaje: "
-"hotel, campos de golf, pagos y documentación."
+msgid "Credenciales de acceso"
+msgstr "Credenciales de acceso"
+
+msgid "Cuando se registren pagos o se aplique un bonus, aparecerán aquí."
+msgstr "Cuando se registren pagos o se aplique un bonus, aparecerán aquí."
+
+msgid "Cuando tu reserva esté confirmada, aquí verás la conversación y las actualizaciones del equipo de Casanova Golf."
+msgstr "Cuando tu reserva esté confirmada, aquí verás la conversación y las actualizaciones del equipo de Casanova Golf."
+
+msgid "Cuando tu reserva esté lista, aquí verás todos los detalles de tu viaje: hotel, campos de golf, pagos y documentación."
+msgstr "Cuando tu reserva esté lista, aquí verás todos los detalles de tu viaje: hotel, campos de golf, pagos y documentación."
 
 msgid "Cuenta no vinculada."
 msgstr "Cuenta no vinculada."
 
-msgid "Código de verificación"
-msgstr "Código de verificación"
-
 msgid "Código:"
 msgstr "Código:"
 
-msgid "DNI"
-msgstr "DNI"
+msgid "Código de verificación"
+msgstr "Código de verificación"
 
-msgid "DNI / NIF"
-msgstr "DNI / NIF"
+msgid "Código de vuelo"
+msgstr "Código de vuelo"
 
-msgid "DNI / NIF (obligatorio)"
-msgstr "DNI / NIF (obligatorio)"
+msgid "Código enviado a {email}. Caduca en 10 minutos."
+msgstr "Código enviado a {email}. Caduca en 10 minutos."
 
-msgid "DNI inválido."
-msgstr "DNI inválido."
+msgid "Código postal"
+msgstr "Código postal"
+
+msgid "Código reenviado. Caduca en 10 minutos."
+msgstr "Código reenviado. Caduca en 10 minutos."
+
+msgid "Código reenviado a {email}. Caduca en 10 minutos."
+msgstr "Código reenviado a {email}. Caduca en 10 minutos."
+
+msgid "Cómo funciona"
+msgstr "Cómo funciona"
 
 msgid "Dashboard"
 msgstr "Dashboard"
@@ -289,14 +396,20 @@ msgstr "Dashboard"
 msgid "Dashboard no disponible."
 msgstr "Dashboard no disponible."
 
-msgid "Debes indicar Nombre y Apellidos."
-msgstr "Debes indicar Nombre y Apellidos."
+msgid "Datos de ubicación"
+msgstr "Datos de ubicación"
+
+msgid "Datos personales"
+msgstr "Datos personales"
 
 msgid "Debes indicar el DNI/NIF."
 msgstr "Debes indicar el DNI/NIF."
 
 msgid "Debes indicar email y DNI."
 msgstr "Debes indicar email y DNI."
+
+msgid "Debes indicar Nombre y Apellidos."
+msgstr "Debes indicar Nombre y Apellidos."
 
 msgid "Debes indicar un email valido."
 msgstr "Debes indicar un email valido."
@@ -310,11 +423,11 @@ msgstr "Debes iniciar sesión."
 msgid "Debes seleccionar al menos 1 persona."
 msgstr "Debes seleccionar al menos 1 persona."
 
-msgid "Demasiados intentos de pago. Espera unos minutos."
-msgstr "Demasiados intentos de pago. Espera unos minutos."
-
 msgid "Demasiados intentos. Espera unos minutos."
 msgstr "Demasiados intentos. Espera unos minutos."
+
+msgid "Demasiados intentos de pago. Espera unos minutos."
+msgstr "Demasiados intentos de pago. Espera unos minutos."
 
 msgid "Deposito viaje %s"
 msgstr "Deposito viaje %s"
@@ -328,8 +441,14 @@ msgstr "Depósito (Redsys %s)"
 msgid "Depósito no disponible"
 msgstr "Depósito no disponible"
 
+msgid "Desactivado"
+msgstr "Desactivado"
+
 msgid "Descargar PDF"
 msgstr "Descargar PDF"
+
+msgid "Descargas asociadas a este viaje"
+msgstr "Descargas asociadas a este viaje"
 
 msgid "Descripción:"
 msgstr "Descripción:"
@@ -340,11 +459,11 @@ msgstr "Destino:"
 msgid "Detalle"
 msgstr "Detalle"
 
-msgid "Detalle de reserva"
-msgstr "Detalle de reserva"
-
 msgid "Detalle del viaje"
 msgstr "Detalle del viaje"
+
+msgid "Detalle de reserva"
+msgstr "Detalle de reserva"
 
 msgid "Detalles del servicio"
 msgstr "Detalles del servicio"
@@ -361,14 +480,32 @@ msgstr "Dirección de facturación"
 msgid "Distribución"
 msgstr "Distribución"
 
+msgid "DNI"
+msgstr "DNI"
+
+msgid "DNI / NIF"
+msgstr "DNI / NIF"
+
+msgid "DNI / NIF (obligatorio)"
+msgstr "DNI / NIF (obligatorio)"
+
+msgid "DNI inválido."
+msgstr "DNI inválido."
+
 msgid "Documentacion digital"
 msgstr "Documentacion digital"
+
+msgid "Documentación disponible"
+msgstr "Documentación disponible"
 
 msgid "Documento"
 msgstr "Documento"
 
 msgid "Día %d - %s, %s"
 msgstr "Día %d - %s, %s"
+
+msgid "Edición desactivada"
+msgstr "Edición desactivada"
 
 msgid "Edición desactivada en vista cliente"
 msgstr "Edición desactivada en vista cliente"
@@ -382,12 +519,8 @@ msgstr "El adjunto ya no está disponible."
 msgid "El cliente de GIAV no existe o no se pudo cargar."
 msgstr "El cliente de GIAV no existe o no se pudo cargar."
 
-msgid ""
-"El cliente lo verá dentro del portal y además recibirá un email con enlace a "
-"la conversación."
-msgstr ""
-"El cliente lo verá dentro del portal y además recibirá un email con enlace a "
-"la conversación."
+msgid "El cliente lo verá dentro del portal y además recibirá un email con enlace a la conversación."
+msgstr "El cliente lo verá dentro del portal y además recibirá un email con enlace a la conversación."
 
 msgid "El código caduca en 10 minutos."
 msgstr "El código caduca en 10 minutos."
@@ -395,14 +528,26 @@ msgstr "El código caduca en 10 minutos."
 msgid "El código ha caducado. Solicita uno nuevo."
 msgstr "El código ha caducado. Solicita uno nuevo."
 
+msgid "El código no es válido."
+msgstr "El código no es válido."
+
 msgid "El código no es válido. Revisa el email e inténtalo de nuevo."
 msgstr "El código no es válido. Revisa el email e inténtalo de nuevo."
 
 msgid "El depósito no está disponible para este expediente."
 msgstr "El depósito no está disponible para este expediente."
 
+msgid "Elegir expediente"
+msgstr "Elegir expediente"
+
+msgid "Elegir otro cliente"
+msgstr "Elegir otro cliente"
+
 msgid "El expediente no tiene importe pendiente en GIAV."
 msgstr "El expediente no tiene importe pendiente en GIAV."
+
+msgid "Elige método de pago"
+msgstr "Elige método de pago"
 
 msgid "El mensaje incluye %d adjunto."
 msgstr "El mensaje incluye %d adjunto."
@@ -413,29 +558,14 @@ msgstr "El mensaje incluye %d adjuntos."
 msgid "El mensaje no puede superar %d caracteres."
 msgstr "El mensaje no puede superar %d caracteres."
 
-msgid ""
-"El pago por transferencia bancaria online PSD2 no tiene recargo y es "
-"completamente seguro. Serás redirigido a una página de pago donde podrás "
-"seleccionar tu banco y acceder a tu banca online para autorizar la "
-"transferencia. Una vez completado el pago, volverás automáticamente a "
-"nuestra página. Este método es compatible con la mayoría de bancos españoles "
-"y portugueses."
-msgstr ""
-"El pago por transferencia bancaria online PSD2 no tiene recargo y es "
-"completamente seguro. Serás redirigido a una página de pago donde podrás "
-"seleccionar tu banco y acceder a tu banca online para autorizar la "
-"transferencia. Una vez completado el pago, volverás automáticamente a "
-"nuestra página. Este método es compatible con la mayoría de bancos españoles "
-"y portugueses."
+msgid "El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses."
+msgstr "El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses."
 
 msgid "El usuario seleccionado no tiene portal de cliente."
 msgstr "El usuario seleccionado no tiene portal de cliente."
 
-msgid "Elegir expediente"
-msgstr "Elegir expediente"
-
-msgid "Elegir otro cliente"
-msgstr "Elegir otro cliente"
+msgid "El viaje debe estar pagado para descargar los bonos."
+msgstr "El viaje debe estar pagado para descargar los bonos."
 
 msgid "Email"
 msgstr "Email"
@@ -448,6 +578,9 @@ msgstr "En %s días"
 
 msgid "En cada reserva podrás ver el bono y descargar el PDF."
 msgstr "En cada reserva podrás ver el bono y descargar el PDF."
+
+msgid "English"
+msgstr "English"
 
 msgid "Enlace de grupo caducado."
 msgstr "Enlace de grupo caducado."
@@ -476,6 +609,9 @@ msgstr "Enlace de pago no encontrado."
 msgid "Enlace para completar tu pago – Expediente %s"
 msgstr "Enlace para completar tu pago – Expediente %s"
 
+msgid "Enviando…"
+msgstr "Enviando…"
+
 msgid "Enviar código"
 msgstr "Enviar código"
 
@@ -485,11 +621,20 @@ msgstr "Enviar enlace del resto"
 msgid "Enviar mensaje"
 msgstr "Enviar mensaje"
 
+msgid "Error al cargar los viajes"
+msgstr "Error al cargar los viajes"
+
 msgid "Escribe aquí la respuesta para el cliente…"
 msgstr "Escribe aquí la respuesta para el cliente…"
 
+msgid "Escribe aquí tu mensaje sobre este viaje…"
+msgstr "Escribe aquí tu mensaje sobre este viaje…"
+
 msgid "Escribe un mensaje o adjunta un archivo antes de enviarlo."
 msgstr "Escribe un mensaje o adjunta un archivo antes de enviarlo."
+
+msgid "Español"
+msgstr "Español"
 
 msgid "Estado"
 msgstr "Estado"
@@ -497,17 +642,29 @@ msgstr "Estado"
 msgid "Estado de pagos"
 msgstr "Estado de pagos"
 
-msgid ""
-"Este bono es válido únicamente si el expediente no tiene pagos pendientes."
-msgstr ""
-"Este bono es válido únicamente si el expediente no tiene pagos pendientes."
+msgid "Estado de pagos del viaje"
+msgstr "Estado de pagos del viaje"
 
-msgid ""
-"Este cliente existe en GIAV, pero todavia no tiene usuario WordPress "
-"vinculado. La vista previa usa directamente su contexto de cliente."
-msgstr ""
-"Este cliente existe en GIAV, pero todavia no tiene usuario WordPress "
-"vinculado. La vista previa usa directamente su contexto de cliente."
+msgid "Estamos preparando la información de este viaje. En cuanto esté lista, la verás aquí."
+msgstr "Estamos preparando la información de este viaje. En cuanto esté lista, la verás aquí."
+
+msgid "Estancia"
+msgstr "Estancia"
+
+msgid "Estancia por confirmar"
+msgstr "Estancia por confirmar"
+
+msgid "Este bono es válido únicamente si el expediente no tiene pagos pendientes."
+msgstr "Este bono es válido únicamente si el expediente no tiene pagos pendientes."
+
+msgid "Este cliente existe en GIAV, pero todavia no tiene usuario WordPress vinculado. La vista previa usa directamente su contexto de cliente."
+msgstr "Este cliente existe en GIAV, pero todavia no tiene usuario WordPress vinculado. La vista previa usa directamente su contexto de cliente."
+
+msgid "Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila."
+msgstr "Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila."
+
+msgid "Esto solo afecta al portal."
+msgstr "Esto solo afecta al portal."
 
 msgid "Estás enviando mensajes demasiado rápido. Espera un minuto."
 msgstr "Estás enviando mensajes demasiado rápido. Espera un minuto."
@@ -521,11 +678,17 @@ msgstr "Expediente"
 msgid "Expediente #%s"
 msgstr "Expediente #%s"
 
+msgid "Expediente #{id}"
+msgstr "Expediente #{id}"
+
 msgid "Expediente %d"
 msgstr "Expediente %d"
 
 msgid "Expediente %s"
 msgstr "Expediente %s"
+
+msgid "Expediente:"
+msgstr "Expediente:"
 
 msgid "Expediente GIAV"
 msgstr "Expediente GIAV"
@@ -542,17 +705,23 @@ msgstr "Expediente inválido."
 msgid "Expediente no encontrado."
 msgstr "Expediente no encontrado."
 
-msgid "Expediente:"
-msgstr "Expediente:"
-
 msgid "Expedientes"
 msgstr "Expedientes"
+
+msgid "Extras"
+msgstr "Extras"
+
+msgid "Extras y asistencia"
+msgstr "Extras y asistencia"
 
 msgid "Factura"
 msgstr "Factura"
 
 msgid "Factura #%s"
 msgstr "Factura #%s"
+
+msgid "Factura #{id}"
+msgstr "Factura #{id}"
 
 msgid "Facturas"
 msgstr "Facturas"
@@ -581,6 +750,12 @@ msgstr "Fecha límite: %s"
 msgid "Fechas:"
 msgstr "Fechas:"
 
+msgid "Fechas por confirmar"
+msgstr "Fechas por confirmar"
+
+msgid "Fin"
+msgstr "Fin"
+
 msgid "Firma Redsys invalida."
 msgstr "Firma Redsys invalida."
 
@@ -590,28 +765,38 @@ msgstr "Firma Redsys inválida"
 msgid "Función no disponible. Contacta con la agencia."
 msgstr "Función no disponible. Contacta con la agencia."
 
+msgid "Ganado"
+msgstr "Ganado"
+
+msgid "Ganados"
+msgstr "Ganados"
+
+msgid "Gasto acumulado"
+msgstr "Gasto acumulado"
+
+msgid "Gasto acumulado: <strong>%1$s</strong> · Ratio actual: <strong>x%2$s</strong>"
+msgstr "Gasto acumulado: <strong>%1$s</strong> · Ratio actual: <strong>x%2$s</strong>"
+
+msgid "Gasto confirmado"
+msgstr "Gasto confirmado"
+
+msgid "Gasto histórico"
+msgstr "Gasto histórico"
+
+msgid "Gestión de Reservas"
+msgstr "Gestión de Reservas"
+
 msgid "GIAV #%d"
 msgstr "GIAV #%d"
 
 msgid "GIAV no ha devuelto un PDF válido."
 msgstr "GIAV no ha devuelto un PDF válido."
 
-msgid "Ganados"
-msgstr "Ganados"
-
-msgid ""
-"Gasto acumulado: <strong>%1$s</strong> · Ratio actual: <strong>x%2$s</strong>"
-msgstr ""
-"Gasto acumulado: <strong>%1$s</strong> · Ratio actual: <strong>x%2$s</strong>"
-
-msgid "Gasto confirmado"
-msgstr "Gasto confirmado"
-
-msgid "Gestión de Reservas"
-msgstr "Gestión de Reservas"
-
 msgid "Golf"
 msgstr "Golf"
+
+msgid "Gracias, procesamos el cobro y actualizamos tus datos."
+msgstr "Gracias, procesamos el cobro y actualizamos tus datos."
 
 msgid "Gracias. Hemos recibido tu pago."
 msgstr "Gracias. Hemos recibido tu pago."
@@ -619,29 +804,38 @@ msgstr "Gracias. Hemos recibido tu pago."
 msgid "Guardando…"
 msgstr "Guardando…"
 
+msgid "Guardar"
+msgstr "Guardar"
+
 msgid "Guardar dirección"
 msgstr "Guardar dirección"
+
+msgid "Habitaciones"
+msgstr "Habitaciones"
 
 msgid "Hace %s"
 msgstr "Hace %s"
 
-msgid ""
-"Has hecho demasiados intentos. Espera unos minutos y vuelve a intentarlo."
-msgstr ""
-"Has hecho demasiados intentos. Espera unos minutos y vuelve a intentarlo."
+msgid "ha enviado un mensaje desde el portal de cliente."
+msgstr "ha enviado un mensaje desde el portal de cliente."
+
+msgid "Has hecho demasiados intentos. Espera unos minutos y vuelve a intentarlo."
+msgstr "Has hecho demasiados intentos. Espera unos minutos y vuelve a intentarlo."
 
 msgid "Has pagado %1$s de %2$s"
 msgstr "Has pagado %1$s de %2$s"
 
+msgid "Has pagado {paid} de {total}."
+msgstr "Has pagado {paid} de {total}."
+
 msgid "Has superado el número de intentos. Solicita un código nuevo."
 msgstr "Has superado el número de intentos. Solicita un código nuevo."
 
-msgid ""
-"Hemos registrado correctamente tu pago para el expediente <strong>%s</"
-"strong>."
-msgstr ""
-"Hemos registrado correctamente tu pago para el expediente <strong>%s</"
-"strong>."
+msgid "Hemos recibido el pago. Gracias, procesamos el cobro y actualizamos tus datos."
+msgstr "Hemos recibido el pago. Gracias, procesamos el cobro y actualizamos tus datos."
+
+msgid "Hemos registrado correctamente tu pago para el expediente <strong>%s</strong>."
+msgstr "Hemos registrado correctamente tu pago para el expediente <strong>%s</strong>."
 
 msgid "Hemos registrado un pago para tu expediente <strong>%s</strong>."
 msgstr "Hemos registrado un pago para tu expediente <strong>%s</strong>."
@@ -649,11 +843,17 @@ msgstr "Hemos registrado un pago para tu expediente <strong>%s</strong>."
 msgid "Hilos recientes del portal"
 msgstr "Hilos recientes del portal"
 
+msgid "Histórico"
+msgstr "Histórico"
+
 msgid "Histórico de cobros"
 msgstr "Histórico de cobros"
 
 msgid "Histórico de cobros (%s)"
 msgstr "Histórico de cobros (%s)"
+
+msgid "Hola"
+msgstr "Hola"
 
 msgid "Hola %s,"
 msgstr "Hola %s,"
@@ -661,14 +861,23 @@ msgstr "Hola %s,"
 msgid "Hola,"
 msgstr "Hola,"
 
+msgid "Horario"
+msgstr "Horario"
+
 msgid "Hotel"
 msgstr "Hotel"
+
+msgid "Hoteles por confirmar"
+msgstr "Hoteles por confirmar"
+
+msgid "Hotel por confirmar"
+msgstr "Hotel por confirmar"
 
 msgid "ID de cliente inválido."
 msgstr "ID de cliente inválido."
 
-msgid "IDs"
-msgstr "IDs"
+msgid "Idioma"
+msgstr "Idioma"
 
 msgid "Idioma actualizado."
 msgstr "Idioma actualizado."
@@ -678,6 +887,9 @@ msgstr "Idioma del portal"
 
 msgid "Idioma inválido."
 msgstr "Idioma inválido."
+
+msgid "IDs"
+msgstr "IDs"
 
 msgid "Importe"
 msgstr "Importe"
@@ -715,8 +927,14 @@ msgstr "Inespay no está disponible en el servidor."
 msgid "Info"
 msgstr "Info"
 
+msgid "Información personal"
+msgstr "Información personal"
+
 msgid "Inicia sesión para vincular tu cuenta."
 msgstr "Inicia sesión para vincular tu cuenta."
+
+msgid "Inicio"
+msgstr "Inicio"
 
 msgid "Intent invalido."
 msgstr "Intent invalido."
@@ -730,19 +948,14 @@ msgstr "Introduce el código que te hemos enviado."
 msgid "Introduce tu DNI."
 msgstr "Introduce tu DNI."
 
-msgid ""
-"Introduce tu DNI. Te enviaremos un código al email asociado a tu reserva "
-"para verificar que eres el titular."
-msgstr ""
-"Introduce tu DNI. Te enviaremos un código al email asociado a tu reserva "
-"para verificar que eres el titular."
+msgid "Introduce tu DNI. Te enviaremos un código al email asociado a tu reserva para verificar que eres el titular."
+msgstr "Introduce tu DNI. Te enviaremos un código al email asociado a tu reserva para verificar que eres el titular."
 
-msgid ""
-"Introduce un ID de expediente para ver la conversación completa y responder "
-"desde WordPress."
-msgstr ""
-"Introduce un ID de expediente para ver la conversación completa y responder "
-"desde WordPress."
+msgid "Introduce un ID de expediente para ver la conversación completa y responder desde WordPress."
+msgstr "Introduce un ID de expediente para ver la conversación completa y responder desde WordPress."
+
+msgid "Inténtalo de nuevo más tarde."
+msgstr "Inténtalo de nuevo más tarde."
 
 msgid "Ir al portal"
 msgstr "Ir al portal"
@@ -765,6 +978,18 @@ msgstr "La nueva contraseña debe tener al menos 8 caracteres."
 msgid "Las contraseñas no coinciden."
 msgstr "Las contraseñas no coinciden."
 
+msgid "La solicitud con Aplazame ha quedado pendiente. Actualizaremos tus pagos en cuanto recibamos la confirmación final."
+msgstr "La solicitud con Aplazame ha quedado pendiente. Actualizaremos tus pagos en cuanto recibamos la confirmación final."
+
+msgid "La solicitud con Aplazame no se completó. Si el estado cambia más tarde, lo verás reflejado aquí."
+msgstr "La solicitud con Aplazame no se completó. Si el estado cambia más tarde, lo verás reflejado aquí."
+
+msgid "La transferencia no se completó. Si el banco la confirma más tarde, lo verás reflejado aquí."
+msgstr "La transferencia no se completó. Si el banco la confirma más tarde, lo verás reflejado aquí."
+
+msgid "La transferencia ya se ha iniciado. Actualizaremos tus pagos cuando recibamos la confimación del banco."
+msgstr "La transferencia ya se ha iniciado. Actualizaremos tus pagos cuando recibamos la confimación del banco."
+
 msgid "Limpiar"
 msgstr "Limpiar"
 
@@ -780,8 +1005,23 @@ msgstr "Localizador:"
 msgid "Logo"
 msgstr "Logo"
 
+msgid "Lo que incluye tu viaje"
+msgstr "Lo que incluye tu viaje"
+
 msgid "Los adjuntos del portal no están disponibles."
 msgstr "Los adjuntos del portal no están disponibles."
+
+msgid "Los beneficios se activan con una reserva real. Si un año no viajas, mantienes tu nivel, pero no se “dispara” el beneficio."
+msgstr "Los beneficios se activan con una reserva real. Si un año no viajas, mantienes tu nivel, pero no se “dispara” el beneficio."
+
+msgid "Los bonos aparecerán cuando el viaje esté pagado."
+msgstr "Los bonos aparecerán cuando el viaje esté pagado."
+
+msgid "Los puntos clave de tu viaje"
+msgstr "Los puntos clave de tu viaje"
+
+msgid "Los vuelos y traslados aparecerán aquí cuando estén definidos"
+msgstr "Los vuelos y traslados aparecerán aquí cuando estén definidos"
 
 msgid "Mensaje enviado."
 msgstr "Mensaje enviado."
@@ -807,26 +1047,26 @@ msgstr "Modalidad"
 msgid "Modo de vista cliente activo. Solo lectura."
 msgstr "Modo de vista cliente activo. Solo lectura."
 
+msgid "Modo oscuro"
+msgstr "Modo oscuro"
+
 msgid "Modo prueba"
 msgstr "Modo prueba"
 
 msgid "Modo solo lectura activo."
 msgstr "Modo solo lectura activo."
 
-msgid ""
-"Mostrando clientes recientes con portal activo. Usa el buscador para afinar "
-"la seleccion o introduce un GIAV ID/DNI exacto para previsualizar clientes "
-"sin acceso web."
-msgstr ""
-"Mostrando clientes recientes con portal activo. Usa el buscador para afinar "
-"la seleccion o introduce un GIAV ID/DNI exacto para previsualizar clientes "
-"sin acceso web."
+msgid "Mostrando clientes recientes con portal activo. Usa el buscador para afinar la seleccion o introduce un GIAV ID/DNI exacto para previsualizar clientes sin acceso web."
+msgstr "Mostrando clientes recientes con portal activo. Usa el buscador para afinar la seleccion o introduce un GIAV ID/DNI exacto para previsualizar clientes sin acceso web."
 
 msgid "Movimiento"
 msgstr "Movimiento"
 
 msgid "Movimientos"
 msgstr "Movimientos"
+
+msgid "Movimientos recientes (ganados, bonus y canjes)."
+msgstr "Movimientos recientes (ganados, bonus y canjes)."
 
 msgid "Mulligans"
 msgstr "Mulligans"
@@ -840,27 +1080,35 @@ msgstr "Método de pago"
 msgid "Método de pago inválido."
 msgstr "Método de pago inválido."
 
+msgid "Móvil"
+msgstr "Móvil"
+
 msgid "Navegación del portal"
 msgstr "Navegación del portal"
 
-msgid ""
-"Necesitas iniciar sesión para acceder al portal. <a href=\"%s\">Iniciar "
-"sesión</a>"
-msgstr ""
-"Necesitas iniciar sesión para acceder al portal. <a href=\"%s\">Iniciar "
-"sesión</a>"
+msgid "Necesitas iniciar sesión para acceder al portal. <a href=\"%s\">Iniciar sesión</a>"
+msgstr "Necesitas iniciar sesión para acceder al portal. <a href=\"%s\">Iniciar sesión</a>"
+
+msgid "Nivel"
+msgstr "Nivel"
 
 msgid "Nivel: %s"
 msgstr "Nivel: %s"
 
+msgid "Nivel actual"
+msgstr "Nivel actual"
+
+msgid "Nivel máximo"
+msgstr "Nivel máximo"
+
 msgid "No autorizado"
 msgstr "No autorizado"
 
-msgid "No autorizado para este expediente."
-msgstr "No autorizado para este expediente."
-
 msgid "No autorizado."
 msgstr "No autorizado."
+
+msgid "No autorizado para este expediente."
+msgstr "No autorizado para este expediente."
 
 msgid "No disponible."
 msgstr "No disponible."
@@ -868,12 +1116,8 @@ msgstr "No disponible."
 msgid "No encontrado. Contacta con la agencia."
 msgstr "No encontrado. Contacta con la agencia."
 
-msgid ""
-"No encontramos ninguna reserva asociada a ese DNI. Si ya has viajado con "
-"nosotros, escríbenos y lo revisamos."
-msgstr ""
-"No encontramos ninguna reserva asociada a ese DNI. Si ya has viajado con "
-"nosotros, escríbenos y lo revisamos."
+msgid "No encontramos ninguna reserva asociada a ese DNI. Si ya has viajado con nosotros, escríbenos y lo revisamos."
+msgstr "No encontramos ninguna reserva asociada a ese DNI. Si ya has viajado con nosotros, escríbenos y lo revisamos."
 
 msgid "No encontramos un código activo. Solicita uno nuevo."
 msgstr "No encontramos un código activo. Solicita uno nuevo."
@@ -884,17 +1128,26 @@ msgstr "No está disponible la actualización de perfil."
 msgid "No hay"
 msgstr "No hay"
 
+msgid "No hay bonos disponibles para este viaje."
+msgstr "No hay bonos disponibles para este viaje."
+
 msgid "No hay expediente seleccionado."
 msgstr "No hay expediente seleccionado."
+
+msgid "No hay facturas disponibles."
+msgstr "No hay facturas disponibles."
 
 msgid "No hay importe pendiente para pagar."
 msgstr "No hay importe pendiente para pagar."
 
-msgid "No hay mensajes recientes."
-msgstr "No hay mensajes recientes."
-
 msgid "No hay mensajes."
 msgstr "No hay mensajes."
+
+msgid "No hay mensajes nuevos"
+msgstr "No hay mensajes nuevos"
+
+msgid "No hay mensajes recientes."
+msgstr "No hay mensajes recientes."
 
 msgid "No hay movimientos todavía."
 msgstr "No hay movimientos todavía."
@@ -911,17 +1164,32 @@ msgstr "No hay próximos viajes."
 msgid "No hay reservas en este expediente."
 msgstr "No hay reservas en este expediente."
 
+msgid "No hay servicios disponibles ahora mismo."
+msgstr "No hay servicios disponibles ahora mismo."
+
 msgid "No hay servicios programados."
 msgstr "No hay servicios programados."
+
+msgid "No hay una vista previa disponible para este bono."
+msgstr "No hay una vista previa disponible para este bono."
+
+msgid "No hay un PDF disponible para este bono."
+msgstr "No hay un PDF disponible para este bono."
 
 msgid "No hay un viaje activo o próximo para mostrar pagos."
 msgstr "No hay un viaje activo o próximo para mostrar pagos."
 
-msgid "No hay viajes próximos para mostrar aquí."
-msgstr "No hay viajes próximos para mostrar aquí."
+msgid "No hay viajes disponibles"
+msgstr "No hay viajes disponibles"
+
+msgid "No hay viajes disponibles para el año seleccionado."
+msgstr "No hay viajes disponibles para el año seleccionado."
 
 msgid "No hay viajes próximos."
 msgstr "No hay viajes próximos."
+
+msgid "No hay viajes próximos para mostrar aquí."
+msgstr "No hay viajes próximos para mostrar aquí."
 
 msgid "No hay viajes registrados en %s."
 msgstr "No hay viajes registrados en %s."
@@ -932,15 +1200,26 @@ msgstr "No hemos encontrado clientes con portal para esa busqueda."
 msgid "No hemos podido consultar el sistema. Inténtalo más tarde."
 msgstr "No hemos podido consultar el sistema. Inténtalo más tarde."
 
-msgid ""
-"No hemos podido enviar el código porque no hay un email válido asociado a tu "
-"reserva. Escríbenos y lo revisamos."
-msgstr ""
-"No hemos podido enviar el código porque no hay un email válido asociado a tu "
-"reserva. Escríbenos y lo revisamos."
+msgid "No hemos podido enviar el código porque no hay un email válido asociado a tu reserva. Escríbenos y lo revisamos."
+msgstr "No hemos podido enviar el código porque no hay un email válido asociado a tu reserva. Escríbenos y lo revisamos."
 
 msgid "No hemos podido enviar el email. Inténtalo más tarde."
 msgstr "No hemos podido enviar el email. Inténtalo más tarde."
+
+msgid "Nombre"
+msgstr "Nombre"
+
+msgid "Nombre, email, usuario, WP ID, GIAV ID o DNI exacto"
+msgstr "Nombre, email, usuario, WP ID, GIAV ID o DNI exacto"
+
+msgid "Nombres de viajeros (opcional)"
+msgstr "Nombres de viajeros (opcional)"
+
+msgid "Nonce inválido"
+msgstr "Nonce inválido"
+
+msgid "No podemos cargar tu perfil"
+msgstr "No podemos cargar tu perfil"
 
 msgid "No podemos consultar el sistema en este momento. Inténtalo más tarde."
 msgstr "No podemos consultar el sistema en este momento. Inténtalo más tarde."
@@ -960,15 +1239,6 @@ msgstr "No se ha encontrado el archivo temporal del adjunto."
 msgid "No se ha encontrado el usuario."
 msgstr "No se ha encontrado el usuario."
 
-msgid "No se ha podido cargar el expediente."
-msgstr "No se ha podido cargar el expediente."
-
-msgid "No se ha podido iniciar la verificación. Contacta con nosotros."
-msgstr "No se ha podido iniciar la verificación. Contacta con nosotros."
-
-msgid "No se ha podido validar el código. Contacta con nosotros."
-msgstr "No se ha podido validar el código. Contacta con nosotros."
-
 msgid "No se han podido cargar las facturas. Inténtalo más tarde."
 msgstr "No se han podido cargar las facturas. Inténtalo más tarde."
 
@@ -987,23 +1257,50 @@ msgstr "No se han podido cargar los mensajes."
 msgid "No se han podido cargar los pagos. Inténtalo más tarde."
 msgstr "No se han podido cargar los pagos. Inténtalo más tarde."
 
-msgid "No se han podido cargar tus Mulligans ahora mismo."
-msgstr "No se han podido cargar tus Mulligans ahora mismo."
+msgid "No se han podido cargar los viajes."
+msgstr "No se han podido cargar los viajes."
 
 msgid "No se han podido cargar tus datos. Inténtalo más tarde."
 msgstr "No se han podido cargar tus datos. Inténtalo más tarde."
 
-msgid "No se pudieron cargar las reservas del expediente."
-msgstr "No se pudieron cargar las reservas del expediente."
+msgid "No se han podido cargar tus Mulligans ahora mismo."
+msgstr "No se han podido cargar tus Mulligans ahora mismo."
+
+msgid "No se ha podido cargar el expediente."
+msgstr "No se ha podido cargar el expediente."
+
+msgid "No se ha podido enviar el código."
+msgstr "No se ha podido enviar el código."
+
+msgid "No se ha podido iniciar la verificación. Contacta con nosotros."
+msgstr "No se ha podido iniciar la verificación. Contacta con nosotros."
+
+msgid "No se ha podido reenviar el código."
+msgstr "No se ha podido reenviar el código."
+
+msgid "No se ha podido validar el código."
+msgstr "No se ha podido validar el código."
+
+msgid "No se ha podido validar el código. Contacta con nosotros."
+msgstr "No se ha podido validar el código. Contacta con nosotros."
 
 msgid "No se pudieron cargar las reservas."
 msgstr "No se pudieron cargar las reservas."
 
+msgid "No se pudieron cargar las reservas del expediente."
+msgstr "No se pudieron cargar las reservas del expediente."
+
 msgid "No se pudieron cargar reservas"
 msgstr "No se pudieron cargar reservas"
 
+msgid "No se pudo abrir Aplazame. Intentalo de nuevo."
+msgstr "No se pudo abrir Aplazame. Intentalo de nuevo."
+
 msgid "No se pudo actualizar el idioma."
 msgstr "No se pudo actualizar el idioma."
+
+msgid "No se pudo actualizar la contraseña."
+msgstr "No se pudo actualizar la contraseña."
 
 msgid "No se pudo actualizar la dirección."
 msgstr "No se pudo actualizar la dirección."
@@ -1016,6 +1313,9 @@ msgstr "No se pudo calcular el pago."
 
 msgid "No se pudo calcular el pendiente del expediente."
 msgstr "No se pudo calcular el pendiente del expediente."
+
+msgid "No se pudo cargar Aplazame."
+msgstr "No se pudo cargar Aplazame."
 
 msgid "No se pudo cargar el expediente."
 msgstr "No se pudo cargar el expediente."
@@ -1044,6 +1344,9 @@ msgstr "No se pudo crear la conversación."
 msgid "No se pudo determinar el importe por persona."
 msgstr "No se pudo determinar el importe por persona."
 
+msgid "No se pudo enviar el mensaje."
+msgstr "No se pudo enviar el mensaje."
+
 msgid "No se pudo enviar el mensaje. Revisa el expediente y el contenido."
 msgstr "No se pudo enviar el mensaje. Revisa el expediente y el contenido."
 
@@ -1059,6 +1362,9 @@ msgstr "No se pudo generar la URL de pago."
 msgid "No se pudo guardar el mensaje."
 msgstr "No se pudo guardar el mensaje."
 
+msgid "No se pudo guardar el perfil."
+msgstr "No se pudo guardar el perfil."
+
 msgid "No se pudo guardar uno de los adjuntos."
 msgstr "No se pudo guardar uno de los adjuntos."
 
@@ -1070,6 +1376,9 @@ msgstr "No se pudo inicializar el pago (intents)."
 
 msgid "No se pudo iniciar Aplazame."
 msgstr "No se pudo iniciar Aplazame."
+
+msgid "No se pudo iniciar el pago."
+msgstr "No se pudo iniciar el pago."
 
 msgid "No se pudo iniciar el pago por transferencia."
 msgstr "No se pudo iniciar el pago por transferencia."
@@ -1098,12 +1407,8 @@ msgstr "No se pudo reenviar el enlace. Contacta con la agencia."
 msgid "No se pudo registrar uno de los adjuntos."
 msgstr "No se pudo registrar uno de los adjuntos."
 
-msgid ""
-"No se pudo resolver el cliente de este expediente. Si ya existe un hilo "
-"local, revisa los datos de GIAV."
-msgstr ""
-"No se pudo resolver el cliente de este expediente. Si ya existe un hilo "
-"local, revisa los datos de GIAV."
+msgid "No se pudo resolver el cliente de este expediente. Si ya existe un hilo local, revisa los datos de GIAV."
+msgstr "No se pudo resolver el cliente de este expediente. Si ya existe un hilo local, revisa los datos de GIAV."
 
 msgid "No se pudo resolver el cliente del expediente."
 msgstr "No se pudo resolver el cliente del expediente."
@@ -1117,14 +1422,26 @@ msgstr "No se pudo validar la factura."
 msgid "No se puede calcular el estado de pagos."
 msgstr "No se puede calcular el estado de pagos."
 
-msgid "No se puede verificar la propiedad del expediente."
-msgstr "No se puede verificar la propiedad del expediente."
+msgid "No se puede cargar el expediente ahora mismo."
+msgstr "No se puede cargar el expediente ahora mismo."
+
+msgid "No se puede iniciar el pago"
+msgstr "No se puede iniciar el pago"
 
 msgid "No se pueden cargar los datos del cliente para Aplazame."
 msgstr "No se pueden cargar los datos del cliente para Aplazame."
 
+msgid "No se pueden cargar los mensajes"
+msgstr "No se pueden cargar los mensajes"
+
 msgid "No se pueden guardar cambios mientras está activa la impersonación."
 msgstr "No se pueden guardar cambios mientras está activa la impersonación."
+
+msgid "No se puede verificar la propiedad del expediente."
+msgstr "No se puede verificar la propiedad del expediente."
+
+msgid "Nota: este listado refleja los cobros registrados en el expediente (cobros y reembolsos)."
+msgstr "Nota: este listado refleja los cobros registrados en el expediente (cobros y reembolsos)."
 
 msgid "No tienes acceso a esta factura."
 msgstr "No tienes acceso a esta factura."
@@ -1147,24 +1464,8 @@ msgstr "No tienes permiso para ver este expediente."
 msgid "No tienes viajes próximos."
 msgstr "No tienes viajes próximos."
 
-msgid "Nombre"
-msgstr "Nombre"
-
-msgid "Nombre, email, usuario, WP ID, GIAV ID o DNI exacto"
-msgstr "Nombre, email, usuario, WP ID, GIAV ID o DNI exacto"
-
-msgid "Nombres de viajeros (opcional)"
-msgstr "Nombres de viajeros (opcional)"
-
-msgid "Nonce inválido"
-msgstr "Nonce inválido"
-
-msgid ""
-"Nota: este listado refleja los cobros registrados en el expediente (cobros y "
-"reembolsos)."
-msgstr ""
-"Nota: este listado refleja los cobros registrados en el expediente (cobros y "
-"reembolsos)."
+msgid "Nueva contraseña"
+msgstr "Nueva contraseña"
 
 msgid "Nuevo"
 msgstr "Nuevo"
@@ -1184,20 +1485,11 @@ msgstr "Observaciones / Remarks"
 msgid "Observaciones:"
 msgstr "Observaciones:"
 
-msgid "Otro viaje"
-msgstr "Otro viaje"
-
 msgid "Otros servicios"
 msgstr "Otros servicios"
 
-msgid "PDF"
-msgstr "PDF"
-
-msgid "PSD2 · Sin recargo."
-msgstr "PSD2 · Sin recargo."
-
-msgid "PVP:"
-msgstr "PVP:"
+msgid "Otro viaje"
+msgstr "Otro viaje"
 
 msgid "Pagada"
 msgstr "Pagada"
@@ -1211,8 +1503,14 @@ msgstr "Pagado:"
 msgid "Pagado: %s €"
 msgstr "Pagado: %s €"
 
+msgid "Pagado: {amount}"
+msgstr "Pagado: {amount}"
+
 msgid "Pagador"
 msgstr "Pagador"
+
+msgid "Pagado {amount}"
+msgstr "Pagado {amount}"
 
 msgid "Pagar"
 msgstr "Pagar"
@@ -1244,6 +1542,9 @@ msgstr "Pagar el resto"
 msgid "Pagar el total pendiente: %s"
 msgstr "Pagar el total pendiente: %s"
 
+msgid "Pagar pendiente"
+msgstr "Pagar pendiente"
+
 msgid "Pagar total"
 msgstr "Pagar total"
 
@@ -1255,6 +1556,9 @@ msgstr "Pago"
 
 msgid "Pago (Redsys %s)"
 msgstr "Pago (Redsys %s)"
+
+msgid "Pago a plazos"
+msgstr "Pago a plazos"
 
 msgid "Pago completado"
 msgstr "Pago completado"
@@ -1271,6 +1575,9 @@ msgstr "Pago del viaje"
 msgid "Pago desactivado en vista cliente"
 msgstr "Pago desactivado en vista cliente"
 
+msgid "Pago inmediato y seguro"
+msgstr "Pago inmediato y seguro"
+
 msgid "Pago inmediato y seguro."
 msgstr "Pago inmediato y seguro."
 
@@ -1279,6 +1586,9 @@ msgstr "Pago no completado."
 
 msgid "Pago pendiente"
 msgstr "Pago pendiente"
+
+msgid "Pago pendiente de confirmación"
+msgstr "Pago pendiente de confirmación"
 
 msgid "Pago recibido"
 msgstr "Pago recibido"
@@ -1292,6 +1602,15 @@ msgstr "Pago registrado correctamente"
 msgid "Pago restante"
 msgstr "Pago restante"
 
+msgid "Pagos"
+msgstr "Pagos"
+
+msgid "Pagos del viaje"
+msgstr "Pagos del viaje"
+
+msgid "Pagos desactivados"
+msgstr "Pagos desactivados"
+
 msgid "Pago seguro"
 msgstr "Pago seguro"
 
@@ -1301,21 +1620,17 @@ msgstr "Pago total"
 msgid "Pago viaje %s"
 msgstr "Pago viaje %s"
 
-msgid "Pagos"
-msgstr "Pagos"
-
 msgid "Paquete"
 msgstr "Paquete"
 
+msgid "Para:"
+msgstr "Para:"
+
 msgid "Para confirmar tu viaje, puedes pagar un depósito de %1$s hasta el %2$s"
-msgstr ""
-"Para confirmar tu viaje, puedes pagar un depósito de %1$s hasta el %2$s"
+msgstr "Para confirmar tu viaje, puedes pagar un depósito de %1$s hasta el %2$s"
 
 msgid "Para confirmar tu viaje, puedes pagar un depósito de %s"
 msgstr "Para confirmar tu viaje, puedes pagar un depósito de %s"
-
-msgid "Para:"
-msgstr "Para:"
 
 msgid "Pasajero"
 msgstr "Pasajero"
@@ -1332,11 +1647,23 @@ msgstr "Pax:"
 msgid "País"
 msgstr "País"
 
+msgid "PDF"
+msgstr "PDF"
+
 msgid "Pendiente"
 msgstr "Pendiente"
 
 msgid "Pendiente %s"
 msgstr "Pendiente %s"
+
+msgid "Pendiente:"
+msgstr "Pendiente:"
+
+msgid "Pendiente: %s"
+msgstr "Pendiente: %s"
+
+msgid "Pendiente: {amount}"
+msgstr "Pendiente: {amount}"
 
 msgid "Pendiente de pago: %s"
 msgstr "Pendiente de pago: %s"
@@ -1347,11 +1674,11 @@ msgstr "Pendiente estimado:"
 msgid "Pendiente total: %s"
 msgstr "Pendiente total: %s"
 
-msgid "Pendiente:"
-msgstr "Pendiente:"
+msgid "Pendiente {amount}"
+msgstr "Pendiente {amount}"
 
-msgid "Pendiente: %s"
-msgstr "Pendiente: %s"
+msgid "Perfil actualizado."
+msgstr "Perfil actualizado."
 
 msgid "Personas incluidas en este pago"
 msgstr "Personas incluidas en este pago"
@@ -1368,14 +1695,23 @@ msgstr "Portal"
 msgid "Portal cliente"
 msgstr "Portal cliente"
 
-msgid "Previsualizacion GIAV activa: %s"
-msgstr "Previsualizacion GIAV activa: %s"
+msgid "Previsión en destino"
+msgstr "Previsión en destino"
 
 msgid "Previsualizacion de cliente activa. Solo lectura."
 msgstr "Previsualizacion de cliente activa. Solo lectura."
 
+msgid "Previsualizacion GIAV activa: %s"
+msgstr "Previsualizacion GIAV activa: %s"
+
+msgid "Programa de fidelización"
+msgstr "Programa de fidelización"
+
 msgid "Programa del viaje"
 msgstr "Programa del viaje"
+
+msgid "Programa del viaje (PDF)"
+msgstr "Programa del viaje (PDF)"
 
 msgid "Programa del viaje no disponible."
 msgstr "Programa del viaje no disponible."
@@ -1383,11 +1719,14 @@ msgstr "Programa del viaje no disponible."
 msgid "Programa del viaje por expediente"
 msgstr "Programa del viaje por expediente"
 
-msgid "Progreso Mulligans"
-msgstr "Progreso Mulligans"
+msgid "Progreso de Mulligans"
+msgstr "Progreso de Mulligans"
 
 msgid "Progreso de pago"
 msgstr "Progreso de pago"
+
+msgid "Progreso Mulligans"
+msgstr "Progreso Mulligans"
 
 msgid "Proveedor"
 msgstr "Proveedor"
@@ -1395,14 +1734,47 @@ msgstr "Proveedor"
 msgid "Provincia"
 msgstr "Provincia"
 
+msgid "Próximo nivel"
+msgstr "Próximo nivel"
+
+msgid "Próximo paso"
+msgstr "Próximo paso"
+
 msgid "Próximo viaje"
 msgstr "Próximo viaje"
+
+msgid "PSD2 · Sin recargo"
+msgstr "PSD2 · Sin recargo"
+
+msgid "PSD2 · Sin recargo."
+msgstr "PSD2 · Sin recargo."
 
 msgid "Puedes adjuntar como máximo %d archivos por mensaje."
 msgstr "Puedes adjuntar como máximo %d archivos por mensaje."
 
+msgid "Puedes adjuntar como máximo 3 archivos por mensaje."
+msgstr "Puedes adjuntar como máximo 3 archivos por mensaje."
+
+msgid "Puedes consultar los datos del cliente, pero no modificarlos desde esta vista."
+msgstr "Puedes consultar los datos del cliente, pero no modificarlos desde esta vista."
+
+msgid "Puedes revisar el estado de pagos, pero no iniciar cobros desde esta vista."
+msgstr "Puedes revisar el estado de pagos, pero no iniciar cobros desde esta vista."
+
+msgid "Puedes revisar esta sección, pero no cambiar la contraseña del cliente."
+msgstr "Puedes revisar esta sección, pero no cambiar la contraseña del cliente."
+
 msgid "Puedes ver el estado actualizado aquí:"
 msgstr "Puedes ver el estado actualizado aquí:"
+
+msgid "Puntos"
+msgstr "Puntos"
+
+msgid "Puntos y nivel se actualizan automáticamente con tus reservas."
+msgstr "Puntos y nivel se actualizan automáticamente con tus reservas."
+
+msgid "PVP:"
+msgstr "PVP:"
 
 msgid "Quedan %s € por abonar"
 msgstr "Quedan %s € por abonar"
@@ -1410,13 +1782,20 @@ msgstr "Quedan %s € por abonar"
 msgid "Quieres acceder a tus documentos y facturas?"
 msgstr "Quieres acceder a tus documentos y facturas?"
 
+msgid "Quitar"
+msgstr "Quitar"
+
 msgid "Qué necesitas hacer ahora"
 msgstr "Qué necesitas hacer ahora"
 
-msgid ""
-"Recibirás además un email con el enlace para completar el resto del pago."
-msgstr ""
-"Recibirás además un email con el enlace para completar el resto del pago."
+msgid "Ratio actual"
+msgstr "Ratio actual"
+
+msgid "Recibirás además un email con el enlace para completar el resto del pago."
+msgstr "Recibirás además un email con el enlace para completar el resto del pago."
+
+msgid "Redirigiendo…"
+msgstr "Redirigiendo…"
 
 msgid "Redsys no disponible"
 msgstr "Redsys no disponible"
@@ -1430,17 +1809,38 @@ msgstr "Reembolso"
 msgid "Reenviar código"
 msgstr "Reenviar código"
 
+msgid "Reenviar código ({seconds}s)"
+msgstr "Reenviar código ({seconds}s)"
+
+msgid "Referencia interna #{id}"
+msgstr "Referencia interna #{id}"
+
+msgid "Referencia {code}"
+msgstr "Referencia {code}"
+
 msgid "Reservas"
 msgstr "Reservas"
 
 msgid "Reservas no disponibles."
 msgstr "Reservas no disponibles."
 
+msgid "Responder"
+msgstr "Responder"
+
 msgid "Responder desde WordPress"
 msgstr "Responder desde WordPress"
 
 msgid "Respuesta Cliente_GET inesperada."
 msgstr "Respuesta Cliente_GET inesperada."
+
+msgid "Resumen"
+msgstr "Resumen"
+
+msgid "Resumen de pago"
+msgstr "Resumen de pago"
+
+msgid "Rondas de golf por confirmar"
+msgstr "Rondas de golf por confirmar"
 
 msgid "Rooming"
 msgstr "Rooming"
@@ -1454,18 +1854,23 @@ msgstr "Régimen:"
 msgid "Salir de vista cliente"
 msgstr "Salir de vista cliente"
 
+msgid "Secciones del viaje"
+msgstr "Secciones del viaje"
+
+msgid "Se completará cuando quede confirmado"
+msgstr "Se completará cuando quede confirmado"
+
 msgid "Segmentos:"
 msgstr "Segmentos:"
 
 msgid "Seguridad"
 msgstr "Seguridad"
 
-msgid ""
-"Selecciona cuántas personas quedan incluidas en este pago y completa los "
-"datos del pagador."
-msgstr ""
-"Selecciona cuántas personas quedan incluidas en este pago y completa los "
-"datos del pagador."
+msgid "Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador."
+msgstr "Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador."
+
+msgid "Selecciona cuánto pagar ahora"
+msgstr "Selecciona cuánto pagar ahora"
 
 msgid "Selecciona un expediente para ver su detalle."
 msgstr "Selecciona un expediente para ver su detalle."
@@ -1485,39 +1890,62 @@ msgstr "Servicio degradado."
 msgid "Servicios"
 msgstr "Servicios"
 
+msgid "Servicios del viaje"
+msgstr "Servicios del viaje"
+
 msgid "Servicios incluidos"
 msgstr "Servicios incluidos"
+
+msgid "Servicios y planificación del viaje"
+msgstr "Servicios y planificación del viaje"
+
+msgid "Sin datos"
+msgstr "Sin datos"
+
+msgid "Sin datos de pago"
+msgstr "Sin datos de pago"
+
+msgid "Si necesitas ajustar algo, resolver una duda o revisar el viaje con nosotros, aquí tienes acceso directo al equipo que te acompaña."
+msgstr "Si necesitas ajustar algo, resolver una duda o revisar el viaje con nosotros, aquí tienes acceso directo al equipo que te acompaña."
+
+msgid "Si necesitas algo sobre este viaje, escríbenos desde aquí y seguiremos la conversación en el portal."
+msgstr "Si necesitas algo sobre este viaje, escríbenos desde aquí y seguiremos la conversación en el portal."
 
 msgid "Si necesitas ayuda con el pago, contacta con la agencia."
 msgstr "Si necesitas ayuda con el pago, contacta con la agencia."
 
-msgid "Si no has solicitado este enlace, puedes ignorar este email."
-msgstr "Si no has solicitado este enlace, puedes ignorar este email."
+msgid "Sin estado"
+msgstr "Sin estado"
 
-msgid "Si persiste, lo revisamos."
-msgstr "Si persiste, lo revisamos."
+msgid "Sin extras destacados"
+msgstr "Sin extras destacados"
 
-msgid ""
-"Si quedaba importe pendiente, recibiras ademas un enlace por email para "
-"completar el pago mas adelante."
-msgstr ""
-"Si quedaba importe pendiente, recibiras ademas un enlace por email para "
-"completar el pago mas adelante."
+msgid "Sin fechas"
+msgstr "Sin fechas"
 
-msgid "Si tienes dudas, contacta con la agencia antes de pagar."
-msgstr "Si tienes dudas, contacta con la agencia antes de pagar."
+msgid "Sin importe pendiente"
+msgstr "Sin importe pendiente"
 
 msgid "Sin leer"
 msgstr "Sin leer"
 
+msgid "Si no has solicitado este enlace, puedes ignorar este email."
+msgstr "Si no has solicitado este enlace, puedes ignorar este email."
+
 msgid "Sin portal"
 msgstr "Sin portal"
+
+msgid "Sin referencia externa"
+msgstr "Sin referencia externa"
 
 msgid "Sin servicios programados para este día."
 msgstr "Sin servicios programados para este día."
 
-msgid "Sistema GIAV no disponible."
-msgstr "Sistema GIAV no disponible."
+msgid "Si persiste, lo revisamos."
+msgstr "Si persiste, lo revisamos."
+
+msgid "Si quedaba importe pendiente, recibiras ademas un enlace por email para completar el pago mas adelante."
+msgstr "Si quedaba importe pendiente, recibiras ademas un enlace por email para completar el pago mas adelante."
 
 msgid "Sistema de grupos no disponible."
 msgstr "Sistema de grupos no disponible."
@@ -1534,8 +1962,20 @@ msgstr "Sistema de pagos no disponible"
 msgid "Sistema de reservas no disponible"
 msgstr "Sistema de reservas no disponible"
 
+msgid "Sistema GIAV no disponible."
+msgstr "Sistema GIAV no disponible."
+
+msgid "Si te escribimos, lo verás aquí al momento."
+msgstr "Si te escribimos, lo verás aquí al momento."
+
+msgid "Si tienes dudas, contacta con la agencia antes de pagar."
+msgstr "Si tienes dudas, contacta con la agencia antes de pagar."
+
 msgid "Solicitud no valida."
 msgstr "Solicitud no valida."
+
+msgid "Solo lectura"
+msgstr "Solo lectura"
 
 msgid "Solo para referencia de la agencia. 1 nombre por línea."
 msgstr "Solo para referencia de la agencia. 1 nombre por línea."
@@ -1549,35 +1989,56 @@ msgstr "Solo tarjeta disponible."
 msgid "Sí, eres oficialmente peligroso."
 msgstr "Sí, eres oficialmente peligroso."
 
+msgid "Tabla"
+msgstr "Tabla"
+
+msgid "También tienes otro viaje a la vista:"
+msgstr "También tienes otro viaje a la vista:"
+
 msgid "También tienes otro viaje a la vista: <a href=\"%s\">%s</a>.%s"
 msgstr "También tienes otro viaje a la vista: <a href=\"%s\">%s</a>.%s"
 
 msgid "Tarjeta"
 msgstr "Tarjeta"
 
+msgid "Tarjetas"
+msgstr "Tarjetas"
+
+msgid "Te acompañaremos desde aquí"
+msgstr "Te acompañaremos desde aquí"
+
 msgid "Te faltan <strong>%1$s</strong> para subir a <strong>%2$s</strong>."
 msgstr "Te faltan <strong>%1$s</strong> para subir a <strong>%2$s</strong>."
+
+msgid "Te faltan {amount} para subir a {tier}."
+msgstr "Te faltan {amount} para subir a {tier}."
+
+msgid "Te faltan {amount} para {tier}."
+msgstr "Te faltan {amount} para {tier}."
 
 msgid "Te hemos enviado la confirmacion a %s."
 msgstr "Te hemos enviado la confirmacion a %s."
 
-msgid ""
-"Te hemos reenviado el enlace de pago final si existía un depósito registrado."
-msgstr ""
-"Te hemos reenviado el enlace de pago final si existía un depósito registrado."
+msgid "Te hemos reenviado el enlace de pago final si existía un depósito registrado."
+msgstr "Te hemos reenviado el enlace de pago final si existía un depósito registrado."
+
+msgid "Tel."
+msgstr "Tel."
 
 msgid "Teléfono"
 msgstr "Teléfono"
 
+msgid "Texto: máximo %d caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP."
+msgstr "Texto: máximo %d caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP."
+
+msgid "Texto: máximo 4000 caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. PDF, JPG, PNG o WEBP."
+msgstr "Texto: máximo 4000 caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. PDF, JPG, PNG o WEBP."
+
 msgid "Texto adicional (bono):"
 msgstr "Texto adicional (bono):"
 
-msgid ""
-"Texto: máximo %d caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, "
-"máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP."
-msgstr ""
-"Texto: máximo %d caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, "
-"máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP."
+msgid "Tiempo"
+msgstr "Tiempo"
 
 msgid "Tienes %d facturas disponibles."
 msgstr "Tienes %d facturas disponibles."
@@ -1597,14 +2058,17 @@ msgstr "Tienes un pago pendiente de %s."
 msgid "Tienes un pago pendiente de <strong>%s</strong> para este viaje."
 msgstr "Tienes un pago pendiente de <strong>%s</strong> para este viaje."
 
+msgid "Tienes un pago pendiente de {amount} para este viaje."
+msgstr "Tienes un pago pendiente de {amount} para este viaje."
+
 msgid "Tipo"
 msgstr "Tipo"
 
-msgid "Tipo de pago inválido."
-msgstr "Tipo de pago inválido."
-
 msgid "Tipo:"
 msgstr "Tipo:"
+
+msgid "Tipo de pago inválido."
+msgstr "Tipo de pago inválido."
 
 msgid "Todavia no hay clientes con portal listados."
 msgstr "Todavia no hay clientes con portal listados."
@@ -1612,20 +2076,44 @@ msgstr "Todavia no hay clientes con portal listados."
 msgid "Todavía no has realizado ningún pago en este viaje."
 msgstr "Todavía no has realizado ningún pago en este viaje."
 
+msgid "Todavía no hay datos de pagos disponibles. En cuanto estén listos, aparecerán aquí resumidos."
+msgstr "Todavía no hay datos de pagos disponibles. En cuanto estén listos, aparecerán aquí resumidos."
+
 msgid "Todavía no hay facturas emitidas."
 msgstr "Todavía no hay facturas emitidas."
+
+msgid "Todavía no hay mensajes"
+msgstr "Todavía no hay mensajes"
 
 msgid "Todavía no hay mensajes propios del portal."
 msgstr "Todavía no hay mensajes propios del portal."
 
+msgid "Todavía no tienes un viaje activo. Cuando lo tengas, aquí verás el siguiente paso con claridad."
+msgstr "Todavía no tienes un viaje activo. Cuando lo tengas, aquí verás el siguiente paso con claridad."
+
+msgid "Todo el viaje está liquidado."
+msgstr "Todo el viaje está liquidado."
+
+msgid "Todo en marcha"
+msgstr "Todo en marcha"
+
+msgid "Todo está en orden. Ahora solo queda preparar el viaje con calma."
+msgstr "Todo está en orden. Ahora solo queda preparar el viaje con calma."
+
 msgid "Todo listo"
 msgstr "Todo listo"
+
+msgid "Todo lo importante de tu viaje, en un vistazo claro, cuidado y agradable."
+msgstr "Todo lo importante de tu viaje, en un vistazo claro, cuidado y agradable."
 
 msgid "Todo pagado"
 msgstr "Todo pagado"
 
 msgid "Total"
 msgstr "Total"
+
+msgid "Total:"
+msgstr "Total:"
 
 msgid "Total expediente"
 msgstr "Total expediente"
@@ -1636,29 +2124,41 @@ msgstr "Total pagado"
 msgid "Total viaje"
 msgstr "Total viaje"
 
-msgid "Total:"
-msgstr "Total:"
-
 msgid "Transferencia bancaria"
 msgstr "Transferencia bancaria"
 
 msgid "Transferencia bancaria online"
 msgstr "Transferencia bancaria online"
 
+msgid "Transferencia iniciada. En cuanto el banco la confirme actualizaremos tus pagos."
+msgstr "Transferencia iniciada. En cuanto el banco la confirme actualizaremos tus pagos."
+
 msgid "Transferencia no disponible."
 msgstr "Transferencia no disponible."
+
+msgid "traslados incluidos"
+msgstr "traslados incluidos"
+
+msgid "traslados previstos"
+msgstr "traslados previstos"
+
+msgid "Trayecto"
+msgstr "Trayecto"
+
+msgid "Tu contraseña es tu llave digital. No la compartas, aunque a los humanos les encante hacerlo."
+msgstr "Tu contraseña es tu llave digital. No la compartas, aunque a los humanos les encante hacerlo."
 
 msgid "Tu cuenta"
 msgstr "Tu cuenta"
 
-msgid "Tu cuenta no está vinculada todavía."
-msgstr "Tu cuenta no está vinculada todavía."
+msgid "Tu cuenta no está vinculada a un cliente."
+msgstr "Tu cuenta no está vinculada a un cliente."
 
 msgid "Tu cuenta no está vinculada a un cliente casanova."
 msgstr "Tu cuenta no está vinculada a un cliente casanova."
 
-msgid "Tu cuenta no está vinculada a un cliente."
-msgstr "Tu cuenta no está vinculada a un cliente."
+msgid "Tu cuenta no está vinculada todavía."
+msgstr "Tu cuenta no está vinculada todavía."
 
 msgid "Tu cuenta ya está vinculada."
 msgstr "Tu cuenta ya está vinculada."
@@ -1666,28 +2166,59 @@ msgstr "Tu cuenta ya está vinculada."
 msgid "Tu código de verificación"
 msgstr "Tu código de verificación"
 
-msgid ""
-"Tu código de verificación para vincular tu cuenta es: %s\\n\\nCaduca en 10 "
-"minutos.\\n\\nSi no has solicitado este código, puedes ignorar este email."
-msgstr ""
-"Tu código de verificación para vincular tu cuenta es: %s\\n\\nCaduca en 10 "
-"minutos.\\n\\nSi no has solicitado este código, puedes ignorar este email."
+msgid "Tu código de verificación para vincular tu cuenta es: %s\\n\\nCaduca en 10 minutos.\\n\\nSi no has solicitado este código, puedes ignorar este email."
+msgstr "Tu código de verificación para vincular tu cuenta es: %s\\n\\nCaduca en 10 minutos.\\n\\nSi no has solicitado este código, puedes ignorar este email."
 
-msgid ""
-"Tu expediente <strong>%s</strong> está <strong>completamente pagado</strong>."
-msgstr ""
-"Tu expediente <strong>%s</strong> está <strong>completamente pagado</strong>."
+msgid "Tu equipo Casanova"
+msgstr "Tu equipo Casanova"
 
-msgid ""
-"Tu próximo viaje está al día. No tienes acciones pendientes ahora mismo."
-msgstr ""
-"Tu próximo viaje está al día. No tienes acciones pendientes ahora mismo."
+msgid "Tu expediente <strong>%s</strong> está <strong>completamente pagado</strong>."
+msgstr "Tu expediente <strong>%s</strong> está <strong>completamente pagado</strong>."
+
+msgid "Tu nivel actual, tus puntos y el progreso hacia el siguiente nivel."
+msgstr "Tu nivel actual, tus puntos y el progreso hacia el siguiente nivel."
+
+msgid "Tu nivel actual y los puntos que ya has acumulado."
+msgstr "Tu nivel actual y los puntos que ya has acumulado."
+
+msgid "Tu programa Mulligans"
+msgstr "Tu programa Mulligans"
+
+msgid "Tu próximo viaje"
+msgstr "Tu próximo viaje"
+
+msgid "Tu próximo viaje está al día. No tienes acciones pendientes ahora mismo."
+msgstr "Tu próximo viaje está al día. No tienes acciones pendientes ahora mismo."
+
+msgid "Tus Mulligans"
+msgstr "Tus Mulligans"
+
+msgid "Tus viajes"
+msgstr "Tus viajes"
 
 msgid "Tu viaje"
 msgstr "Tu viaje"
 
-msgid "Tus Mulligans"
-msgstr "Tus Mulligans"
+msgid "Tu viaje de un vistazo"
+msgstr "Tu viaje de un vistazo"
+
+msgid "Tu viaje empieza en {days} días"
+msgstr "Tu viaje empieza en {days} días"
+
+msgid "Tu viaje empieza hoy"
+msgstr "Tu viaje empieza hoy"
+
+msgid "Tu viaje en marcha"
+msgstr "Tu viaje en marcha"
+
+msgid "Tu viaje incluye"
+msgstr "Tu viaje incluye"
+
+msgid "Tú"
+msgstr "Tú"
+
+msgid "Una vista rápida de lo esencial de tu viaje."
+msgstr "Una vista rápida de lo esencial de tu viaje."
 
 msgid "Uno de los archivos adjuntos está vacío."
 msgstr "Uno de los archivos adjuntos está vacío."
@@ -1695,15 +2226,14 @@ msgstr "Uno de los archivos adjuntos está vacío."
 msgid "Uno de los archivos no se ha podido subir."
 msgstr "Uno de los archivos no se ha podido subir."
 
+msgid "Usados"
+msgstr "Usados"
+
 msgid "Usa el botón para ver tu lista de expedientes."
 msgstr "Usa el botón para ver tu lista de expedientes."
 
-msgid ""
-"Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos "
-"el enlace del pago restante."
-msgstr ""
-"Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos "
-"el enlace del pago restante."
+msgid "Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos el enlace del pago restante."
+msgstr "Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos el enlace del pago restante."
 
 msgid "Usuario"
 msgstr "Usuario"
@@ -1726,6 +2256,15 @@ msgstr "Ver expediente"
 msgid "Ver facturas"
 msgstr "Ver facturas"
 
+msgid "Verificar y continuar"
+msgstr "Verificar y continuar"
+
+msgid "Ver mapa"
+msgstr "Ver mapa"
+
+msgid "Ver mapa en Google Maps"
+msgstr "Ver mapa en Google Maps"
+
 msgid "Ver mensajes"
 msgstr "Ver mensajes"
 
@@ -1741,14 +2280,17 @@ msgstr "Ver pagos"
 msgid "Ver portal como cliente"
 msgstr "Ver portal como cliente"
 
+msgid "Ver ruta"
+msgstr "Ver ruta"
+
+msgid "Ver ruta en Google Maps"
+msgstr "Ver ruta en Google Maps"
+
 msgid "Ver viaje"
 msgstr "Ver viaje"
 
 msgid "Ver últimos movimientos"
 msgstr "Ver últimos movimientos"
-
-msgid "Verificar y continuar"
-msgstr "Verificar y continuar"
 
 msgid "Viaje"
 msgstr "Viaje"
@@ -1759,8 +2301,17 @@ msgstr "Viaje: %s"
 msgid "Viaje: <strong>%1$s</strong>%2$s"
 msgstr "Viaje: <strong>%1$s</strong>%2$s"
 
+msgid "Viaje destacado"
+msgstr "Viaje destacado"
+
+msgid "Viaje pagado"
+msgstr "Viaje pagado"
+
 msgid "Viajes"
 msgstr "Viajes"
+
+msgid "Viajes >"
+msgstr "Viajes >"
 
 msgid "Vincula tu cuenta"
 msgstr "Vincula tu cuenta"
@@ -1774,6 +2325,9 @@ msgstr "Vista cliente activa: %s"
 msgid "Vista cliente en modo solo lectura."
 msgstr "Vista cliente en modo solo lectura."
 
+msgid "Vista en construcción."
+msgstr "Vista en construcción."
+
 msgid "Vista solo lectura"
 msgstr "Vista solo lectura"
 
@@ -1783,29 +2337,80 @@ msgstr "Volver"
 msgid "Voucher no disponible."
 msgstr "Voucher no disponible."
 
+msgid "Vouchers y documentación"
+msgstr "Vouchers y documentación"
+
 msgid "Vuelo"
 msgstr "Vuelo"
 
 msgid "Vuelos"
 msgstr "Vuelos"
 
+msgid "vuelos incluidos"
+msgstr "vuelos incluidos"
+
+msgid "vuelos previstos"
+msgstr "vuelos previstos"
+
+msgid "Vuelos y traslados"
+msgstr "Vuelos y traslados"
+
+msgid "vuelos y traslados incluidos"
+msgstr "vuelos y traslados incluidos"
+
+msgid "vuelos y traslados previstos"
+msgstr "vuelos y traslados previstos"
+
+msgid "Web"
+msgstr "Web"
+
 msgid "WP #%d"
 msgstr "WP #%d"
 
-msgid ""
-"Ya hemos registrado tu depósito. Cuando quieras, puedes completar el resto "
-"del pago desde este enlace seguro:"
-msgstr ""
-"Ya hemos registrado tu depósito. Cuando quieras, puedes completar el resto "
-"del pago desde este enlace seguro:"
+msgid "Ya estás en el nivel más alto del programa."
+msgstr "Ya estás en el nivel más alto del programa."
 
-msgid ""
-"Ya puedes acceder a tu documentación (bonos y facturas) desde el portal:"
-msgstr ""
-"Ya puedes acceder a tu documentación (bonos y facturas) desde el portal:"
+msgid "Ya hemos registrado tu depósito. Cuando quieras, puedes completar el resto del pago desde este enlace seguro:"
+msgstr "Ya hemos registrado tu depósito. Cuando quieras, puedes completar el resto del pago desde este enlace seguro:"
 
-msgid "ha enviado un mensaje desde el portal de cliente."
-msgstr "ha enviado un mensaje desde el portal de cliente."
+msgid "Ya puedes acceder a tu documentación (bonos y facturas) desde el portal:"
+msgstr "Ya puedes acceder a tu documentación (bonos y facturas) desde el portal:"
+
+msgid "Ya tienes documentación disponible para este viaje."
+msgstr "Ya tienes documentación disponible para este viaje."
+
+msgid "{badge} · {count}"
+msgstr "{badge} · {count}"
+
+msgid "{count} hotel"
+msgstr "{count} hotel"
+
+msgid "{count} hoteles"
+msgstr "{count} hoteles"
+
+msgid "{count} mensaje sin leer"
+msgstr "{count} mensaje sin leer"
+
+msgid "{count} mensajes sin leer"
+msgstr "{count} mensajes sin leer"
+
+msgid "{count} noche"
+msgstr "{count} noche"
+
+msgid "{count} noches"
+msgstr "{count} noches"
+
+msgid "{count} ronda de golf"
+msgstr "{count} ronda de golf"
+
+msgid "{count} rondas de golf"
+msgstr "{count} rondas de golf"
+
+msgid "{paid} pagados"
+msgstr "{paid} pagados"
+
+msgid "· {label}: {value}"
+msgstr "· {label}: {value}"
 
 msgid "¿No tienes acceso a ese email? Escríbenos y lo solucionamos."
 msgstr "¿No tienes acceso a ese email? Escríbenos y lo solucionamos."
@@ -1816,11 +2421,17 @@ msgstr "¿Ya pagaste el depósito? Reenviar enlace para pagar el resto"
 msgid "Última actualización hace %s"
 msgstr "Última actualización hace %s"
 
+msgid "Última sincronización"
+msgstr "Última sincronización"
+
 msgid "Última sincronización:"
 msgstr "Última sincronización:"
 
 msgid "Último mensaje"
 msgstr "Último mensaje"
+
+msgid "← Viajes"
+msgstr "← Viajes"
 
 msgid "← Volver a mis expedientes"
 msgstr "← Volver a mis expedientes"

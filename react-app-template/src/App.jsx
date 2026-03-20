@@ -16,9 +16,8 @@ import { PortalFooter, Sidebar, Topbar } from "./components/PortalShell.jsx";
 import SecurityView from "./components/SecurityView.jsx";
 import TripsList from "./components/TripsList.jsx";
 import { EmptyState, Notice, Skeleton, TableSkeleton } from "./components/ui.jsx";
-import { t, tt } from "./i18n/t.js";
+import { formatCurrency, formatDate, formatNumber, t, tt } from "./i18n/t.js";
 import { api } from "./lib/api.js";
-import { formatMsgDate } from "./lib/formatters.js";
 import { readParams, setParam } from "./lib/params.js";
 import { getBonusesVariant, getPaymentVariant, getStatusVariant } from "./lib/statusBadges.js";
 import { LS_KEYS, lsGet, lsSet, resolveInitialTheme } from "./lib/storage.js";
@@ -259,6 +258,7 @@ function IconLogout() {
 const NAV_ITEMS = [
   {
     key: "dashboard",
+    labelKey: "nav_dashboard",
     label: "Dashboard",
     view: "dashboard",
     icon: IconGrid,
@@ -266,6 +266,7 @@ const NAV_ITEMS = [
   },
   {
     key: "trips",
+    labelKey: "nav_trips",
     label: "Viajes",
     view: "trips",
     icon: IconMapPin,
@@ -273,6 +274,7 @@ const NAV_ITEMS = [
   },
   {
     key: "inbox",
+    labelKey: "nav_messages",
     label: "Mensajes",
     view: "inbox",
     icon: IconChatBubble,
@@ -280,6 +282,7 @@ const NAV_ITEMS = [
   },
   {
     key: "mulligans",
+    labelKey: "nav_mulligans",
     label: "Mulligans",
     view: "mulligans",
     icon: IconStarBadge,
@@ -316,22 +319,22 @@ function MulligansView({ data }) {
   };
 
   const fmtMoney = (v) =>
-    new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v || 0);
+    formatCurrency(v || 0, "EUR", { maximumFractionDigits: 0 });
 
   const fmtDate = (ts) => {
     const n = Number(ts || 0);
     if (!n) return "—";
     const d = new Date(n * 1000);
-    return d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return formatDate(d, { day: "2-digit", month: "2-digit", year: "numeric" });
   };
 
   const mulliganKpiItems = [
-    { key: "balance", label: "Balance", value: points.toLocaleString("es-ES"), icon: <IconSparkle />, colorClass: "is-salmon" },
-    { key: "spend", label: "Gasto histórico", value: fmtMoney(spend), icon: <IconChartBar />, colorClass: "is-blue" },
-    { key: "sync", label: "Última sincronización", value: fmtDate(m.last_sync), icon: <IconCalendar />, colorClass: "is-lilac" },
-    { key: "earned", label: "Ganados", value: earned.toLocaleString("es-ES"), icon: <IconShieldCheck />, colorClass: "is-green" },
-    { key: "bonus", label: "Bonus", value: bonus.toLocaleString("es-ES"), icon: <IconStar />, colorClass: "is-salmon" },
-    { key: "used", label: "Usados", value: used.toLocaleString("es-ES"), icon: <IconClockArrow />, colorClass: "is-lilac" },
+    { key: "balance", label: tt("Balance"), value: formatNumber(points), icon: <IconSparkle />, colorClass: "is-salmon" },
+    { key: "spend", label: tt("Gasto histórico"), value: fmtMoney(spend), icon: <IconChartBar />, colorClass: "is-blue" },
+    { key: "sync", label: tt("Última sincronización"), value: fmtDate(m.last_sync), icon: <IconCalendar />, colorClass: "is-lilac" },
+    { key: "earned", label: tt("Ganados"), value: formatNumber(earned), icon: <IconShieldCheck />, colorClass: "is-green" },
+    { key: "bonus", label: tt("Bonus"), value: formatNumber(bonus), icon: <IconStar />, colorClass: "is-salmon" },
+    { key: "used", label: tt("Usados"), value: formatNumber(used), icon: <IconClockArrow />, colorClass: "is-lilac" },
   ];
 
   return (
@@ -357,7 +360,7 @@ function MulligansView({ data }) {
         </div>
         <div className="cp-mt-14">
           <Notice variant="info" title={tt("Cómo funciona")}>
-            Los beneficios se activan con una reserva real. Si un año no viajas, mantienes tu nivel, pero no se “dispara” el beneficio.
+            {tt("Los beneficios se activan con una reserva real. Si un año no viajas, mantienes tu nivel, pero no se “dispara” el beneficio.")}
           </Notice>
         </div>
       </div>
@@ -377,7 +380,7 @@ function MulligansView({ data }) {
               const sign = pts >= 0 ? "+" : "";
               const when = it.ts ? fmtDate(it.ts) : "—";
               const type = String(it.type || "");
-              const label = type === "bonus" ? "Bonus" : type === "earn" ? "Ganado" : type === "redeem" ? "Canje" : "Movimiento";
+              const label = type === "bonus" ? tt("Bonus") : type === "earn" ? tt("Ganado") : type === "redeem" ? tt("Canje") : tt("Movimiento");
               return (
                 <div key={it.id || `${it.ts}-${Math.random()}`} className="cp-ledger-row">
                   <div className="cp-ledger-main">
@@ -843,14 +846,20 @@ function App() {
     }
   }
 
-  async function setLocale(locale) {
+  async function setLocale(selection) {
     if (isReadOnly) {
       notify(readOnlyMessage, "warn");
       return;
     }
     try {
+      const locale = typeof selection === "string"
+        ? selection
+        : String(selection?.locale || selection?.value || "");
       const lang = String(locale || "").slice(0, 2).toLowerCase();
-      const res = await api('/profile/locale', { method: 'POST', body: { locale, lang } });
+      const resolvedLang = typeof selection === "string"
+        ? lang
+        : String(selection?.lang || lang || "").toLowerCase();
+      const res = await api('/profile/locale', { method: 'POST', body: { locale, lang: resolvedLang } });
       setProfile((p) => (p ? { ...p, locale: res.locale || locale } : p));
 
       // Si WPML está activo, el backend nos devuelve la URL del portal en el idioma correcto.
@@ -935,7 +944,7 @@ function App() {
               title={paymentBanner.title}
               className="casanova-notice casanova-notice--payment"
               onClose={dismissPaymentBanner}
-              closeLabel="Cerrar"
+              closeLabel={t("close", "Cerrar")}
             >
               {paymentBanner.body}
             </Notice>
@@ -945,7 +954,7 @@ function App() {
         {loadingDash && !dashboard ? (
           <div className="cp-content">
             <div className="cp-card">
-              <div className="cp-card-title">{(activeView === "viajes" || activeView === "trips") ? "Tus viajes" : "Cargando"}</div>
+              <div className="cp-card-title">{(activeView === "viajes" || activeView === "trips") ? tt("Tus viajes") : tt("Cargando")}</div>
               {(activeView === "viajes" || activeView === "trips") ? (
                 <div className="cp-table-wrap cp-mt-14">
                   <TableSkeleton rows={7} cols={8} />
@@ -1018,7 +1027,7 @@ function App() {
             <div className="cp-content">
               {profileErr ? (
                 <Notice variant="warn" title={tt("No podemos cargar tu perfil")}>
-                  {profileErr?.message || 'Inténtalo de nuevo más tarde.'}
+                  {profileErr?.message || tt("Inténtalo de nuevo más tarde.")}
                 </Notice>
               ) : (
                 <div className="cp-card"><Skeleton lines={6} /></div>

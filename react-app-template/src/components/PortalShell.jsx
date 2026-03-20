@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
-import { t, tt } from "../i18n/t.js";
+import { getLanguages, t, tt } from "../i18n/t.js";
 import { setParam } from "../lib/params.js";
 
 const ICON_PROPS = {
@@ -74,16 +74,49 @@ function IconLogout() {
 function initials(name) {
   const value = String(name || "").trim();
   if (!value) return "U";
+
   const parts = value.split(/\s+/).filter(Boolean);
   const first = parts[0]?.[0] || "U";
   const last = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
   return (first + last).toUpperCase();
 }
 
+function fallbackLanguages() {
+  return [
+    { value: "es_ES", locale: "es_ES", lang: "es", label: "ES", name: tt("Español") },
+    { value: "en_US", locale: "en_US", lang: "en", label: "EN", name: tt("English") },
+  ];
+}
+
+function availableLanguages() {
+  const items = getLanguages();
+  return items.length ? items : fallbackLanguages();
+}
+
+function normalizeLanguageSelection(item) {
+  const locale = item?.locale || item?.value || "";
+  const lang = item?.lang || String(locale || "").slice(0, 2).toLowerCase();
+  return { locale, lang };
+}
+
+function currentLocaleValue(locale, items) {
+  const current = String(locale || "");
+  if (current) return current;
+
+  if (typeof window !== "undefined") {
+    const runtimeLocale = String(window.CASANOVA_I18N_META?.localeRaw || "");
+    if (runtimeLocale) return runtimeLocale;
+  }
+
+  return items[0]?.value || "es_ES";
+}
+
 function LanguageMenu({ locale, onLocale, disabled = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const current = locale || "es_ES";
+  const items = availableLanguages();
+  const current = currentLocaleValue(locale, items);
+  const active = items.find((item) => item.value === current || item.locale === current) || items[0];
 
   useEffect(() => {
     if (disabled && open) setOpen(false);
@@ -98,33 +131,27 @@ function LanguageMenu({ locale, onLocale, disabled = false }) {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [open]);
 
-  const items = [
-    { value: "es_ES", label: "ES", name: "Español" },
-    { value: "en_US", label: "EN", name: "English" },
-  ];
-  const active = items.find((item) => item.value === current) || items[0];
-
   return (
     <div className="cp-lang" ref={ref}>
-      <button type="button" className="cp-lang-btn" onClick={() => { if (!disabled) setOpen((value) => !value); }} aria-haspopup="menu" aria-expanded={open ? "true" : "false"} title={active.name} disabled={disabled}>
+      <button type="button" className="cp-lang-btn" onClick={() => { if (!disabled) setOpen((value) => !value); }} aria-haspopup="menu" aria-expanded={open ? "true" : "false"} title={active?.name || ""} disabled={disabled}>
         <span className="cp-lang-ico" aria-hidden="true"><IconGlobe /></span>
-        <span className="cp-lang-label">{active.label}</span>
+        <span className="cp-lang-label">{active?.label || "ES"}</span>
       </button>
       {open && !disabled ? (
         <div className="cp-lang-menu" role="menu">
           {items.map((item) => (
             <button
-              key={item.value}
+              key={item.value || item.locale}
               type="button"
-              className={`cp-lang-item ${item.value === current ? "is-active" : ""}`}
+              className={`cp-lang-item ${item.value === current || item.locale === current ? "is-active" : ""}`}
               onClick={() => {
                 setOpen(false);
-                if (typeof onLocale === "function") onLocale(item.value);
+                if (typeof onLocale === "function") onLocale(normalizeLanguageSelection(item));
               }}
               role="menuitem"
             >
               <span className="cp-lang-item-label">{item.name}</span>
-              {item.value === current ? <span className="cp-lang-check" aria-hidden="true">✓</span> : null}
+              {item.value === current || item.locale === current ? <span className="cp-lang-check" aria-hidden="true">✓</span> : null}
             </button>
           ))}
         </div>
@@ -245,6 +272,8 @@ export function Sidebar({ view, unread = 0, items = [], theme = "light" }) {
         {items.map((item) => {
           const IconComponent = item.icon;
           const active = item.isActive(view);
+          const label = item.labelKey ? t(item.labelKey, item.label || item.fallback || "") : (item.label || item.fallback || "");
+
           return (
             <button
               key={item.key}
@@ -256,7 +285,7 @@ export function Sidebar({ view, unread = 0, items = [], theme = "light" }) {
                 <span className="cp-nav-icon">
                   <IconComponent />
                 </span>
-                <span>{item.label}</span>
+                <span>{label}</span>
               </span>
               {item.key === "inbox" && view !== "inbox" && unread > 0 ? (
                 <span className="cp-badge">{unread}</span>

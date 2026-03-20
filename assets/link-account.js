@@ -1,6 +1,32 @@
 (function () {
   "use strict";
 
+  function getI18n() {
+    return window.CasanovaPortalI18n || null;
+  }
+
+  function interpolate(template, vars) {
+    return String(template || "").replace(/\{(\w+)\}/g, function (_, name) {
+      return Object.prototype.hasOwnProperty.call(vars || {}, name) ? vars[name] : "";
+    });
+  }
+
+  function tt(literal, fallback) {
+    var runtime = getI18n();
+    if (runtime && typeof runtime.tt === "function") {
+      return runtime.tt(literal, fallback);
+    }
+    return fallback == null ? String(literal || "") : String(fallback || "");
+  }
+
+  function ttf(literal, vars, fallback) {
+    var runtime = getI18n();
+    if (runtime && typeof runtime.ttf === "function") {
+      return runtime.ttf(literal, vars || {}, fallback);
+    }
+    return interpolate(tt(literal, fallback), vars || {});
+  }
+
   function qs(root, sel) {
     return root.querySelector(sel);
   }
@@ -85,19 +111,21 @@
     function startCooldown(seconds) {
       resendCooldown = seconds || 60;
       if (!resendBtn) return;
+
       resendBtn.disabled = true;
-      resendBtn.textContent = "Reenviar código (" + resendCooldown + "s)";
+      resendBtn.textContent = ttf("Reenviar código ({seconds}s)", { seconds: resendCooldown });
       if (resendTimer) clearInterval(resendTimer);
+
       resendTimer = setInterval(function () {
         resendCooldown -= 1;
         if (resendCooldown <= 0) {
           clearInterval(resendTimer);
           resendTimer = null;
           resendBtn.disabled = false;
-          resendBtn.textContent = "Reenviar código";
+          resendBtn.textContent = tt("Reenviar código");
           return;
         }
-        resendBtn.textContent = "Reenviar código (" + resendCooldown + "s)";
+        resendBtn.textContent = ttf("Reenviar código ({seconds}s)", { seconds: resendCooldown });
       }, 1000);
     }
 
@@ -105,11 +133,13 @@
       hide(step1);
       show(step2);
       alertBox(root, null, null);
+
       if (sentHint) {
-        var msg = "";
-        if (emailMasked) msg = "Código enviado a " + emailMasked + ".";
-        sentHint.textContent = msg ? msg + " Caduca en 10 minutos." : "";
+        sentHint.textContent = emailMasked
+          ? ttf("Código enviado a {email}. Caduca en 10 minutos.", { email: emailMasked })
+          : tt("El código caduca en 10 minutos.");
       }
+
       if (otpInput) otpInput.focus();
       startCooldown(60);
     }
@@ -120,7 +150,7 @@
 
       var dni = (dniInput && dniInput.value) ? dniInput.value.trim() : "";
       if (!dni) {
-        alertBox(root, "error", "Introduce tu DNI.");
+        alertBox(root, "error", tt("Introduce tu DNI."));
         return;
       }
 
@@ -130,13 +160,13 @@
         .then(function (r) {
           var j = r.json || {};
           if (!r.ok || !j.ok) {
-            alertBox(root, "error", j.message || "No se ha podido enviar el código.");
+            alertBox(root, "error", j.message || tt("No se ha podido enviar el código."));
             return;
           }
           toStep2(j.emailMasked || "");
         })
         .catch(function () {
-          alertBox(root, "error", "No se ha podido enviar el código.");
+          alertBox(root, "error", tt("No se ha podido enviar el código."));
         })
         .finally(function () {
           setBusy(submitBtn, false);
@@ -150,11 +180,11 @@
       var dni = (dniInput && dniInput.value) ? dniInput.value.trim() : "";
       var otp = (otpInput && otpInput.value) ? otpInput.value.trim() : "";
       if (!dni) {
-        alertBox(root, "error", "Introduce tu DNI.");
+        alertBox(root, "error", tt("Introduce tu DNI."));
         return;
       }
       if (!otp) {
-        alertBox(root, "error", "Introduce el código que te hemos enviado.");
+        alertBox(root, "error", tt("Introduce el código que te hemos enviado."));
         return;
       }
 
@@ -164,13 +194,13 @@
         .then(function (r) {
           var j = r.json || {};
           if (!r.ok || !j.ok) {
-            alertBox(root, "error", j.message || "El código no es válido.");
+            alertBox(root, "error", j.message || tt("El código no es válido."));
             return;
           }
           window.location.href = j.redirectTo || redirectTo || "/portal-app/";
         })
         .catch(function () {
-          alertBox(root, "error", "No se ha podido validar el código.");
+          alertBox(root, "error", tt("No se ha podido validar el código."));
         })
         .finally(function () {
           setBusy(verifyBtn, false);
@@ -180,10 +210,11 @@
     if (resendBtn) {
       resendBtn.addEventListener("click", function () {
         if (resendBtn.disabled) return;
+
         alertBox(root, null, null);
         var dni = (dniInput && dniInput.value) ? dniInput.value.trim() : "";
         if (!dni) {
-          alertBox(root, "error", "Introduce tu DNI.");
+          alertBox(root, "error", tt("Introduce tu DNI."));
           return;
         }
 
@@ -192,16 +223,18 @@
           .then(function (r) {
             var j = r.json || {};
             if (!r.ok || !j.ok) {
-              alertBox(root, "error", j.message || "No se ha podido reenviar el código.");
+              alertBox(root, "error", j.message || tt("No se ha podido reenviar el código."));
               return;
             }
             if (sentHint) {
-              sentHint.textContent = (j.emailMasked ? "Código reenviado a " + j.emailMasked + "." : "Código reenviado.") + " Caduca en 10 minutos.";
+              sentHint.textContent = j.emailMasked
+                ? ttf("Código reenviado a {email}. Caduca en 10 minutos.", { email: j.emailMasked })
+                : tt("Código reenviado. Caduca en 10 minutos.");
             }
             startCooldown(60);
           })
           .catch(function () {
-            alertBox(root, "error", "No se ha podido reenviar el código.");
+            alertBox(root, "error", tt("No se ha podido reenviar el código."));
           })
           .finally(function () {
             setBusy(resendBtn, false);

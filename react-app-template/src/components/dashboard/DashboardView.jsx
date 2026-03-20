@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 
-import { t, tt } from "../../i18n/t.js";
+import { t, tt, ttf } from "../../i18n/t.js";
 import { EmptyState, ProgressBar } from "../ui.jsx";
-import { euro, formatDateES, formatTierLabel, formatTimestamp, normalizeTripDates } from "../../lib/formatters.js";
+import { euro, formatDateES, formatNumberUi, formatTierLabel, formatTimestamp, normalizeTripDates } from "../../lib/formatters.js";
 import { setParam } from "../../lib/params.js";
 import { compactList, countNightsBetween, flightSummary, serviceSemanticType, transferSummary, uniqueStrings } from "../../lib/tripServices.js";
 
@@ -171,7 +171,9 @@ export default function DashboardView({
   const progressPct = Math.max(0, Math.min(100, Math.round(progressRaw || 0)));
   const remaining = typeof mull?.remaining_to_next === "number" ? mull.remaining_to_next : null;
   const nextTier = mull?.next_tier_label ? String(mull.next_tier_label) : null;
-  const hintText = (remaining !== null && nextTier) ? ("Te faltan " + euro(remaining) + " para subir a " + nextTier + ".") : null;
+  const hintText = (remaining !== null && nextTier)
+    ? ttf("Te faltan {amount} para subir a {tier}.", { amount: euro(remaining), tier: nextTier })
+    : null;
   const nextTierSlug = normalizeTierSlug(nextTier);
   const tierMinSpend = LOYALTY_TIER_MIN_SPEND[tierSlug] ?? 0;
   const nextTierMinSpend = LOYALTY_TIER_MIN_SPEND[nextTierSlug];
@@ -186,7 +188,7 @@ export default function DashboardView({
     ? tt("Tu nivel actual, tus puntos y el progreso hacia el siguiente nivel.")
     : tt("Tu nivel actual y los puntos que ya has acumulado.");
   const loyaltyHint = (remaining !== null && nextTier)
-    ? ("Te faltan " + euro(remaining) + " para " + nextTier + ".")
+    ? ttf("Te faltan {amount} para {tier}.", { amount: euro(remaining), tier: nextTier })
     : tt("Ya est\u00e1s en el nivel m\u00e1s alto del programa.");
 
   const heroTrip = hasActiveTrip ? (detailTrip || nextTrip || null) : null;
@@ -196,12 +198,12 @@ export default function DashboardView({
   const tripDates = normalizeTripDates(heroTrip || nextTrip);
   const tripDateRange = [formatDateES(tripDates.start), formatDateES(tripDates.end)].filter((value) => value && value !== "—").join(" — ");
   const tripDatesLabel = tripDateRange || tt("Fechas por confirmar");
-  const tripReferenceLabel = tripCode ? `${tt("Referencia")} ${tripCode}` : "";
+  const tripReferenceLabel = tripCode ? ttf("Referencia {code}", { code: tripCode }) : "";
   const daysLeftRaw = Number(nextTrip?.days_left);
   const daysLeft = Number.isFinite(daysLeftRaw) ? Math.max(0, Math.round(daysLeftRaw)) : null;
   let daysLeftLabel = null;
   if (daysLeft !== null) {
-    daysLeftLabel = daysLeft === 0 ? tt("Tu viaje empieza hoy") : `Tu viaje empieza en ${daysLeft} días`;
+    daysLeftLabel = daysLeft === 0 ? tt("Tu viaje empieza hoy") : ttf("Tu viaje empieza en {days} días", { days: daysLeft });
   }
 
   const mapUrl = heroMap?.url ? String(heroMap.url) : "";
@@ -213,7 +215,7 @@ export default function DashboardView({
   const actionText = !hasActiveTrip
     ? tt("Todavía no tienes un viaje activo. Cuando lo tengas, aquí verás el siguiente paso con claridad.")
     : actionStatus === "pending" && pendingAmount !== null
-      ? `Tienes un pago pendiente de ${euro(pendingAmount)} para este viaje.`
+      ? ttf("Tienes un pago pendiente de {amount} para este viaje.", { amount: euro(pendingAmount) })
       : actionStatus === "invoices"
         ? tt("Ya tienes documentación disponible para este viaje.")
         : actionStatus === "ok"
@@ -234,7 +236,7 @@ export default function DashboardView({
     : (actionNote?.url ? String(actionNote.url) : "");
   const actionPillClass = actionStatus === "pending" ? "is-warn" : (actionStatus === "ok" ? "is-ok" : "is-info");
   const actionPillLabel = actionStatus === "invoices" && typeof action?.invoice_count === "number"
-    ? `${actionBadge} · ${action.invoice_count}`
+    ? ttf("{badge} · {count}", { badge: actionBadge, count: action.invoice_count })
     : actionBadge;
   const actionCtaLabel = actionStatus === "pending" ? tt("Ver pagos") : (actionStatus === "invoices" ? tt("Ver facturas") : tt("Ver viaje"));
 
@@ -252,8 +254,12 @@ export default function DashboardView({
   const transferCount = hasTransferSummary ? transferServices.length : 0;
   const extrasCount = otherServices.length;
   const nights = countNightsBetween(tripDates.start, tripDates.end);
-  const nightsLabel = nights ? `${nights} ${nights === 1 ? tt("noche") : tt("noches")}` : "";
-  const golfLabel = golfCount ? `${golfCount} ${golfCount === 1 ? tt("ronda de golf") : tt("rondas de golf")}` : "";
+  const nightsLabel = nights
+    ? (nights === 1 ? ttf("{count} noche", { count: nights }) : ttf("{count} noches", { count: nights }))
+    : "";
+  const golfLabel = golfCount
+    ? (golfCount === 1 ? ttf("{count} ronda de golf", { count: golfCount }) : ttf("{count} rondas de golf", { count: golfCount }))
+    : "";
   const flightLabel = hasFlightSummary
     ? (flightServices.every((service) => service?.included !== false) ? tt("vuelos incluidos") : tt("vuelos previstos"))
     : "";
@@ -278,7 +284,9 @@ export default function DashboardView({
   const heroVisualCopy = compactList(golfTitles, 1) || tripDateRange || heroSummaryLine || heroLead;
   const hotelNamesLabel = hotelTitles.join(" · ");
   const golfNamesLabel = golfTitles.join(" · ");
-  const hotelCountLabel = hotelCount ? `${hotelCount} ${hotelCount === 1 ? tt("hotel") : tt("hoteles")}` : "";
+  const hotelCountLabel = hotelCount
+    ? (hotelCount === 1 ? ttf("{count} hotel", { count: hotelCount }) : ttf("{count} hoteles", { count: hotelCount }))
+    : "";
   const hotelGlanceValue = nightsLabel || hotelCountLabel || tt("Hotel por confirmar");
   const hotelGlanceNote = hotelNamesLabel || tt("Estancia por confirmar");
   const golfGlanceValue = golfLabel || tt("Rondas de golf por confirmar");
@@ -328,13 +336,17 @@ export default function DashboardView({
   const unreadMessages = typeof data?.messages?.unread === "number" ? data.messages.unread : 0;
   const messageMeta = [
     messageWhen,
-    unreadMessages > 0 ? `${unreadMessages} ${unreadMessages === 1 ? tt("mensaje sin leer") : tt("mensajes sin leer")}` : "",
+    unreadMessages > 0
+      ? (unreadMessages === 1
+        ? ttf("{count} mensaje sin leer", { count: unreadMessages })
+        : ttf("{count} mensajes sin leer", { count: unreadMessages }))
+      : "",
   ].filter(Boolean).join(" · ");
 
   const emptyStateTitle = tt("Aún no tienes un viaje confirmado.");
   const emptyStateBody = tt("Cuando tu reserva esté lista, aquí verás todos los detalles de tu viaje: hotel, campos de golf, pagos y documentación.");
   const messageCopy = hasActiveTrip
-    ? (messageSnippet || tt("AquÃ­ verÃ¡s los Ãºltimos mensajes sobre tu viaje: horarios de salida, pagos o cualquier actualizaciÃ³n."))
+    ? (messageSnippet || tt("Aquí verás los últimos mensajes sobre tu viaje: horarios de salida, pagos o cualquier actualización."))
     : tt("Cuando tu reserva esté confirmada, aquí verás la conversación y las actualizaciones del equipo de Casanova Golf.");
 
   const dashboardMessageCopy = hasActiveTrip
@@ -525,7 +537,7 @@ export default function DashboardView({
               <a href={actionNoteUrl} onClick={noteExpedienteId ? viewNoteTrip : undefined}>
                 {actionNote.label}
               </a>
-              {actionNote.pending ? ` · ${tt("Pendiente")}: ${actionNote.pending}` : ""}
+              {actionNote.pending ? ttf("· {label}: {value}", { label: tt("Pendiente"), value: actionNote.pending }) : ""}
             </div>
           ) : null}
           <div className="cp-trip-module__footer">
@@ -565,7 +577,7 @@ export default function DashboardView({
                 />
               </div>
               <div className="cp-trip-module__meta">
-                {isPaid ? tt("Todo el viaje está liquidado.") : `Has pagado ${paidLabel} de ${totalLabel}.`}
+                {isPaid ? tt("Todo el viaje está liquidado.") : ttf("Has pagado {paid} de {total}.", { paid: paidLabel, total: totalLabel })}
               </div>
               <button className="cp-btn cp-btn--ghost" onClick={viewPayments}>
                 {tt("Ver pagos")}
@@ -671,11 +683,11 @@ export default function DashboardView({
                 </div>
                 <div className="cp-dashboard-loyalty__points-panel">
                   <div className="cp-dashboard-loyalty__kicker">{tt("Puntos")}</div>
-                  <div className="cp-dashboard-loyalty__points">{points.toLocaleString("es-ES")}</div>
+                  <div className="cp-dashboard-loyalty__points">{formatNumberUi(points)}</div>
                 </div>
               </div>
               <div className="cp-dashboard-loyalty__stats-old" aria-hidden="true">
-                <div className="cp-dashboard-loyalty__points">{points.toLocaleString("es-ES")}</div>
+                <div className="cp-dashboard-loyalty__points">{formatNumberUi(points)}</div>
                 <div className="cp-dashboard-loyalty__meta">
                   {tt("Nivel")} {levelLabel} · {tt("Ratio actual")} {multLabel || "—"}
                 </div>
@@ -689,7 +701,7 @@ export default function DashboardView({
                   <strong>{levelLabel}</strong>
                 </div>
                 <div className="cp-dashboard-loyalty__progress-end is-next">
-                  <span>{tt("PrÃ³ximo nivel")}</span>
+                  <span>{tt("Próximo nivel")}</span>
                   <strong>{progressTargetLabel}</strong>
                 </div>
               </div>

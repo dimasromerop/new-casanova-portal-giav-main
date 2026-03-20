@@ -336,7 +336,7 @@ export default function TripsList({ mock, onOpen, dashboard }) {
         }
       } catch (err) {
         if (!active) return;
-        setError(err?.message || "No se han podido cargar los viajes.");
+        setError(err?.message || tt("No se han podido cargar los viajes."));
         setTrips([]);
       } finally {
         if (active) setLoading(false);

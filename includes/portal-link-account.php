@@ -13,10 +13,12 @@ function casanova_portal_enqueue_link_account_assets(): void {
   $handle_js = 'casanova-link-account';
   $handle_css = 'casanova-link-account';
 
+  casanova_portal_register_i18n_runtime();
+
   wp_register_script(
     $handle_js,
     CASANOVA_GIAV_PLUGIN_URL . 'assets/link-account.js',
-    [],
+    [casanova_portal_i18n_runtime_handle()],
     casanova_portal_giav_current_version(),
     true
   );
@@ -29,7 +31,9 @@ function casanova_portal_enqueue_link_account_assets(): void {
   );
 
   wp_enqueue_style($handle_css);
+  wp_enqueue_script(casanova_portal_i18n_runtime_handle());
   wp_enqueue_script($handle_js);
+  casanova_portal_localize_i18n_runtime();
 
   wp_localize_script($handle_js, 'CASANOVA_LINKING', [
     'restUrl'   => esc_url_raw(rest_url('casanova/v1')),

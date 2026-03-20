@@ -2,10 +2,35 @@ import React, { useEffect, useState } from "react";
 
 import Field from "./Field.jsx";
 import { Notice } from "./ui.jsx";
-import { t, tt } from "../i18n/t.js";
+import { getLanguages, t, tt } from "../i18n/t.js";
+
+function fallbackLanguages() {
+  return [
+    { value: "es_ES", locale: "es_ES", lang: "es", name: tt("Español") },
+    { value: "en_US", locale: "en_US", lang: "en", name: tt("English") },
+  ];
+}
+
+function availableLanguages() {
+  const items = getLanguages();
+  return items.length ? items : fallbackLanguages();
+}
+
+function currentLocaleValue(locale, items) {
+  const current = String(locale || "");
+  if (current) return current;
+
+  if (typeof window !== "undefined") {
+    const runtimeLocale = String(window.CASANOVA_I18N_META?.localeRaw || "");
+    if (runtimeLocale) return runtimeLocale;
+  }
+
+  return items[0]?.value || "es_ES";
+}
 
 export default function ProfileView({ profile, onSave, onLocale, readOnly = false, readOnlyMessage = "" }) {
   const giav = profile?.giav || {};
+  const languageItems = availableLanguages();
   const [form, setForm] = useState(() => ({
     telefono: giav.telefono || "",
     movil: giav.movil || "",
@@ -28,7 +53,7 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
     });
   }, [giav.codPostal, giav.direccion, giav.movil, giav.pais, giav.poblacion, giav.provincia, giav.telefono]);
 
-  const locale = profile?.locale || "";
+  const locale = currentLocaleValue(profile?.locale, languageItems);
   const lockedMessage = readOnlyMessage || tt("Modo de vista cliente activo. Solo lectura.");
   const fullName = `${giav.nombre || ""} ${giav.apellidos || ""}`.trim() || "—";
   const email = giav.email || profile?.user?.email || "—";
@@ -170,12 +195,25 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
               id="profile-locale"
               className="cp-input cp-input--narrow"
               value={locale}
-              onChange={(event) => onLocale(event.target.value)}
+              onChange={(event) => {
+                const selected = languageItems.find((item) => (item.value || item.locale) === event.target.value);
+                if (!selected) {
+                  onLocale(event.target.value);
+                  return;
+                }
+                onLocale({
+                  locale: selected.locale || selected.value,
+                  lang: selected.lang || String(selected.value || "").slice(0, 2).toLowerCase(),
+                });
+              }}
               disabled={readOnly}
               aria-disabled={readOnly ? "true" : undefined}
             >
-              <option value="es_ES">{tt("Español")}</option>
-              <option value="en_US">{tt("English")}</option>
+              {languageItems.map((item) => (
+                <option key={item.value || item.locale} value={item.value || item.locale}>
+                  {item.name}
+                </option>
+              ))}
             </select>
           </Field>
         </section>

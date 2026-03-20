@@ -96,13 +96,13 @@ export function ServiceItem({ service, indent = false }) {
   const pdfUrl = service.voucher_urls?.pdf || "";
   const canVoucher = Boolean(service.actions?.voucher);
   const canPdf = Boolean(service.actions?.pdf);
-  const tagLabel = (service.type || "servicio").toUpperCase();
+  const tagLabel = (service.type || tt("Servicio")).toUpperCase();
   const serviceType = (detail.type || service.type || "").toUpperCase();
   const isPlaneService = serviceType === "AV";
   const semanticType = serviceSemanticType(service);
   const detailPayload = detail.details || service.details || {};
   const segments = Array.isArray(detailPayload.segments) ? detailPayload.segments : [];
-  const serviceDatesLabel = cleanServiceText(service.date_range) || "Fechas por confirmar";
+  const serviceDatesLabel = cleanServiceText(service.date_range) || tt("Fechas por confirmar");
   const golfObservationText = semanticType === "golf"
     ? getGolfObservationText(service, detail, detailPayload)
     : "";
@@ -111,55 +111,55 @@ export function ServiceItem({ service, indent = false }) {
   const extraDetailRows = [
     {
       key: "rooms",
-      label: "Habitaciones",
+      label: tt("Habitaciones"),
       value: detailPayload.rooms,
       show: shouldShowRow("hotel"),
     },
     {
       key: "board",
-      label: "Régimen",
+      label: tt("Régimen"),
       value: detailPayload.board,
       show: shouldShowRow("hotel"),
     },
     {
       key: "rooming",
-      label: "Rooming",
+      label: tt("Rooming"),
       value: detailPayload.rooming,
       show: shouldShowRow("hotel"),
     },
     {
       key: "players",
-      label: "Jugadores",
+      label: tt("Jugadores"),
       value: detailPayload.players,
       show: shouldShowRow("golf"),
     },
     {
       key: "route",
-      label: "Trayecto",
+      label: tt("Trayecto"),
       value: detailPayload.route,
       show: shouldShowRow("flight", "transfer"),
     },
     {
       key: "flight_code",
-      label: "Código de vuelo",
+      label: tt("Código de vuelo"),
       value: detailPayload.flight_code,
       show: shouldShowRow("flight"),
     },
     {
       key: "schedule",
-      label: "Horario",
+      label: tt("Horario"),
       value: detailPayload.schedule,
       show: shouldShowRow("flight", "transfer"),
     },
     {
       key: "passengers",
-      label: "Pasajeros",
+      label: tt("Pasajeros"),
       value: detailPayload.passengers,
       show: shouldShowRow("flight", "transfer"),
     },
     {
       key: "provider",
-      label: "Proveedor",
+      label: tt("Proveedor"),
       value: detailPayload.provider,
       show: shouldShowRow("transfer"),
     },
@@ -185,7 +185,7 @@ export function ServiceItem({ service, indent = false }) {
                 <IconPlane />
               </span>
             ) : null}
-            <span>{service.title || "Servicio"}</span>
+            <span>{service.title || tt("Servicio")}</span>
           </div>
           <div className="cp-service__dates">
             <span>{serviceDatesLabel}</span>
