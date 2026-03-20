@@ -69,6 +69,33 @@ function casanova_portal_messages_sanitize_body(string $body): string {
   return trim((string) $body);
 }
 
+function casanova_portal_messages_body_max_length(): int {
+  return 4000;
+}
+
+function casanova_portal_messages_body_length(string $body): int {
+  $body = (string) $body;
+  if (function_exists('mb_strlen')) {
+    return (int) mb_strlen($body, 'UTF-8');
+  }
+  return strlen($body);
+}
+
+function casanova_portal_messages_log(string $message, array $context = [], string $level = 'warn'): void {
+  if (function_exists('casanova_log')) {
+    casanova_log('messages', $message, $context, $level);
+    return;
+  }
+
+  if (function_exists('casanova_portal_log')) {
+    casanova_portal_log('messages', [
+      'level' => $level,
+      'message' => $message,
+      'context' => $context,
+    ]);
+  }
+}
+
 function casanova_portal_messages_preview(string $body, int $limit = 140): string {
   $body = trim((string) $body);
   if ($body === '') return '';
@@ -413,12 +440,21 @@ function casanova_portal_messages_store_attachments(int $thread_id, int $message
 
   $root_dir = casanova_portal_messages_ensure_attachment_dir();
   if ($root_dir === '') {
+    casanova_portal_messages_log('attachment directory unavailable', [
+      'thread_id' => $thread_id,
+      'message_id' => $message_id,
+    ], 'error');
     return new WP_Error('message_attachment_dir', __('No se pudo preparar la carpeta de adjuntos.', 'casanova-portal'));
   }
 
   $subdir = gmdate('Y/m');
   $target_dir = trailingslashit($root_dir) . $subdir;
   if (!is_dir($target_dir) && !wp_mkdir_p($target_dir)) {
+    casanova_portal_messages_log('attachment target directory create failed', [
+      'thread_id' => $thread_id,
+      'message_id' => $message_id,
+      'target_dir' => $target_dir,
+    ], 'error');
     return new WP_Error('message_attachment_dir', __('No se pudo crear la carpeta del adjunto.', 'casanova-portal'));
   }
 
@@ -438,6 +474,12 @@ function casanova_portal_messages_store_attachments(int $thread_id, int $message
       foreach ($stored_ids as $stored_id) {
         $wpdb->delete($table, ['id' => (int) $stored_id], ['%d']);
       }
+      casanova_portal_messages_log('attachment move failed', [
+        'thread_id' => $thread_id,
+        'message_id' => $message_id,
+        'target_path' => $absolute_path,
+        'original_name' => (string) ($file['name'] ?? ''),
+      ], 'error');
       return new WP_Error('message_attachment_move', __('No se pudo guardar uno de los adjuntos.', 'casanova-portal'));
     }
 
@@ -464,6 +506,12 @@ function casanova_portal_messages_store_attachments(int $thread_id, int $message
       foreach ($stored_ids as $stored_id) {
         $wpdb->delete($table, ['id' => (int) $stored_id], ['%d']);
       }
+      casanova_portal_messages_log('attachment database insert failed', [
+        'thread_id' => $thread_id,
+        'message_id' => $message_id,
+        'original_name' => (string) ($file['name'] ?? ''),
+        'relative_path' => $relative_path,
+      ], 'error');
       return new WP_Error('message_attachment_db', __('No se pudo registrar uno de los adjuntos.', 'casanova-portal'));
     }
 
@@ -899,6 +947,16 @@ function casanova_portal_messages_create_message(array $args): array|WP_Error {
   $body = casanova_portal_messages_sanitize_body((string) ($args['body'] ?? ''));
   $attachments_input = is_array($args['attachments_files'] ?? null) ? $args['attachments_files'] : [];
 
+  if (casanova_portal_messages_body_length($body) > casanova_portal_messages_body_max_length()) {
+    return new WP_Error(
+      'message_too_long',
+      sprintf(
+        __('El mensaje no puede superar %d caracteres.', 'casanova-portal'),
+        casanova_portal_messages_body_max_length()
+      )
+    );
+  }
+
   $validated_attachments = casanova_portal_messages_validate_uploaded_files($attachments_input);
   if (is_wp_error($validated_attachments)) {
     return $validated_attachments;
@@ -964,16 +1022,36 @@ function casanova_portal_messages_create_message(array $args): array|WP_Error {
   );
 
   if ($inserted === false) {
+    casanova_portal_messages_log('message database insert failed', [
+      'thread_id' => (int) ($thread->id ?? 0),
+      'id_cliente' => $idCliente,
+      'id_expediente' => $idExpediente,
+      'direction' => $direction,
+      'origin' => $origin,
+      'user_id' => $user_id,
+    ], 'error');
     return new WP_Error('message_create_failed', __('No se pudo guardar el mensaje.', 'casanova-portal'));
   }
 
   $message = casanova_portal_messages_get_message((int) $wpdb->insert_id);
   if (!$message) {
+    casanova_portal_messages_log('message fetch after insert failed', [
+      'message_id' => (int) $wpdb->insert_id,
+      'thread_id' => (int) ($thread->id ?? 0),
+      'id_expediente' => $idExpediente,
+    ], 'error');
     return new WP_Error('message_missing', __('No se pudo recuperar el mensaje enviado.', 'casanova-portal'));
   }
 
   $attachments = casanova_portal_messages_store_attachments((int) $thread->id, (int) $message->id, $validated_attachments);
   if (is_wp_error($attachments)) {
+    casanova_portal_messages_log('attachment store failed; rolling back message', [
+      'message_id' => (int) ($message->id ?? 0),
+      'thread_id' => (int) ($thread->id ?? 0),
+      'id_expediente' => $idExpediente,
+      'error_code' => $attachments->get_error_code(),
+      'error_message' => $attachments->get_error_message(),
+    ], 'error');
     casanova_portal_messages_delete_message_record((int) $message->id);
     return $attachments;
   }

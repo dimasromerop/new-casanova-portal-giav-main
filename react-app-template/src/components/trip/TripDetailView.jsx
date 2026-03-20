@@ -31,6 +31,7 @@ export default function TripDetailView({
 
   const trips = Array.isArray(dashboard?.trips) ? dashboard.trips : [];
   const fallbackTrip = trips.find((trip) => String(trip.id) === String(expediente)) || { id: expediente };
+  const tab = readParams().tab;
 
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,16 @@ export default function TripDetailView({
 
   useEffect(() => {
     let alive = true;
+
+    if (tab === "messages") {
+      setDetail(null);
+      setLoading(false);
+      setErr(null);
+      return () => {
+        alive = false;
+      };
+    }
+
     (async () => {
       try {
         setLoading(true);
@@ -70,7 +81,7 @@ export default function TripDetailView({
     return () => {
       alive = false;
     };
-  }, [expediente, mock]);
+  }, [expediente, mock, tab]);
 
   const trip = detail?.trip || fallbackTrip;
   const payments = detail?.payments || null;
@@ -148,7 +159,6 @@ export default function TripDetailView({
   };
 
   const title = trip?.title || ttf("Expediente #{id}", { id: expediente });
-  const tab = readParams().tab;
   const showDetailState = tab !== "messages";
 
   const resolvedTrip = useMemo(() => {

@@ -238,6 +238,7 @@ export default function MessagesTimeline({
             onChange={(event) => setDraft(event.target.value)}
             placeholder={tt("Escribe aquí tu mensaje sobre este viaje…")}
             disabled={sending}
+            maxLength={4000}
           />
           <div className="cp-message-composer__files">
             <input
@@ -249,7 +250,7 @@ export default function MessagesTimeline({
               disabled={sending}
             />
             <div className="cp-meta">
-              {tt("Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. PDF, JPG, PNG o WEBP.")}
+              {tt("Texto: máximo 4000 caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. PDF, JPG, PNG o WEBP.")}
             </div>
             {files.length ? (
               <div className="cp-message-composer__file-list">

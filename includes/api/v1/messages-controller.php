@@ -155,11 +155,23 @@ class Casanova_Messages_Controller {
       $data = Casanova_Messages_Service::post_message_for_user($user_id, $request);
       if (is_wp_error($data)) {
         $perf_error = $data;
+        $status = (int) ($data->get_error_data()['status'] ?? 400);
+        if (
+          $status >= 500
+          && function_exists('casanova_portal_messages_log')
+        ) {
+          casanova_portal_messages_log('message post failed', [
+            'user_id' => $user_id,
+            'expediente_id' => (int) $request->get_param('expediente'),
+            'error_code' => $data->get_error_code(),
+            'status' => $status,
+          ], 'error');
+        }
         $response = new WP_REST_Response([
           'status' => 'error',
           'code' => $data->get_error_code(),
           'message' => $data->get_error_message(),
-        ], (int) ($data->get_error_data()['status'] ?? 400));
+        ], $status);
         return $response;
       }
 
@@ -167,6 +179,13 @@ class Casanova_Messages_Controller {
       return $response;
     } catch (Throwable $e) {
       $perf_error = $e;
+      if (function_exists('casanova_portal_messages_log')) {
+        casanova_portal_messages_log('message post exception', [
+          'user_id' => $user_id,
+          'expediente_id' => (int) $request->get_param('expediente'),
+          'exception' => $e->getMessage(),
+        ], 'error');
+      }
       $response = new WP_REST_Response([
         'status' => 'error',
         'code' => 'messages_post_failed',
@@ -194,6 +213,12 @@ class Casanova_Messages_Controller {
 
     $attachment = casanova_portal_messages_get_attachment($attachment_id);
     if (!is_object($attachment)) {
+      if (function_exists('casanova_portal_messages_log')) {
+        casanova_portal_messages_log('attachment record missing', [
+          'attachment_id' => $attachment_id,
+          'user_id' => (int) get_current_user_id(),
+        ], 'warn');
+      }
       return new WP_REST_Response([
         'status' => 'error',
         'code' => 'messages_attachment_missing',
@@ -205,6 +230,15 @@ class Casanova_Messages_Controller {
       ? casanova_portal_messages_attachment_absolute_path($attachment)
       : '';
     if ($path === '' || !file_exists($path)) {
+      if (function_exists('casanova_portal_messages_log')) {
+        casanova_portal_messages_log('attachment file missing', [
+          'attachment_id' => $attachment_id,
+          'message_id' => (int) ($attachment->message_id ?? 0),
+          'relative_path' => (string) ($attachment->relative_path ?? ''),
+          'resolved_path' => $path,
+          'user_id' => (int) get_current_user_id(),
+        ], 'error');
+      }
       return new WP_REST_Response([
         'status' => 'error',
         'code' => 'messages_attachment_missing_file',

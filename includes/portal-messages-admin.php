@@ -230,9 +230,9 @@ function casanova_portal_messages_admin_render_page(): void {
       echo '<input type="hidden" name="id_expediente" value="' . esc_attr((string) $selected_expediente) . '" />';
       echo '<input type="hidden" name="id_cliente" value="' . esc_attr((string) $selected_client_id) . '" />';
       wp_nonce_field('casanova_admin_send_portal_message_' . $selected_expediente);
-      echo '<textarea name="body" rows="5" class="large-text" placeholder="' . esc_attr__('Escribe aquí la respuesta para el cliente…', 'casanova-portal') . '"></textarea>';
+      echo '<textarea name="body" rows="5" class="large-text" maxlength="' . esc_attr((string) casanova_portal_messages_body_max_length()) . '" placeholder="' . esc_attr__('Escribe aquí la respuesta para el cliente…', 'casanova-portal') . '"></textarea>';
       echo '<p style="margin-top:10px;"><input type="file" name="attachments[]" multiple accept=".pdf,image/jpeg,image/png,image/webp" /></p>';
-      echo '<p class="description">' . esc_html__('Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP.', 'casanova-portal') . '</p>';
+      echo '<p class="description">' . esc_html(sprintf(__('Texto: máximo %d caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP.', 'casanova-portal'), casanova_portal_messages_body_max_length())) . '</p>';
       echo '<p class="description">' . esc_html__('El cliente lo verá dentro del portal y además recibirá un email con enlace a la conversación.', 'casanova-portal') . '</p>';
       submit_button(__('Enviar mensaje', 'casanova-portal'));
       echo '</form>';
