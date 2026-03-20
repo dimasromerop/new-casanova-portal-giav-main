@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: New Casanova Portal - GIAV
+ * Plugin Name: Casanova Portal Clientes
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
  * Version: 0.30.15
  * Author: Casanova Golf
