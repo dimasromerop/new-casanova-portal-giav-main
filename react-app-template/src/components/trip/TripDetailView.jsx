@@ -108,11 +108,19 @@ export default function TripDetailView({
   const paidLabel = Number.isFinite(paidAmount) ? euro(paidAmount, currency) : "—";
   const pendingLabel = pendingAmount !== null && Number.isFinite(pendingAmount) ? euro(pendingAmount, currency) : "—";
 
+  const paidPct = Number.isFinite(totalAmount) && totalAmount > 0 && Number.isFinite(paidAmount)
+    ? Math.round((paidAmount / totalAmount) * 100)
+    : 0;
+  const pendingPct = Number.isFinite(totalAmount) && totalAmount > 0 && pendingAmount !== null
+    ? Math.round((pendingAmount / totalAmount) * 100)
+    : 0;
+  const mulligansAvailable = payments?.mulligans_available ?? 0;
+
   const paymentKpiItems = payments
     ? [
         { key: "total", label: tt("Total"), value: totalLabel, icon: <BriefcaseIcon />, colorClass: "is-salmon" },
-        { key: "paid", label: tt("Pagado"), value: paidLabel, icon: <ShieldCheckIcon />, colorClass: "is-blue" },
-        { key: "pending", label: tt("Pendiente"), value: pendingLabel, icon: <ClockArrowIcon />, colorClass: "is-green" },
+        { key: "paid", label: tt("Pagado"), value: paidLabel, icon: <ShieldCheckIcon />, colorClass: "is-blue", sub: `${paidPct}% ${tt("completado")}` },
+        { key: "pending", label: tt("Pendiente"), value: pendingLabel, icon: <ClockArrowIcon />, colorClass: "is-green", cardClass: "is-pending", sub: `${pendingPct}% ${tt("pendiente")}` },
         ...(mulligansEnabled
           ? [{
               key: "mulligans",
@@ -120,6 +128,7 @@ export default function TripDetailView({
               value: formatNumberUi(mulligansUsed),
               icon: <SparkleIcon />,
               colorClass: "is-lilac",
+              sub: `${formatNumberUi(mulligansAvailable)} ${tt("disponibles")}`,
             }]
           : []),
       ]
@@ -210,48 +219,74 @@ export default function TripDetailView({
         ) : null}
 
         {tab === "summary" ? (
-          <div className="cp-card">
-            <div className="cp-card-title">{tt("Resumen")}</div>
-            <div className="cp-card-sub">{tt("Servicios y planificación del viaje")}</div>
-
+          <>
             {!hasServices ? (
-              <div className="cp-meta cp-mt-10">
-                {tt("No hay servicios disponibles ahora mismo.")}
+              <div className="cp-card">
+                <div className="cp-meta cp-mt-10">
+                  {tt("No hay servicios disponibles ahora mismo.")}
+                </div>
               </div>
             ) : (
               <div className="cp-summary-services">
                 {pkg ? (
-                  <div className="cp-service-section">
-                    <div className="cp-service-section__heading">{tt("Paquete")}</div>
-                    <ServiceItem service={pkg} />
+                  <>
+                    <div className="cp-pkg-card">
+                      <div className="cp-pkg-card__info">
+                        <h3 className="cp-pkg-card__title">{pkg.title || tt("Paquete")}</h3>
+                        <p className="cp-pkg-card__meta">{pkg.date_range || ""}{pkg.detail?.type ? ` · ${pkg.detail.type}` : ""}</p>
+                      </div>
+                      <div className="cp-pkg-card__right">
+                        {typeof pkg.price === "number" ? (
+                          <span className="cp-pkg-card__price">{euro(pkg.price)}</span>
+                        ) : null}
+                        <span className="cp-chip">{(pkg.type || "PQ").toUpperCase()}</span>
+                        <div className="cp-pkg-card__actions">
+                          <button type="button" className="cp-btn cp-btn--ghost" onClick={() => {}} disabled={!pkg.actions?.detail}>{tt("Detalle")}</button>
+                          {pkg.voucher_urls?.view ? (
+                            <a className="cp-btn cp-btn--ghost" href={pkg.voucher_urls.view} target="_blank" rel="noreferrer">{tt("Bono")}</a>
+                          ) : (
+                            <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("Bono")}</span>
+                          )}
+                          {pkg.voucher_urls?.pdf ? (
+                            <a className="cp-btn cp-btn--ghost" href={pkg.voucher_urls.pdf} target="_blank" rel="noreferrer">{tt("PDF")}</a>
+                          ) : (
+                            <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("PDF")}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     {packageServices.length > 0 ? (
                       <div className="cp-service-section">
-                        <div className="cp-service-section__heading">{tt("Servicios incluidos")}</div>
+                        <div className="cp-service-section__heading">
+                          {tt("Servicios incluidos")}
+                          <span className="cp-service-section__count">{packageServices.length}</span>
+                        </div>
                         <ServiceList services={packageServices} indent sortMode="chronological" />
                       </div>
                     ) : null}
-                  </div>
+                  </>
                 ) : null}
                 {extras.length > 0 ? (
-                  <div className="cp-service-section">
-                    <div className="cp-service-section__heading">{pkg ? tt("Extras") : tt("Servicios")}</div>
+                  <div className="cp-service-section cp-service-section--extras">
+                    <div className="cp-service-section__heading">{tt("Extras")}</div>
                     <ServiceList services={extras} />
                   </div>
                 ) : null}
               </div>
             )}
-          </div>
+          </>
         ) : null}
 
         {tab === "payments" ? (
-          <div className="cp-card">
-            <div className="cp-card-title">{tt("Pagos")}</div>
-            <div className="cp-card-sub">{tt("Estado de pagos del viaje")}</div>
-
+          <div className="cp-pay-tab">
             {!payments ? (
-              <div className="cp-meta cp-mt-10">{tt("Aún no hay pagos asociados a este viaje.")}</div>
+              <div className="cp-card">
+                <div className="cp-card-title">{tt("Pagos")}</div>
+                <div className="cp-meta cp-mt-10">{tt("Aún no hay pagos asociados a este viaje.")}</div>
+              </div>
             ) : (
               <>
+                {/* KPI cards */}
                 <div className="cp-kpi-card-grid">
                   {paymentKpiItems.map((item) => (
                     <KpiCard
@@ -259,11 +294,28 @@ export default function TripDetailView({
                       icon={item.icon}
                       label={item.label}
                       value={item.value}
+                      sub={item.sub}
                       colorClass={item.colorClass}
+                      cardClass={item.cardClass}
                     />
                   ))}
                 </div>
 
+                {/* Progress bar */}
+                <div className="cp-pay-progress">
+                  <div className="cp-pay-progress__track">
+                    <div
+                      className="cp-pay-progress__fill"
+                      style={{ width: `${paidPct}%` }}
+                    />
+                  </div>
+                  <div className="cp-pay-progress__labels">
+                    <span>{tt("Pagado")}: <strong>{paidLabel}</strong></span>
+                    <span>{tt("Pendiente")}: <strong>{pendingLabel}</strong></span>
+                  </div>
+                </div>
+
+                {/* Payment actions (methods + amount + CTA) */}
                 <PaymentActions
                   expediente={expediente}
                   payments={payments}
@@ -271,15 +323,22 @@ export default function TripDetailView({
                   readOnly={readOnly}
                   readOnlyMessage={readOnlyMessage}
                 />
+
                 {isPaid ? (
                   <div className="cp-mt-12">
                     <div className="cp-pill cp-pill--success">{tt("Pagado")}</div>
                   </div>
                 ) : null}
 
-                {chargeHistory.length > 0 ? (
-                  <div className="cp-payments-history">
-                    <div className="cp-payments-history__title">{tt("Histórico de cobros")}</div>
+                {/* Payment history card */}
+                <div className="cp-pay-history">
+                  <div className="cp-pay-history__title">
+                    {tt("Historial de pagos")}
+                    <span className="cp-pay-history__count">
+                      {chargeHistory.length} {tt("cobros")}
+                    </span>
+                  </div>
+                  {chargeHistory.length > 0 ? (
                     <div className="cp-table-wrap">
                       <table className="cp-payments-history__table">
                         <thead>
@@ -315,12 +374,31 @@ export default function TripDetailView({
                         </tbody>
                       </table>
                     </div>
+                  ) : (
+                    <div className="cp-pay-history__empty">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.3">
+                        <circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>
+                      </svg>
+                      <p>{tt("No hay cobros registrados todavía.")}<br />{tt("Tu primer pago aparecerá aquí.")}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Security footer */}
+                <div className="cp-pay-security">
+                  <div className="cp-pay-security__item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    {tt("Pago seguro SSL")}
                   </div>
-                ) : (
-                  <div className="cp-meta cp-mt-14">
-                    {tt("Aún no hay cobros registrados en este viaje.")}
+                  <div className="cp-pay-security__item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    {tt("Datos encriptados")}
                   </div>
-                )}
+                  <div className="cp-pay-security__item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                    {tt("PCI DSS certificado")}
+                  </div>
+                </div>
               </>
             )}
           </div>
@@ -412,17 +490,13 @@ export default function TripDetailView({
         ) : null}
 
         {tab === "messages" ? (
-          <div className="cp-card">
-            <div className="cp-card-title">{tt("Mensajes")}</div>
-            <div className="cp-card-sub">{tt("Conversación sobre este viaje")}</div>
-            <MessagesTimeline
-              expediente={expediente}
-              mock={mock}
-              onSeen={onSeen}
-              readOnly={readOnly}
-              readOnlyMessage={readOnlyMessage}
-            />
-          </div>
+          <MessagesTimeline
+            expediente={expediente}
+            mock={mock}
+            onSeen={onSeen}
+            readOnly={readOnly}
+            readOnlyMessage={readOnlyMessage}
+          />
         ) : null}
       </div>
     </div>

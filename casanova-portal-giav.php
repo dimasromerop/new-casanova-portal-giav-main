@@ -118,13 +118,20 @@ add_action('wp_enqueue_scripts', function () {
   if (is_admin()) return;
   casanova_portal_register_i18n_runtime();
 
+  wp_enqueue_style(
+    'casanova-portal-fonts',
+    'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=Playfair+Display:wght@500;600&display=swap',
+    [],
+    null
+  );
+
   $file = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal.css';
   $ver  = file_exists($file) ? (string) filemtime($file) : '0';
 
   wp_enqueue_style(
     'casanova-portal-giav',
     CASANOVA_GIAV_PLUGIN_URL . 'assets/portal.css',
-    [],
+    ['casanova-portal-fonts'],
     $ver
   );
 

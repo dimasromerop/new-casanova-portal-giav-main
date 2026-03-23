@@ -170,62 +170,88 @@ export function ServiceItem({ service, indent = false }) {
     setOpen((prev) => !prev);
   };
 
+  const dotClass = semanticType === "hotel" ? "is-hotel"
+    : semanticType === "golf" ? "is-golf"
+    : semanticType === "transfer" ? "is-transfer"
+    : semanticType === "flight" ? "is-flight"
+    : "";
+
   return (
     <div className={`cp-service${indent ? " cp-service--child" : ""}`}>
-      <div className={`cp-service__summary${hasImage ? "" : " is-no-image"}`}>
-        {imageUrl ? (
-          <div className="cp-service__thumb" aria-hidden="true">
-            <img src={imageUrl} alt="" loading="lazy" />
-          </div>
+      <div className={`cp-service__dot ${dotClass}`} aria-hidden="true">
+        {semanticType === "hotel" ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M4 12V9.5A2.5 2.5 0 0 1 6.5 7H9a2 2 0 0 1 2 2v3" /><path d="M11 12V8.8A1.8 1.8 0 0 1 12.8 7H16a4 4 0 0 1 4 4v1" /><path d="M4 12h16v4H4z" /><path d="M6 16v2M18 16v2" />
+          </svg>
+        ) : semanticType === "golf" ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M8 20V4" /><path d="M8 5c1.2 0 2.2-.8 3.8-.8 1.7 0 2.3.8 3.8.8 1.2 0 1.9-.4 2.4-.7v6.4c-.5.3-1.2.7-2.4.7-1.5 0-2.1-.8-3.8-.8-1.6 0-2.6.8-3.8.8" strokeLinejoin="round" /><path d="M6 20h4" />
+          </svg>
+        ) : semanticType === "transfer" ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M6.5 16.5h11a1.5 1.5 0 0 0 1.5-1.5v-3l-1.7-3.6A2.2 2.2 0 0 0 15.3 7H8.7a2.2 2.2 0 0 0-2 1.4L5 12v3a1.5 1.5 0 0 0 1.5 1.5z" strokeLinejoin="round" /><path d="M7 12h10" /><circle cx="8.5" cy="16.5" r="1.4" /><circle cx="15.5" cy="16.5" r="1.4" />
+          </svg>
+        ) : semanticType === "flight" ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M6.5 16.5h11a1.5 1.5 0 0 0 1.5-1.5v-3l-1.7-3.6A2.2 2.2 0 0 0 15.3 7H8.7a2.2 2.2 0 0 0-2 1.4L5 12v3a1.5 1.5 0 0 0 1.5 1.5z" strokeLinejoin="round" /><path d="M7 12h10" /><circle cx="8.5" cy="16.5" r="1.4" /><circle cx="15.5" cy="16.5" r="1.4" />
+          </svg>
         ) : null}
-        <div className="cp-service__main">
-          <div className="cp-service__title">
-            {isPlaneService ? (
-              <span className="cp-service__title-icon" aria-hidden="true">
-                <IconPlane />
-              </span>
-            ) : null}
-            <span>{service.title || tt("Servicio")}</span>
-          </div>
-          <div className="cp-service__dates">
-            <span>{serviceDatesLabel}</span>
-            {golfObservationText ? <span className="cp-service__dates-note">{golfObservationText}</span> : null}
-          </div>
-        </div>
-        <div className="cp-service__right">
-          {price != null ? (
-            <div className="cp-service__price">{euro(price)}</div>
-          ) : null}
-          <div className="cp-service__actions">
-            <span className="cp-chip">{tagLabel}</span>
-            <button
-              type="button"
-              className="cp-btn cp-btn--ghost"
-              onClick={toggleDetail}
-              disabled={!service.actions?.detail}
-              aria-expanded={open}
-            >
-              {tt("Detalle")}
-            </button>
-            {canVoucher && viewUrl ? (
-              <a className="cp-btn cp-btn--ghost" href={viewUrl} target="_blank" rel="noreferrer">
-                {tt("Ver bono")}
-              </a>
-            ) : (
-              <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("Bono")}</span>
-            )}
-            {canPdf && pdfUrl ? (
-              <a className="cp-btn cp-btn--ghost" href={pdfUrl} target="_blank" rel="noreferrer">
-                {tt("PDF")}
-              </a>
-            ) : (
-              <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("PDF")}</span>
-            )}
-          </div>
-        </div>
       </div>
-      {open ? (
-        <div className="cp-service__detail">
+      <div className={`cp-service__card${open ? " is-open" : ""}`}>
+        <div className={`cp-service__summary${hasImage ? "" : " is-no-image"}`} onClick={toggleDetail}>
+          {imageUrl ? (
+            <div className="cp-service__thumb" aria-hidden="true">
+              <img src={imageUrl} alt="" loading="lazy" />
+            </div>
+          ) : null}
+          <div className="cp-service__main">
+            <div className="cp-service__title">
+              {isPlaneService ? (
+                <span className="cp-service__title-icon" aria-hidden="true">
+                  <IconPlane />
+                </span>
+              ) : null}
+              <span>{service.title || tt("Servicio")}</span>
+            </div>
+            <div className="cp-service__dates">
+              <span>{serviceDatesLabel}</span>
+              {golfObservationText ? <span className="cp-service__dates-note">{golfObservationText}</span> : null}
+            </div>
+          </div>
+          <div className="cp-service__right">
+            {price != null ? (
+              <div className="cp-service__price">{euro(price)}</div>
+            ) : null}
+            <div className="cp-service__actions">
+              <span className="cp-chip">{tagLabel}</span>
+              <button
+                type="button"
+                className="cp-btn cp-btn--ghost"
+                onClick={(e) => { e.stopPropagation(); toggleDetail(); }}
+                disabled={!service.actions?.detail}
+                aria-expanded={open}
+              >
+                {tt("Detalle")}
+              </button>
+              {canVoucher && viewUrl ? (
+                <a className="cp-btn cp-btn--ghost" href={viewUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                  {tt("Bono")}
+                </a>
+              ) : (
+                <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("Bono")}</span>
+              )}
+              {canPdf && pdfUrl ? (
+                <a className="cp-btn cp-btn--ghost" href={pdfUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                  {tt("PDF")}
+                </a>
+              ) : (
+                <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("PDF")}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        {open ? (
+          <div className="cp-service__detail">
           <div className="cp-service__kv">
             {detail.code || service.id ? (
               <div>
@@ -280,6 +306,7 @@ export function ServiceItem({ service, indent = false }) {
           ) : null}
         </div>
       ) : null}
+      </div>
     </div>
   );
 }

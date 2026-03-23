@@ -300,18 +300,24 @@ export function Sidebar({ view, unread = 0, items = [], theme = "light" }) {
   );
 }
 
-export function Topbar({ title, chip, onRefresh, isRefreshing, profile, onGo, onLogout, onLocale, readOnly = false, theme, onToggleTheme }) {
+export function Topbar({ title, subtitle, chip, onRefresh, isRefreshing, profile, onGo, onLogout, onLocale, readOnly = false, theme, onToggleTheme }) {
   return (
     <div className="cp-topbar">
       <div className="cp-topbar-inner">
-        <div className="cp-title">{title}</div>
+        {title ? (
+          <div className="cp-topbar__left">
+            <div className="cp-topbar__title">{title}</div>
+            {subtitle ? <div className="cp-topbar__subtitle">{subtitle}</div> : null}
+          </div>
+        ) : <div />}
         <div className="cp-actions">
           {chip ? <div className="cp-chip">{chip}</div> : null}
           {isRefreshing ? <div className="cp-chip">{tt("Actualizando…")}</div> : null}
+          <LanguageMenu locale={profile?.locale} onLocale={onLocale} disabled={readOnly} />
           <button className="cp-btn" onClick={onRefresh}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:4}}><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             {tt("Actualizar")}
           </button>
-          <LanguageMenu locale={profile?.locale} onLocale={onLocale} disabled={readOnly} />
           <UserMenu profile={profile} onGo={onGo} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
         </div>
       </div>

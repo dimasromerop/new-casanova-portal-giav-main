@@ -300,14 +300,41 @@ add_shortcode('casanova_portal', function($atts = []) {
   if (function_exists('casanova_portal_render_impersonation_banner')) {
     $html .= casanova_portal_render_impersonation_banner();
   }
+  // Agency profile for sidebar branding
+  $agency = function_exists('casanova_portal_agency_profile') ? casanova_portal_agency_profile() : [];
+  $agency_name = !empty($agency['nombre']) ? $agency['nombre'] : 'Casanova Golf';
+  $agency_initials = mb_strtoupper(mb_substr($agency_name, 0, 2, 'UTF-8'), 'UTF-8');
+
+  // Current user info for sidebar footer
+  $current_user = wp_get_current_user();
+  $display_name = $current_user->display_name ?: $current_user->user_login;
+  $user_initials = mb_strtoupper(mb_substr($display_name, 0, 2, 'UTF-8'), 'UTF-8');
+  $m_data = function_exists('casanova_mulligans_get_user') ? casanova_mulligans_get_user($user_id) : [];
+  $user_tier = isset($m_data['tier']) ? (string)$m_data['tier'] : '';
+
   $html .= '<div class="casanova-app">';
   $html .= '  <aside class="casanova-sidebar" aria-label="' . esc_attr__('Navegación del portal', 'casanova-portal') . '">';
   $html .= '    <div class="casanova-sidebar-inner">';
   $html .= '      <div class="casanova-nav">';
   $html .= '        <div class="casanova-nav-head">';
-  $html .= '          <div class="casanova-nav-brand">' . esc_html__('Gestión de Reservas', 'casanova-portal') . '</div>';
+  $html .= '          <div class="casanova-nav-brand">';
+  $html .= '            <span class="casanova-nav-brand-icon">' . esc_html($agency_initials) . '</span>';
+  $html .= '            <span class="casanova-nav-brand-label">';
+  $html .= '              <span class="casanova-nav-brand-name">' . esc_html($agency_name) . '</span>';
+  $html .= '              <span class="casanova-nav-brand-sub">' . esc_html__('Portal del cliente', 'casanova-portal') . '</span>';
+  $html .= '            </span>';
+  $html .= '          </div>';
   $html .= '        </div>';
   $html .=          $menu;
+  $html .= '      </div>';
+  $html .= '      <div class="casanova-sidebar-footer">';
+  $html .= '        <span class="casanova-user-avatar">' . esc_html($user_initials) . '</span>';
+  $html .= '        <span class="casanova-user-info">';
+  $html .= '          <span class="casanova-user-name">' . esc_html($display_name) . '</span>';
+  if ($user_tier) {
+    $html .= '          <span class="casanova-user-level">' . esc_html(sprintf(__('Nivel %s', 'casanova-portal'), $user_tier)) . '</span>';
+  }
+  $html .= '        </span>';
   $html .= '      </div>';
   $html .= '    </div>';
   $html .= '  </aside>';

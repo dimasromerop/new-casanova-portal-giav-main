@@ -296,105 +296,301 @@ function getNavItems({ mulligansEnabled = true } = {}) {
 
 /* ===== App ===== */
 function MulligansView({ data }) {
+  const [historyFilter, setHistoryFilter] = useState("all");
   const m = data?.mulligans || {};
   const points = Number(m.points || 0);
-  const tier = String(m.tier || "birdie").toLowerCase();
+  const tier = String(m.tier || "birdie").toLowerCase().replace(/\s+/g, "_").replace(/\+/g, "_plus").replace(/-/g, "_");
   const spend = Number(m.spend || 0);
   const earned = Number(m.earned || 0);
   const bonus = Number(m.bonus || 0);
   const used = Number(m.used || 0);
   const ledger = Array.isArray(m.ledger) ? m.ledger : [];
-  const tierSlug = tier
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/\+/g, "_plus")
-    .replace(/-/g, "_");
 
   const tierLabel = (t) => {
-    if (t === "albatross") return "Albatross";
-    if (t === "eagle") return "Eagle";
-    if (t === "birdie") return "Birdie";
-    return t ? t.charAt(0).toUpperCase() + t.slice(1) : "Birdie";
+    const map = { birdie: "Birdie", eagle: "Eagle", eagle_plus: "Eagle+", albatross: "Albatross" };
+    return map[t] || (t ? t.charAt(0).toUpperCase() + t.slice(1) : "Birdie");
   };
 
-  const fmtMoney = (v) =>
-    formatCurrency(v || 0, "EUR", { maximumFractionDigits: 0 });
-
+  const fmtMoney = (v) => formatCurrency(v || 0, "EUR", { maximumFractionDigits: 0 });
   const fmtDate = (ts) => {
     const n = Number(ts || 0);
-    if (!n) return "—";
+    if (!n) return "\u2014";
     const d = new Date(n * 1000);
     return formatDate(d, { day: "2-digit", month: "2-digit", year: "numeric" });
   };
+  const fmtPts = (v) => formatNumber(v);
 
-  const mulliganKpiItems = [
-    { key: "balance", label: tt("Balance"), value: formatNumber(points), icon: <IconSparkle />, colorClass: "is-salmon" },
-    { key: "spend", label: tt("Gasto histórico"), value: fmtMoney(spend), icon: <IconChartBar />, colorClass: "is-blue" },
-    { key: "sync", label: tt("Última sincronización"), value: fmtDate(m.last_sync), icon: <IconCalendar />, colorClass: "is-lilac" },
-    { key: "earned", label: tt("Ganados"), value: formatNumber(earned), icon: <IconShieldCheck />, colorClass: "is-green" },
-    { key: "bonus", label: tt("Bonus"), value: formatNumber(bonus), icon: <IconStar />, colorClass: "is-salmon" },
-    { key: "used", label: tt("Usados"), value: formatNumber(used), icon: <IconClockArrow />, colorClass: "is-lilac" },
+  /* Tier definitions — based on cumulative spend (euros) */
+  const TIERS = [
+    { slug: "birdie",     name: "Birdie",     mult: "x1.00", range: tt("Hasta 4.999 \u20ac"),            min: 0,     max: 4999 },
+    { slug: "eagle",      name: "Eagle",      mult: "x1.20", range: "5.000 \u20ac \u2014 14.999 \u20ac", min: 5000,  max: 14999 },
+    { slug: "eagle_plus", name: "Eagle+",     mult: "x1.35", range: "15.000 \u20ac \u2014 29.999 \u20ac",min: 15000, max: 29999, featured: true },
+    { slug: "albatross",  name: "Albatross",  mult: "x1.50", range: tt("Mas de 30.000 \u20ac"),          min: 30000, max: Infinity },
   ];
+
+  const currentTierIdx = Math.max(0, TIERS.findIndex((t) => t.slug === tier));
+  const currentTier = TIERS[currentTierIdx];
+  const nextTier = TIERS[currentTierIdx + 1] || null;
+  const progressPct = nextTier
+    ? Math.min(100, Math.max(0, ((spend - currentTier.min) / (nextTier.min - currentTier.min)) * 100))
+    : 100;
+
+  /* Filter ledger */
+  const filteredLedger = historyFilter === "all"
+    ? ledger
+    : ledger.filter((it) => {
+        const type = String(it.type || "");
+        if (historyFilter === "earned") return type === "earn";
+        if (historyFilter === "bonus") return type === "bonus";
+        if (historyFilter === "redeemed") return type === "redeem";
+        return true;
+      });
+
+  const typeLabel = (type) => {
+    if (type === "bonus") return tt("Bonus");
+    if (type === "earn") return tt("Ganado");
+    if (type === "redeem") return tt("Canje");
+    return tt("Movimiento");
+  };
+
+  const typeDotClass = (type) => {
+    if (type === "bonus") return "is-bonus";
+    if (type === "redeem") return "is-redeemed";
+    return "is-earned";
+  };
+
+  const pointsClass = (type, pts) => {
+    if (type === "bonus") return "is-bonus";
+    if (pts < 0) return "is-negative";
+    return "is-positive";
+  };
+
+  /* Benefits per tier — real program data */
+  const allBenefits = [
+    /* Birdie */
+    { name: tt("Acceso al portal privado"),  desc: tt("Consulta tus viajes, pagos y puntos Mulligans desde tu portal personal."), tier: "birdie",
+      iconBg: "var(--gold-light)", iconStroke: "var(--gold)", iconPath: "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M12 3v12" },
+    { name: tt("Historial de viajes"),       desc: tt("Registro completo de todos tus viajes organizados por Casanova Golf."), tier: "birdie",
+      iconBg: "var(--gold-light)", iconStroke: "var(--gold)", iconPath: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" },
+    { name: tt("Welcome Pack Digital"),      desc: tt("Pack de bienvenida digital al unirte al programa Mulligans."), tier: "birdie",
+      iconBg: "var(--gold-light)", iconStroke: "var(--gold)", iconPath: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" },
+    { name: tt("Bonus de bienvenida"),       desc: tt("Mulligans iniciales al crear tu cuenta en el programa."), tier: "birdie",
+      iconBg: "var(--gold-light)", iconStroke: "var(--gold)", iconPath: "M12 2l2.09 6.26L21 9.27l-5 3.88L17.18 22 12 18.27 6.82 22 8 13.15 3 9.27l6.91-1.01z" },
+    /* Eagle */
+    { name: tt("Detalle Mulligans anual"),   desc: tt("Cortesia anual: elige tu regalo Mulligans con cada reserva."), tier: "eagle",
+      iconBg: "var(--accent-light, #e8f0e6)", iconStroke: "var(--accent)", iconPath: "M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" },
+    { name: tt("Revision activa de reservas"), desc: tt("Seguimiento proactivo de tu reserva para optimizar tu experiencia."), tier: "eagle",
+      iconBg: "var(--accent-light, #e8f0e6)", iconStroke: "var(--accent)", iconPath: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
+    { name: tt("Acceso a canjes basicos"),   desc: tt("Canjea tu saldo Mulligans por mejoras preferentes y experiencias sencillas."), tier: "eagle",
+      iconBg: "var(--accent-light, #e8f0e6)", iconStroke: "var(--accent)", iconPath: "M12 1v22M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6" },
+    /* Eagle+ */
+    { name: tt("Atencion preferente"),       desc: tt("Linea directa de atencion prioritaria para tu viaje."), tier: "eagle_plus",
+      iconBg: "var(--blue-light, #e6f0f7)", iconStroke: "var(--blue, #1a5276)", iconPath: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.11 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72" },
+    { name: tt("Mulligan Operativo"),        desc: tt("Perdon de 1 penalizacion al ano en cambios o ajustes de reserva."), tier: "eagle_plus",
+      iconBg: "var(--blue-light, #e6f0f7)", iconStroke: "var(--blue, #1a5276)", iconPath: "M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM9 12l2 2 4-4" },
+    { name: tt("Acceso anticipado a ofertas"), desc: tt("Conoce antes que nadie las ofertas y destinos exclusivos."), tier: "eagle_plus",
+      iconBg: "var(--blue-light, #e6f0f7)", iconStroke: "var(--blue, #1a5276)", iconPath: "M13 2L3 14h9l-1 8 10-12h-9l1-8z" },
+    { name: tt("Experiencia Mulligans especial"), desc: tt("Canjes de experiencias gastronomicas, culturales y mejoras avanzadas."), tier: "eagle_plus",
+      iconBg: "var(--blue-light, #e6f0f7)", iconStroke: "var(--blue, #1a5276)", iconPath: "M12 2l2.09 6.26L21 9.27l-5 3.88L17.18 22 12 18.27 6.82 22 8 13.15 3 9.27l6.91-1.01z" },
+    /* Albatross */
+    { name: tt("Maxima prioridad"),          desc: tt("Nivel de atencion y seguimiento mas alto del programa."), tier: "albatross",
+      iconBg: "var(--purple-light, #f3e8ff)", iconStroke: "var(--purple, #7c3aed)", iconPath: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
+    { name: tt("Traslado privado aeropuerto"), desc: tt("Transfer privado de salida incluido una vez al ano."), tier: "albatross",
+      iconBg: "var(--purple-light, #f3e8ff)", iconStroke: "var(--purple, #7c3aed)", iconPath: "M1 16h16M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM1 3h15v13H1zM16 8h4l3 3v5h-3" },
+    { name: tt("Experiencia Mulligans incluida"), desc: tt("Una experiencia al ano definida por Casanova Golf, sin coste de saldo."), tier: "albatross",
+      iconBg: "var(--purple-light, #f3e8ff)", iconStroke: "var(--purple, #7c3aed)", iconPath: "M12 2l2.09 6.26L21 9.27l-5 3.88L17.18 22 12 18.27 6.82 22 8 13.15 3 9.27l6.91-1.01z" },
+    { name: tt("Canje experiencia premium"),  desc: tt("Acceso a canjes premium: cenas privadas, logistica, noches adicionales."), tier: "albatross",
+      iconBg: "var(--purple-light, #f3e8ff)", iconStroke: "var(--purple, #7c3aed)", iconPath: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" },
+  ];
+
+  /* Which benefits are active/locked for the user */
+  const tierOrder = ["birdie", "eagle", "eagle_plus", "albatross"];
+  const userTierOrder = tierOrder.indexOf(tier);
+  const benefits = allBenefits.map((b) => {
+    const bTierOrder = tierOrder.indexOf(b.tier);
+    const locked = bTierOrder > userTierOrder;
+    return { ...b, locked, lockLevel: locked ? tierLabel(b.tier) : null };
+  });
 
   return (
     <div className="cp-content">
-      <div className="cp-card">
-        <div className="cp-card-header">
-          <div>
-            <div className="cp-card-title">{tt("Tu programa Mulligans")}</div>
-            <div className="cp-card-sub">{tt("Puntos y nivel se actualizan automáticamente con tus reservas.")}</div>
+      {/* Level Hero */}
+      <div className="cp-level-hero">
+        <div className="cp-level-hero__content">
+          <div className="cp-level-hero__badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l2.09 6.26L21 9.27l-5 3.88L17.18 22 12 18.27 6.82 22 8 13.15 3 9.27l6.91-1.01z"/></svg>
+            {tt("Nivel actual")}: {tierLabel(tier)}
           </div>
-          <div className={`cp-pill ${tierSlug ? `is-${tierSlug}` : ""}`}>{tierLabel(tier)}</div>
+          <div className="cp-level-hero__points">{fmtPts(points)}</div>
+          <p className="cp-level-hero__label">{tt("puntos Mulligans acumulados")}</p>
+          {nextTier ? (
+            <div className="cp-level-hero__progress">
+              <div className="cp-level-hero__bar">
+                <div className="cp-level-hero__bar-fill" style={{ width: `${progressPct}%` }} />
+              </div>
+              <div className="cp-level-hero__bar-labels">
+                <span>{currentTier.name} &middot; <strong>{fmtMoney(currentTier.min)}</strong></span>
+                <span>{nextTier.name} &middot; <strong>{fmtMoney(nextTier.min)}</strong></span>
+              </div>
+            </div>
+          ) : (
+            <div className="cp-level-hero__progress">
+              <div className="cp-level-hero__bar">
+                <div className="cp-level-hero__bar-fill" style={{ width: "100%" }} />
+              </div>
+              <div className="cp-level-hero__bar-labels">
+                <span>{currentTier.name} &middot; <strong>{tt("Nivel maximo")}</strong></span>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="cp-kpi-card-grid cp-mulligans-kpi-grid">
-          {mulliganKpiItems.map((item) => (
-            <KpiCard
-              key={item.key}
-              icon={item.icon}
-              label={item.label}
-              value={item.value}
-              colorClass={item.colorClass}
-            />
-          ))}
-        </div>
-        <div className="cp-mt-14">
-          <Notice variant="info" title={tt("Cómo funciona")}>
-            {tt("Los beneficios se activan con una reserva real. Si un año no viajas, mantienes tu nivel, pero no se “dispara” el beneficio.")}
-          </Notice>
+        <div className="cp-level-hero__tiers">
+          {TIERS.map((t, i) => {
+            const isCurrent = t.slug === tier;
+            const isPast = i < currentTierIdx;
+            let cls = "cp-tier";
+            if (isCurrent) cls += " is-current";
+            if (isPast) cls += " is-past";
+            return (
+              <React.Fragment key={t.slug}>
+                {i > 0 && <div className="cp-tier-connector" />}
+                <div className={cls}>
+                  <div className="cp-tier__icon">{isCurrent ? "\u2605" : isPast ? "\u2713" : "\u2606"}</div>
+                  <div className="cp-tier__text">
+                    <span className="cp-tier__name">{t.name}</span>
+                    <span className="cp-tier__mult">{t.mult}</span>
+                    <span className="cp-tier__range">{t.range}</span>
+                  </div>
+                  {isCurrent && <span className="cp-tier__tag">{tt("Actual")}</span>}
+                </div>
+              </React.Fragment>
+            );
+          })}
         </div>
       </div>
 
-      <div className="cp-card cp-mt-14">
-        <div className="cp-card-title">{tt("Histórico")}</div>
-        <div className="cp-card-sub">{tt("Movimientos recientes (ganados, bonus y canjes).")}</div>
+      {/* Stats Row */}
+      <div className="cp-mul-stats">
+        <div className="cp-mul-stat">
+          <div className="cp-mul-stat__icon is-gold"><IconStar /></div>
+          <p className="cp-mul-stat__label">{tt("Balance")}</p>
+          <p className="cp-mul-stat__value">{fmtPts(points)}</p>
+        </div>
+        <div className="cp-mul-stat">
+          <div className="cp-mul-stat__icon is-blue"><IconChartBar /></div>
+          <p className="cp-mul-stat__label">{tt("Gasto historico")}</p>
+          <p className="cp-mul-stat__value">{fmtMoney(spend)}</p>
+        </div>
+        <div className="cp-mul-stat">
+          <div className="cp-mul-stat__icon is-green"><IconCalendar /></div>
+          <p className="cp-mul-stat__label">{tt("Multiplicador")}</p>
+          <p className="cp-mul-stat__value">{currentTier.mult}</p>
+        </div>
+        <div className="cp-mul-stat">
+          <div className="cp-mul-stat__icon is-green"><IconShieldCheck /></div>
+          <p className="cp-mul-stat__label">{tt("Ganados")}</p>
+          <p className="cp-mul-stat__value" style={{ color: "var(--accent)" }}>+{fmtPts(earned)}</p>
+          <p className="cp-mul-stat__sub">{ledger.length} {tt("movimientos")}</p>
+        </div>
+        <div className="cp-mul-stat">
+          <div className="cp-mul-stat__icon is-purple"><IconSparkle /></div>
+          <p className="cp-mul-stat__label">{tt("Usados")}</p>
+          <p className="cp-mul-stat__value">{fmtPts(used)}</p>
+          <p className="cp-mul-stat__sub">0 {tt("canjes")}</p>
+        </div>
+      </div>
 
-        {ledger.length === 0 ? (
-          <EmptyState title={tt("Aún no hay movimientos")} icon="🧾">
-            {tt("Cuando se registren pagos o se aplique un bonus, aparecerán aquí.")}
-          </EmptyState>
-        ) : (
-          <div className="cp-ledger">
-            {ledger.map((it) => {
-              const pts = Number(it.points || 0);
-              const sign = pts >= 0 ? "+" : "";
-              const when = it.ts ? fmtDate(it.ts) : "—";
-              const type = String(it.type || "");
-              const label = type === "bonus" ? tt("Bonus") : type === "earn" ? tt("Ganado") : type === "redeem" ? tt("Canje") : tt("Movimiento");
-              return (
-                <div key={it.id || `${it.ts}-${Math.random()}`} className="cp-ledger-row">
-                  <div className="cp-ledger-main">
-                    <div className="cp-ledger-title">{label}</div>
-                    <div className="cp-ledger-sub">{it.note || it.source || "—"}</div>
-                  </div>
-                  <div className="cp-ledger-right">
-                    <div className={`cp-ledger-points ${pts >= 0 ? "is-pos" : "is-neg"}`}>{sign}{pts}</div>
-                    <div className="cp-ledger-date">{when}</div>
-                  </div>
-                </div>
-              );
-            })}
+      {/* How it works */}
+      <div className="cp-mul-info">
+        <div className="cp-mul-info__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        </div>
+        <div className="cp-mul-info__text">
+          <h4>{tt("Como funciona")}</h4>
+          <p>{tt("Tu nivel se determina por tu gasto historico acumulado y es vitalicio. Las cortesias anuales se activan al confirmar una reserva. Tu saldo Mulligans no caduca y se puede canjear en futuros viajes segun tu nivel.")}</p>
+        </div>
+      </div>
+
+      {/* Benefits */}
+      <div className="cp-mul-benefits">
+        <h3 className="cp-mul-benefits__title">
+          {tt("Beneficios de tu nivel")} <span className="cp-mul-benefits__tag">{tierLabel(tier)}</span>
+        </h3>
+        <div className="cp-mul-ben-grid">
+          {benefits.map((ben, i) => (
+            <div key={i} className={`cp-mul-ben ${ben.locked ? "is-locked" : ""}`}>
+              <div className="cp-mul-ben__icon" style={{ background: ben.locked ? "var(--bg)" : ben.iconBg }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke={ben.locked ? "var(--muted)" : ben.iconStroke} strokeWidth="1.8"><path d={ben.iconPath}/></svg>
+              </div>
+              <p className="cp-mul-ben__name">{ben.name}{ben.locked && ben.lockLevel ? <span className="cp-mul-ben__lock"> ({ben.lockLevel})</span> : null}</p>
+              <p className="cp-mul-ben__desc">{ben.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* History */}
+      <div className="cp-mul-history">
+        <div className="cp-mul-history__header">
+          <h3>
+            {tt("Historico de movimientos")} <span className="cp-mul-history__count">{ledger.length} {tt("movimientos")}</span>
+          </h3>
+          <div className="cp-mul-history__filters">
+            {[
+              { key: "all", label: tt("Todos") },
+              { key: "earned", label: tt("Ganados") },
+              { key: "bonus", label: tt("Bonus") },
+              { key: "redeemed", label: tt("Canjeados") },
+            ].map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                className={`cp-mul-history__filter ${historyFilter === f.key ? "is-active" : ""}`}
+                onClick={() => setHistoryFilter(f.key)}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
+        </div>
+
+        {filteredLedger.length === 0 ? (
+          <div style={{ padding: 24 }}>
+            <EmptyState title={tt("Aun no hay movimientos")} icon={"\uD83E\uDDFE"}>
+              {tt("Cuando se registren pagos o se aplique un bonus, apareceran aqui.")}
+            </EmptyState>
+          </div>
+        ) : (
+          <table className="cp-mul-table">
+            <thead>
+              <tr>
+                <th>{tt("Tipo")}</th>
+                <th>{tt("Descripcion")}</th>
+                <th>{tt("Fecha")}</th>
+                <th>{tt("Puntos")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLedger.map((it, i) => {
+                const pts = Number(it.points || 0);
+                const sign = pts >= 0 ? "+" : "";
+                const type = String(it.type || "");
+                return (
+                  <tr key={it.id || `${it.ts}-${i}`}>
+                    <td>
+                      <span className="cp-mul-type">
+                        <span className={`cp-mul-dot ${typeDotClass(type)}`} />
+                        {typeLabel(type)}
+                      </span>
+                    </td>
+                    <td className="cp-mul-desc">{it.note || it.source || "\u2014"}</td>
+                    <td className="cp-mul-date">{fmtDate(it.ts)}</td>
+                    <td className={`cp-mul-points ${pointsClass(type, pts)}`}>{sign}{fmtPts(Math.abs(pts))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
@@ -901,28 +1097,47 @@ function App() {
   const unreadDash = dashboard?.messages?.unread;
   const unreadCount = typeof unreadInbox === "number" ? unreadInbox : (typeof unreadDash === "number" ? unreadDash : 0);
 
-  const title = useMemo(() => {
-    if ((activeView === "viajes" || activeView === "trips")) return t('nav_trips', 'Viajes');
-    if (activeView === "trip") return t('nav_trip_detail', 'Detalle del viaje');
-    if (activeView === "inbox") return t('nav_messages', 'Mensajes');
-    if (activeView === "dashboard") return t('nav_dashboard', 'Dashboard');
-    if (activeView === "mulligans") return t('nav_mulligans', 'Mulligans');
-    if (activeView === "profile") return t('menu_profile', 'Mi perfil');
-    if (activeView === "security") return t('menu_security', 'Seguridad');
-    return t('nav_portal', 'Portal');
-  }, [activeView]);
-
   const chipItems = [];
   if (route.mock) chipItems.push(t('mock_mode', 'Modo prueba'));
   if (isReadOnly) chipItems.push(tt("Vista cliente"));
   const chip = chipItems.length ? chipItems.join(" · ") : null;
+
+  const topbarInfo = useMemo(() => {
+    if (activeView === "dashboard") return { title: null, subtitle: null };
+    if (activeView === "viajes" || activeView === "trips") return {
+      title: t('nav_trips', 'Viajes'),
+      subtitle: t('trips_subtitle', 'Consulta fechas, pagos y estado de cada expediente.'),
+    };
+    if (activeView === "trip") return {
+      title: t('nav_trip_detail', 'Detalle del viaje'),
+      subtitle: null,
+    };
+    if (activeView === "inbox") return {
+      title: t('nav_messages', 'Mensajes'),
+      subtitle: t('messages_subtitle', 'Conversaciones con el equipo de Casanova Golf, organizadas por viaje.'),
+    };
+    if (activeView === "mulligans") return {
+      title: t('nav_mulligans', 'Mulligans'),
+      subtitle: t('mulligans_subtitle', 'Programa de fidelización y beneficios exclusivos.'),
+    };
+    if (activeView === "profile") return {
+      title: t('menu_profile', 'Mi perfil'),
+      subtitle: null,
+    };
+    if (activeView === "security") return {
+      title: t('menu_security', 'Seguridad'),
+      subtitle: null,
+    };
+    return { title: t('nav_portal', 'Portal'), subtitle: null };
+  }, [activeView]);
 
   return (
     <div className="cp-app" data-theme={theme}>
       <Sidebar view={activeView} unread={unreadCount} items={visibleNavItems} theme={theme} />
       <main className="cp-main">
         <Topbar
-          title={title}
+          title={topbarInfo.title}
+          subtitle={topbarInfo.subtitle}
           chip={chip}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}

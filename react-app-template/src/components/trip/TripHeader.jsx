@@ -67,54 +67,56 @@ export default function TripHeader({ trip, map, weather, itineraryUrl }) {
             {trip?.title || tt("Viaje")}
           </div>
           <div className="cp-card-sub cp-trip-header__sub">
-            {trip?.code || ttf("Expediente #{id}", { id: trip?.id || "—" })} · {trip?.status || "—"}
+            <span className="cp-strong">{trip?.code || trip?.id || "—"}</span>
+            {trip?.status ? (
+              <span className="cp-trip-header__status">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12"><path d="M20 6L9 17l-5-5"/></svg>
+                {trip.status}
+              </span>
+            ) : null}
+            <span>{formatDateES(range.start)} — {formatDateES(range.end)}</span>
+          </div>
+          <div className="cp-trip-head__cta-group">
+            {map?.url ? (
+              <a
+                className="cp-btn"
+                href={String(map.url)}
+                target="_blank"
+                rel="noreferrer"
+                title={map?.type === "route" ? tt("Ver ruta en Google Maps") : tt("Ver mapa en Google Maps")}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                {map?.type === "route" ? tt("Ver ruta") : tt("Ver mapa")}
+              </a>
+            ) : null}
+
+            <button
+              type="button"
+              className="cp-btn"
+              onClick={() => {
+                setParam("tab", "payments");
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
+              {tt("Ver pagos")}
+            </button>
+
+            {itineraryUrl ? (
+              <a
+                className="cp-btn cp-btn--ghost"
+                href={itineraryUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                {tt("Programa PDF")}
+              </a>
+            ) : null}
           </div>
         </div>
 
-        <div className="cp-trip-head__meta-actions">
-          <div className="cp-trip-head__meta">
-            <span className="cp-strong">{tt("Fechas:")}</span>
-            <span className="cp-trip-head__dates">{formatDateES(range.start)} – {formatDateES(range.end)}</span>
-          </div>
-
-          <div className="cp-trip-head__actions">
-            <div className="cp-trip-head__cta-group">
-              {map?.url ? (
-                <a
-                  className="cp-btn"
-                  href={String(map.url)}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={map?.type === "route" ? tt("Ver ruta en Google Maps") : tt("Ver mapa en Google Maps")}
-                >
-                  {map?.type === "route" ? tt("Ver ruta") : tt("Ver mapa")}
-                </a>
-              ) : null}
-
-              <button
-                type="button"
-                className="cp-btn"
-                onClick={() => {
-                  setParam("tab", "payments");
-                }}
-              >
-                {tt("Ver pagos")}
-              </button>
-
-              {itineraryUrl ? (
-                <a
-                  className="cp-btn cp-btn--ghost"
-                  href={itineraryUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  {tt("Programa del viaje (PDF)")}
-                </a>
-              ) : null}
-            </div>
-
-            <TripWeather weather={weather} />
-          </div>
+        <div className="cp-trip-head__actions">
+          <TripWeather weather={weather} />
         </div>
       </div>
     </div>

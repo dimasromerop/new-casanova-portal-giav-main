@@ -16,11 +16,11 @@ function firstNameFromProfile(profile) {
   return "";
 }
 
-function DashboardGlanceItem({ icon: Icon, label, value, note, loading = false }) {
+function DashboardGlanceItem({ icon: Icon, label, value, note, loading = false, colorClass = "" }) {
   return (
     <article className={`cp-trip-glance__item ${loading ? "is-loading" : ""}`}>
       <div className="cp-trip-glance__top">
-        <span className="cp-trip-glance__icon" aria-hidden="true"><Icon /></span>
+        <span className={`cp-trip-glance__icon ${colorClass}`.trim()} aria-hidden="true"><Icon /></span>
         <div className="cp-trip-glance__label">{label}</div>
       </div>
       {loading ? (
@@ -500,6 +500,7 @@ export default function DashboardView({
               value={hotelGlanceValue}
               note={hotelGlanceNote}
               loading={showTripDetailSkeleton}
+              colorClass="is-blue"
             />
 
             <DashboardGlanceItem
@@ -508,6 +509,7 @@ export default function DashboardView({
               value={golfGlanceValue}
               note={golfGlanceNote}
               loading={showTripDetailSkeleton}
+              colorClass="is-green"
             />
 
             <DashboardGlanceItem
@@ -516,6 +518,7 @@ export default function DashboardView({
               value={logisticsValue}
               note={logisticsNote}
               loading={showTripDetailSkeleton}
+              colorClass="is-purple"
             />
 
             <DashboardGlanceItem
@@ -523,6 +526,7 @@ export default function DashboardView({
               label={tt("Próximo paso")}
               value={milestoneHeadline}
               note={actionTripLabel || tt("Te acompañaremos desde aquí")}
+              colorClass="is-danger"
             />
           </div>
         </section>
@@ -579,7 +583,7 @@ export default function DashboardView({
               <div className="cp-trip-module__meta">
                 {isPaid ? tt("Todo el viaje está liquidado.") : ttf("Has pagado {paid} de {total}.", { paid: paidLabel, total: totalLabel })}
               </div>
-              <button className="cp-btn cp-btn--ghost" onClick={viewPayments}>
+              <button className="cp-btn gold" onClick={viewPayments}>
                 {tt("Ver pagos")}
               </button>
             </>
@@ -649,6 +653,7 @@ export default function DashboardView({
               <div className="cp-trip-contact__message-head">
                 <span className="cp-trip-contact__message-icon" aria-hidden="true"><ChatBubbleIcon /></span>
                 <span>{tt("Mensajes")}</span>
+                {unreadMessages > 0 ? <span className="cp-trip-contact__badge">{unreadMessages}</span> : null}
               </div>
               <div className="cp-trip-contact__message-copy">
                 {dashboardMessageCopy}
@@ -667,6 +672,15 @@ export default function DashboardView({
               <div className="cp-dashboard-loyalty__lead">
                 <div className="cp-dashboard-loyalty__eyebrow">{tt("Programa de fidelización")}</div>
                 <div className="cp-dashboard-loyalty__title">{tt("Tus Mulligans")}</div>
+                <div className="cp-dashboard-loyalty__level-row">
+                  <span className="cp-dashboard-loyalty__level-pill">{levelLabel}</span>
+                  {nextTier ? (
+                    <>
+                      <span className="cp-dashboard-loyalty__level-arrow" aria-hidden="true">{"\u2192"}</span>
+                      <span className="cp-dashboard-loyalty__level-next">{ttf("Próximo nivel: {tier}", { tier: nextTier })}</span>
+                    </>
+                  ) : null}
+                </div>
                 <div className="cp-dashboard-loyalty__copy">
                   {hintText || tt("Aquí tienes tu avance y un acceso rápido a los movimientos, sin recargar la portada.")}
                 </div>
@@ -695,22 +709,18 @@ export default function DashboardView({
                   {tt("Gasto acumulado")}: {typeof mull?.spend === "number" ? euro(mull.spend) : "—"}
                 </div>
               </div>
-              <div className="cp-dashboard-loyalty__progress-head">
-                <div className="cp-dashboard-loyalty__progress-end">
-                  <span>{tt("Nivel actual")}</span>
-                  <strong>{levelLabel}</strong>
+              <div className="cp-dashboard-loyalty__progress-wrap">
+                <div className="cp-dashboard-loyalty__progress">
+                  <ProgressBar
+                    value={loyaltyProgressPct}
+                    variant="loyalty"
+                    label={tt("Progreso de Mulligans")}
+                  />
                 </div>
-                <div className="cp-dashboard-loyalty__progress-end is-next">
-                  <span>{tt("Próximo nivel")}</span>
-                  <strong>{progressTargetLabel}</strong>
+                <div className="cp-dashboard-loyalty__progress-head">
+                  <span>{levelLabel}</span>
+                  <span>{progressTargetLabel}</span>
                 </div>
-              </div>
-              <div className="cp-dashboard-loyalty__progress">
-                <ProgressBar
-                  value={loyaltyProgressPct}
-                  variant="loyalty"
-                  label={tt("Progreso de Mulligans")}
-                />
               </div>
               <div className="cp-dashboard-loyalty__hint">{loyaltyHint}</div>
               <div className="cp-dashboard-loyalty__actions">
