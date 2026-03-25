@@ -166,6 +166,24 @@ add_action('admin_init', function () {
     'default' => '',
   ]);
 
+  register_setting('casanova_payments', 'casanova_giav_idformapago_redsys', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 1027,
+  ]);
+
+  register_setting('casanova_payments', 'casanova_giav_idformapago_redsys_amex', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 0,
+  ]);
+
+  register_setting('casanova_payments', 'casanova_redsys_tpvs', [
+    'type' => 'array',
+    'sanitize_callback' => 'casanova_redsys_sanitize_tpvs_option',
+    'default' => [],
+  ]);
+
   // GIAV - Forma de pago (Inespay)
   register_setting('casanova_payments', 'casanova_giav_idformapago_inespay', [
     'type' => 'integer',
@@ -211,6 +229,16 @@ add_action('admin_init', function () {
     },
     'default' => 1,
   ]);
+  register_setting('casanova_portal', 'casanova_mulligans_giav_field_perk', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 2237,
+  ]);
+  register_setting('casanova_portal', 'casanova_mulligans_giav_field_used', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 2238,
+  ]);
   register_setting('casanova_portal', 'casanova_portal_tpl_dashboard', ['type' => 'integer', 'sanitize_callback' => 'absint']);
   register_setting('casanova_portal', 'casanova_portal_tpl_expedientes', ['type' => 'integer', 'sanitize_callback' => 'absint']);
   register_setting('casanova_portal', 'casanova_portal_tpl_mulligans', ['type' => 'integer', 'sanitize_callback' => 'absint']);
@@ -223,6 +251,87 @@ add_action('admin_init', function () {
     'default' => [],
   ]);
 });
+
+if (!function_exists('casanova_redsys_sanitize_tpvs_option')) {
+  function casanova_redsys_sanitize_tpvs_option($value): array {
+    $defaults = function_exists('casanova_redsys_known_tpvs')
+      ? casanova_redsys_known_tpvs()
+      : [];
+    $current_tpvs = function_exists('casanova_redsys_get_tpvs')
+      ? casanova_redsys_get_tpvs()
+      : [];
+
+    if (!is_array($value)) {
+      $value = [];
+    }
+
+    $out = [];
+    foreach ($defaults as $tpv_key => $default_cfg) {
+      $candidate = isset($value[$tpv_key]) && is_array($value[$tpv_key]) ? $value[$tpv_key] : [];
+      if (function_exists('casanova_redsys_normalize_tpv_settings')) {
+        $normalized = casanova_redsys_normalize_tpv_settings($candidate, $default_cfg);
+        if ($normalized['secret_key'] === '') {
+          $normalized['secret_key'] = (string)($current_tpvs[$tpv_key]['secret_key'] ?? $default_cfg['secret_key'] ?? '');
+        }
+        unset($normalized['endpoint'], $normalized['resolved_endpoint']);
+        $out[$tpv_key] = $normalized;
+      } else {
+        $out[$tpv_key] = array_replace($default_cfg, $candidate);
+      }
+    }
+
+    return $out;
+  }
+}
+
+if (!function_exists('casanova_redsys_admin_render_tpv_fields')) {
+  function casanova_redsys_admin_render_tpv_fields(string $tpv_key, string $title, array $cfg, string $description = ''): void {
+    $field_prefix = 'casanova_redsys_tpvs[' . $tpv_key . ']';
+    $id_prefix = 'casanova_redsys_tpvs_' . $tpv_key . '_';
+    $sandbox = !empty($cfg['sandbox']);
+    $merchant_code = (string)($cfg['merchant_code'] ?? '');
+    $terminal = (string)($cfg['terminal'] ?? '');
+    $currency = (string)($cfg['currency'] ?? '978');
+    $secret_key = (string)($cfg['secret_key'] ?? '');
+    $has_secret_key = ($secret_key !== '');
+    $sig_version = (string)($cfg['sig_version'] ?? 'HMAC_SHA256_V1');
+    $endpoint_override = (string)($cfg['endpoint_override'] ?? '');
+    $resolved_endpoint = (string)($cfg['endpoint'] ?? $cfg['resolved_endpoint'] ?? '');
+
+    echo '<fieldset class="casanova-admin-fieldset">';
+    echo '<legend><strong>' . esc_html($title) . '</strong></legend>';
+    if ($description !== '') {
+      echo '<p class="description">' . esc_html($description) . '</p>';
+    }
+
+    echo '<p><input type="hidden" name="' . esc_attr($field_prefix . '[sandbox]') . '" value="0" />';
+    echo '<label for="' . esc_attr($id_prefix . 'sandbox') . '">';
+    echo '<input type="checkbox" id="' . esc_attr($id_prefix . 'sandbox') . '" name="' . esc_attr($field_prefix . '[sandbox]') . '" value="1" ' . checked($sandbox, true, false) . ' /> ';
+    echo 'Usar entorno sandbox';
+    echo '</label></p>';
+
+    echo '<p><label for="' . esc_attr($id_prefix . 'merchant_code') . '"><strong>FUC / codigo comercio</strong></label><br />';
+    echo '<input type="text" class="regular-text code" id="' . esc_attr($id_prefix . 'merchant_code') . '" name="' . esc_attr($field_prefix . '[merchant_code]') . '" value="' . esc_attr($merchant_code) . '" /></p>';
+
+    echo '<p><label for="' . esc_attr($id_prefix . 'terminal') . '"><strong>Terminal</strong></label><br />';
+    echo '<input type="text" class="small-text code" id="' . esc_attr($id_prefix . 'terminal') . '" name="' . esc_attr($field_prefix . '[terminal]') . '" value="' . esc_attr($terminal) . '" /></p>';
+
+    echo '<p><label for="' . esc_attr($id_prefix . 'currency') . '"><strong>Moneda ISO</strong></label><br />';
+    echo '<input type="text" class="small-text code" id="' . esc_attr($id_prefix . 'currency') . '" name="' . esc_attr($field_prefix . '[currency]') . '" value="' . esc_attr($currency) . '" /></p>';
+
+    echo '<p><label for="' . esc_attr($id_prefix . 'secret_key') . '"><strong>Clave secreta</strong></label><br />';
+    echo '<input type="password" class="regular-text code" id="' . esc_attr($id_prefix . 'secret_key') . '" name="' . esc_attr($field_prefix . '[secret_key]') . '" value="" autocomplete="new-password" placeholder="' . ($has_secret_key ? esc_attr('••••••••••') : '') . '" /></p>';
+    echo '<p class="description">La clave actual no se muestra en pantalla. Si dejas este campo vacío, se conserva la que ya está guardada.</p>';
+
+    echo '<p><label for="' . esc_attr($id_prefix . 'sig_version') . '"><strong>Version de firma</strong></label><br />';
+    echo '<input type="text" class="regular-text code" id="' . esc_attr($id_prefix . 'sig_version') . '" name="' . esc_attr($field_prefix . '[sig_version]') . '" value="' . esc_attr($sig_version) . '" /></p>';
+
+    echo '<p><label for="' . esc_attr($id_prefix . 'endpoint_override') . '"><strong>Endpoint personalizado</strong></label><br />';
+    echo '<input type="url" class="large-text code" id="' . esc_attr($id_prefix . 'endpoint_override') . '" name="' . esc_attr($field_prefix . '[endpoint_override]') . '" value="' . esc_attr($endpoint_override) . '" placeholder="Automatico segun sandbox/real" /></p>';
+    echo '<p class="description">Si lo dejas vacio, el plugin usa el endpoint oficial de Redsys segun el entorno. Endpoint activo: <code>' . esc_html($resolved_endpoint) . '</code></p>';
+    echo '</fieldset>';
+  }
+}
 
 function casanova_portal_sanitize_menu_items($value): array {
   if (!is_array($value)) return [];
@@ -302,7 +411,7 @@ function casanova_portal_admin_sections(): array {
     'payments' => [
       'slug' => 'casanova-payments-payments',
       'title' => 'Pagos',
-      'description' => 'Configuracion de depositos, overrides y herramientas de soporte ligadas a GIAV.',
+      'description' => 'Configuracion de depositos, TPV Redsys, overrides y herramientas de soporte ligadas a GIAV.',
     ],
     'links' => [
       'slug' => 'casanova-payments-links',
@@ -413,10 +522,12 @@ function casanova_payments_render_settings_page(): void {
 
   if ($section === 'overview') {
     $mulligans_enabled = casanova_portal_mulligans_enabled();
+    $mulligans_field_perk = (int) get_option('casanova_mulligans_giav_field_perk', 2237);
+    $mulligans_field_used = (int) get_option('casanova_mulligans_giav_field_used', 2238);
 
     echo '<div class="notice notice-info inline casanova-admin-note"><p>Las vistas del portal, el menu dinamico y la ayuda legacy se han retirado de esta administracion. Aqui quedan solo las utilidades que siguen activas.</p></div>';
     echo '<div class="casanova-admin-grid">';
-    echo '<section class="casanova-admin-card"><h2>Pagos</h2><p>Configura depositos, overrides por expediente y usa las busquedas rapidas de expediente y cliente.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('payments')) . '">Abrir pagos</a></p></section>';
+    echo '<section class="casanova-admin-card"><h2>Pagos</h2><p>Configura depositos, TPV Redsys, overrides por expediente y usa las busquedas rapidas de expediente y cliente.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('payments')) . '">Abrir pagos</a></p></section>';
     echo '<section class="casanova-admin-card"><h2>Cobros y enlaces</h2><p>Crea payment links individuales, tokens de grupo y consulta los ultimos enlaces generados.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('links')) . '">Abrir cobros y enlaces</a></p></section>';
     echo '<section class="casanova-admin-card"><h2>GIAV</h2><p>Consulta formas de pago y custom fields sin salir del admin ni depender del REST publico.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('giav')) . '">Abrir GIAV</a></p></section>';
     echo '<section class="casanova-admin-card"><h2>Diagnostico</h2><p>Deja a mano la parte legacy de slots y charges para soporte puntual, fuera del flujo principal.</p><p><a class="button button-secondary" href="' . esc_url(casanova_portal_admin_url('diagnostics')) . '">Abrir diagnostico</a></p></section>';
@@ -432,6 +543,13 @@ function casanova_payments_render_settings_page(): void {
     echo 'Activar Mulligans en el portal';
     echo '</label>';
     echo '<p class="description">Si lo desactivas, Mulligans deja de mostrarse en dashboard, router y vistas del portal, pero no se toca la logica interna.</p>';
+    echo '<p><label for="casanova_mulligans_giav_field_perk"><strong>GIAV: campo Mulligans Perk</strong></label><br />';
+    echo '<input name="casanova_mulligans_giav_field_perk" id="casanova_mulligans_giav_field_perk" type="number" min="1" step="1" value="' . esc_attr((string) $mulligans_field_perk) . '" class="small-text" /></p>';
+    echo '<p class="description">Por defecto <code>2237</code>. Identifica el perk/canje aplicado en el expediente.</p>';
+    echo '<p><label for="casanova_mulligans_giav_field_used"><strong>GIAV: campo Mulligans usados</strong></label><br />';
+    echo '<input name="casanova_mulligans_giav_field_used" id="casanova_mulligans_giav_field_used" type="number" min="1" step="1" value="' . esc_attr((string) $mulligans_field_used) . '" class="small-text" /></p>';
+    echo '<p class="description">Por defecto <code>2238</code>. Lee el importe consumido de Mulligans en cada expediente.</p>';
+    echo '<p class="description">Si defines <code>CASANOVA_MULLIGANS_GIAV_FIELD_PERK</code> o <code>CASANOVA_MULLIGANS_GIAV_FIELD_USED</code> en <code>wp-config.php</code>, esas constantes tienen prioridad sobre estos valores.</p>';
     submit_button('Guardar modulo', 'primary', 'submit', false);
     echo '</form>';
     echo '</div>';
@@ -440,11 +558,16 @@ function casanova_payments_render_settings_page(): void {
     $p  = get_option('casanova_deposit_percent', 10);
     $m  = get_option('casanova_deposit_min_amount', 50);
     $ov = get_option('casanova_deposit_overrides', '');
+    $idfp_redsys = (int) get_option('casanova_giav_idformapago_redsys', 1027);
+    $idfp_redsys_amex = (int) get_option('casanova_giav_idformapago_redsys_amex', 0);
     $idfp_inespay = (int) get_option('casanova_giav_idformapago_inespay', 0);
     $aplazame_public_key = (string) get_option('casanova_aplazame_public_key', '');
     $aplazame_private_key = (string) get_option('casanova_aplazame_private_key', '');
     $aplazame_sandbox = (bool) get_option('casanova_aplazame_sandbox', 1);
     $idfp_aplazame = (int) get_option('casanova_giav_idformapago_aplazame', 0);
+    $redsys_tpvs = function_exists('casanova_redsys_get_tpvs') ? casanova_redsys_get_tpvs() : [];
+    $redsys_default_tpv = isset($redsys_tpvs['default']) && is_array($redsys_tpvs['default']) ? $redsys_tpvs['default'] : [];
+    $redsys_amex_tpv = isset($redsys_tpvs['amex']) && is_array($redsys_tpvs['amex']) ? $redsys_tpvs['amex'] : [];
     if (!is_string($ov)) $ov = '';
 
     echo '<h2>Ajustes de pagos</h2>';
@@ -462,6 +585,35 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><th scope="row"><label for="casanova_deposit_overrides">Overrides por expediente</label></th>';
     echo '<td><textarea name="casanova_deposit_overrides" id="casanova_deposit_overrides" rows="8" cols="60" class="large-text code">' . esc_textarea($ov) . '</textarea>';
     echo '<p class="description">Opcional. Una línea por expediente: <code>2553848=15</code> (porcentaje).</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_giav_idformapago_redsys">GIAV: ID forma de pago (Redsys)</label></th>';
+    echo '<td><input name="casanova_giav_idformapago_redsys" id="casanova_giav_idformapago_redsys" type="number" min="0" step="1" value="' . esc_attr($idfp_redsys) . '" />';
+    echo '<p class="description">Se usa cuando la notificación de Redsys registra el cobro en GIAV. Si no lo cambias, se mantiene el valor legacy <code>1027</code>. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_REDSYS</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_giav_idformapago_redsys_amex">GIAV: ID forma de pago (Redsys AMEX)</label></th>';
+    echo '<td><input name="casanova_giav_idformapago_redsys_amex" id="casanova_giav_idformapago_redsys_amex" type="number" min="0" step="1" value="' . esc_attr($idfp_redsys_amex) . '" />';
+    echo '<p class="description">Se usa cuando el pago se procesa con el TPV AMEX. Si lo dejas a <code>0</code>, el sistema usarÃ¡ el ID general de Redsys. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_REDSYS_AMEX</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
+
+    echo '<tr><th scope="row">Redsys / TPV</th>';
+    echo '<td><p class="description">Ahora mismo el portal sigue enviando todos los pagos al <strong>TPV principal</strong>. El <strong>TPV AMEX</strong> queda configurado en admin para activar después la lógica de selección según la tarjeta elegida por el usuario.</p></td></tr>';
+
+    echo '<tr><th scope="row">TPV principal</th><td>';
+    casanova_redsys_admin_render_tpv_fields(
+      'default',
+      'TPV principal',
+      $redsys_default_tpv,
+      'Si no has guardado todavía estos campos, el plugin mantiene como fallback la configuración legacy actual para no romper el flujo en curso.'
+    );
+    echo '</td></tr>';
+
+    echo '<tr><th scope="row">TPV AMEX</th><td>';
+    casanova_redsys_admin_render_tpv_fields(
+      'amex',
+      'TPV AMEX',
+      $redsys_amex_tpv,
+      'Queda preparado para el siguiente paso, cuando el checkout pueda decidir si debe redirigir al TPV específico de AMEX.'
+    );
+    echo '</td></tr>';
 
     echo '<tr><th scope="row"><label for="casanova_giav_idformapago_inespay">GIAV: ID forma de pago (Inespay)</label></th>';
     echo '<td><input name="casanova_giav_idformapago_inespay" id="casanova_giav_idformapago_inespay" type="number" min="0" step="1" value="' . esc_attr($idfp_inespay) . '" />';
@@ -628,6 +780,8 @@ function casanova_payments_render_settings_page(): void {
   } elseif ($tab === 'portal') {
     // Legacy templates por vista (compatibilidad)
     $mulligans_enabled = casanova_portal_mulligans_enabled();
+    $mulligans_field_perk = (int) get_option('casanova_mulligans_giav_field_perk', 2237);
+    $mulligans_field_used = (int) get_option('casanova_mulligans_giav_field_used', 2238);
     $tpl_dashboard   = (int) get_option('casanova_portal_tpl_dashboard', 0);
     $tpl_expedientes = (int) get_option('casanova_portal_tpl_expedientes', 0);
     $tpl_mulligans   = (int) get_option('casanova_portal_tpl_mulligans', 0);
@@ -658,6 +812,14 @@ function casanova_payments_render_settings_page(): void {
     echo 'Mostrar Mulligans en el portal';
     echo '</label>';
     echo '<p class="description">Si lo desactivas, Mulligans deja de mostrarse en el dashboard, en la navegaci&oacute;n y en sus vistas del portal, pero no se toca la l&oacute;gica interna.</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_mulligans_giav_field_perk">GIAV: campo Mulligans Perk</label></th><td>';
+    echo '<input name="casanova_mulligans_giav_field_perk" id="casanova_mulligans_giav_field_perk" type="number" min="1" step="1" value="' . esc_attr((string) $mulligans_field_perk) . '" class="small-text" />';
+    echo '<p class="description">Por defecto <code>2237</code>. Se usa para identificar el perk/canje aplicado en el expediente. Si defines <code>CASANOVA_MULLIGANS_GIAV_FIELD_PERK</code> en <code>wp-config.php</code>, esa constante tiene prioridad.</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_mulligans_giav_field_used">GIAV: campo Mulligans usados</label></th><td>';
+    echo '<input name="casanova_mulligans_giav_field_used" id="casanova_mulligans_giav_field_used" type="number" min="1" step="1" value="' . esc_attr((string) $mulligans_field_used) . '" class="small-text" />';
+    echo '<p class="description">Por defecto <code>2238</code>. Se usa para leer el importe de Mulligans consumidos en cada expediente.</p></td></tr>';
 
     echo '<tr><th scope="row">Dashboard</th><td>';
     $render_select('casanova_portal_tpl_dashboard', $tpl_dashboard);

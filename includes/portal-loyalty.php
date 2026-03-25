@@ -22,6 +22,7 @@ const CASANOVA_MULL_META_TOTAL       = 'casanova_mulligans_total';
 const CASANOVA_MULL_META_SPEND       = 'casanova_mulligans_lifetime_spend';
 const CASANOVA_MULL_META_TIER        = 'casanova_mulligans_tier';
 const CASANOVA_MULL_META_LAST_SYNC   = 'casanova_mulligans_last_sync';
+const CASANOVA_MULL_META_CONFIG_HASH = 'casanova_mulligans_config_hash';
 
 
 const CASANOVA_MULL_META_LEDGER      = 'casanova_mulligans_ledger';
@@ -29,6 +30,49 @@ const CASANOVA_MULL_META_EARNED      = 'casanova_mulligans_points_earned';
 const CASANOVA_MULL_META_BONUS       = 'casanova_mulligans_points_bonus';
 const CASANOVA_MULL_META_USED        = 'casanova_mulligans_points_used';
 const CASANOVA_MULL_META_BALANCE     = 'casanova_mulligans_points_balance';
+
+const CASANOVA_MULL_GIAV_FIELD_PERK_DEFAULT = 2237;
+const CASANOVA_MULL_GIAV_FIELD_USED_DEFAULT = 2238;
+
+function casanova_mulligans_giav_perk_field_id(): int {
+  $fallback = (int) CASANOVA_MULL_GIAV_FIELD_PERK_DEFAULT;
+
+  if (defined('CASANOVA_MULLIGANS_GIAV_FIELD_PERK')) {
+    $defined = (int) CASANOVA_MULLIGANS_GIAV_FIELD_PERK;
+    return $defined > 0 ? $defined : $fallback;
+  }
+
+  $configured = (int) get_option('casanova_mulligans_giav_field_perk', $fallback);
+  return $configured > 0 ? $configured : $fallback;
+}
+
+function casanova_mulligans_giav_used_field_id(): int {
+  $fallback = (int) CASANOVA_MULL_GIAV_FIELD_USED_DEFAULT;
+
+  if (defined('CASANOVA_MULLIGANS_GIAV_FIELD_USED')) {
+    $defined = (int) CASANOVA_MULLIGANS_GIAV_FIELD_USED;
+    return $defined > 0 ? $defined : $fallback;
+  }
+
+  $configured = (int) get_option('casanova_mulligans_giav_field_used', $fallback);
+  return $configured > 0 ? $configured : $fallback;
+}
+
+function casanova_mulligans_giav_field_ids(): array {
+  return [
+    'perk' => casanova_mulligans_giav_perk_field_id(),
+    'used' => casanova_mulligans_giav_used_field_id(),
+  ];
+}
+
+function casanova_mulligans_sync_config_hash(): string {
+  $fields = casanova_mulligans_giav_field_ids();
+
+  return implode('|', [
+    'perk:' . (int) ($fields['perk'] ?? 0),
+    'used:' . (int) ($fields['used'] ?? 0),
+  ]);
+}
 
 /**
  * Config tiers
@@ -260,13 +304,20 @@ function casanova_mulligans_giav_custom_value($expediente, int $key): ?string {
 }
 
 /**
- * GIAV: detecta Mulligans usados por expediente (custom field 2179) y crea movimientos redeem.
+ * GIAV: detecta Mulligans usados por expediente y crea movimientos redeem.
  * Devuelve ['total_used' => float, 'movements' => array].
  */
-function casanova_mulligans_giav_used_movements(int $idCliente, int $field_used = 2237, int $field_note = 2238): array|WP_Error {
+function casanova_mulligans_giav_used_movements(int $idCliente, ?int $field_used = null, ?int $field_perk = null): array|WP_Error {
   if (!function_exists('casanova_giav_expedientes_por_cliente')) {
     return new WP_Error('missing', 'GIAV expedientes helper missing');
   }
+
+  $field_used = ($field_used !== null && $field_used > 0)
+    ? (int) $field_used
+    : casanova_mulligans_giav_used_field_id();
+  $field_perk = ($field_perk !== null && $field_perk > 0)
+    ? (int) $field_perk
+    : casanova_mulligans_giav_perk_field_id();
 
   $pageSize  = 100;
   $pageIndex = 0;
@@ -291,9 +342,9 @@ function casanova_mulligans_giav_used_movements(int $idCliente, int $field_used 
         $used = (float) str_replace(',', '.', (string)$used_raw);
         if ($used <= 0) continue;
 
-        $note = casanova_mulligans_giav_custom_value($exp, $field_note);
-        $note = $note !== null ? trim((string)$note) : '';
-        if ($note === '') $note = 'Canje aplicado';
+        $perk = casanova_mulligans_giav_custom_value($exp, $field_perk);
+        $perk = $perk !== null ? trim((string)$perk) : '';
+        if ($perk === '') $perk = 'Canje aplicado';
 
         $total_used += $used;
 
@@ -303,7 +354,8 @@ function casanova_mulligans_giav_used_movements(int $idCliente, int $field_used 
           'points' => -(int) round($used), // puntos negativos
           'source' => 'giav',
           'ref'    => 'expediente:'.$idExp,
-          'note'   => $note,
+          'note'   => $perk,
+          'perk'   => $perk,
           'ts'     => time(),
           'exp_titulo' => (string)($exp->Titulo ?? ''),
           'exp_codigo' => (string)($exp->Codigo ?? ''),
@@ -338,8 +390,10 @@ function casanova_mulligans_sync_user(int $user_id, bool $force = false): array|
   }
 
   $last = (int) get_user_meta($user_id, CASANOVA_MULL_META_LAST_SYNC, true);
+  $config_hash = casanova_mulligans_sync_config_hash();
+  $stored_hash = (string) get_user_meta($user_id, CASANOVA_MULL_META_CONFIG_HASH, true);
   $ttl = 12 * HOUR_IN_SECONDS;
-  if (!$force && $last > 0 && (time() - $last) < $ttl) {
+  if (!$force && $last > 0 && (time() - $last) < $ttl && $stored_hash === $config_hash) {
     return casanova_mulligans_get_user($user_id);
   }
 
@@ -376,7 +430,7 @@ function casanova_mulligans_sync_user(int $user_id, bool $force = false): array|
   }
 
   // 3) Used: canjes desde GIAV (custom fields por expediente)
-  $used_pack = casanova_mulligans_giav_used_movements($idCliente, 2237, 2238);
+  $used_pack = casanova_mulligans_giav_used_movements($idCliente);
   if (is_wp_error($used_pack)) return $used_pack;
 
   $used_movs = (array)($used_pack['movements'] ?? []);
@@ -413,16 +467,18 @@ function casanova_mulligans_sync_user(int $user_id, bool $force = false): array|
     $bonus_total += (int)($row['points'] ?? 0);
   }
 
-  $balance = 0;
+  $raw_balance = 0;
   foreach ($ledger as $row) {
     if (!is_array($row)) continue;
-    $balance += (int)($row['points'] ?? 0);
+    $raw_balance += (int)($row['points'] ?? 0);
   }
+  $balance = max(0, $raw_balance);
 
   // Persistimos (compatibilidad + nuevos campos)
   update_user_meta($user_id, CASANOVA_MULL_META_SPEND, (float)$spend);
   update_user_meta($user_id, CASANOVA_MULL_META_TIER, $tier);
   update_user_meta($user_id, CASANOVA_MULL_META_LAST_SYNC, (int) time());
+  update_user_meta($user_id, CASANOVA_MULL_META_CONFIG_HASH, $config_hash);
 
   update_user_meta($user_id, CASANOVA_MULL_META_EARNED, (int)$earned_points);
   update_user_meta($user_id, CASANOVA_MULL_META_BONUS, (int)$bonus_total);

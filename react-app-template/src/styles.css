@@ -11,7 +11,7 @@
   --border: rgba(0,0,0,0.07);
 
   --accent: #134640;
-  --accent-2: #153b37;
+  --accent-2: #134640de;
 ;
   --accent-soft: rgba(42,92,40,.08);
   --accent-light: #e8f0e6;
@@ -1667,6 +1667,71 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 24px;
 }
 
+.cp-pay-card-brand{
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--surface), var(--bg));
+}
+
+.cp-pay-card-brand__label{
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.cp-pay-card-brand__choices{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cp-pay-card-brand__choice{
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--surface);
+  padding: 14px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.cp-pay-card-brand__choice:hover{
+  border-color: var(--blue);
+}
+
+.cp-pay-card-brand__choice.is-active{
+  border-color: var(--blue);
+  background: var(--blue-light);
+  box-shadow: inset 0 0 0 1px rgba(0, 97, 199, 0.08);
+}
+
+.cp-pay-card-brand__choice-title{
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cp-pay-card-brand__choice-hint{
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.cp-pay-card-brand__hint{
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 /* ─── Amount selection ─── */
 .cp-pay-cta-row{
   display: grid;
@@ -1823,7 +1888,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .cp-pay-submit:hover{
-  background: #1e4a1c;
+  background: var(--accent-2);
 }
 
 .cp-pay-submit:active{
@@ -1917,6 +1982,10 @@ a { color: inherit; text-decoration: none; }
   }
 
   .cp-pay-cta-row{
+    grid-template-columns: 1fr;
+  }
+
+  .cp-pay-card-brand__choices{
     grid-template-columns: 1fr;
   }
 

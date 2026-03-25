@@ -90,7 +90,16 @@ class Casanova_Dashboard_Service {
     // 1) Mulligans (datos locales)
     $mulligans_start = microtime(true);
 
-    $m_user = function_exists('casanova_mulligans_get_user') ? (array) casanova_mulligans_get_user($user_id) : [];
+    $m_user = [];
+    if (function_exists('casanova_mulligans_sync_user')) {
+      $m_sync = casanova_mulligans_sync_user($user_id, false);
+      if (is_array($m_sync)) {
+        $m_user = $m_sync;
+      }
+    }
+    if (empty($m_user) && function_exists('casanova_mulligans_get_user')) {
+      $m_user = (array) casanova_mulligans_get_user($user_id);
+    }
     $m_points = isset($m_user['points']) ? (int) $m_user['points'] : 0;
     $m_tier   = isset($m_user['tier']) ? (string) $m_user['tier'] : '';
     $m_last   = isset($m_user['last_sync']) ? (int) $m_user['last_sync'] : 0;

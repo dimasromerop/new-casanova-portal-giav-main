@@ -7,6 +7,31 @@ if (!defined('ABSPATH')) exit;
 class Casanova_Payments_Service {
 
   /**
+   * @return array<string,mixed>
+   */
+  private static function get_mulligans_snapshot(int $user_id): array {
+    if ($user_id <= 0) {
+      return [];
+    }
+
+    if (function_exists('casanova_mulligans_sync_user')) {
+      $sync = casanova_mulligans_sync_user($user_id, false);
+      if (is_array($sync)) {
+        return $sync;
+      }
+    }
+
+    if (function_exists('casanova_mulligans_get_user')) {
+      $cached = casanova_mulligans_get_user($user_id);
+      if (is_array($cached)) {
+        return $cached;
+      }
+    }
+
+    return [];
+  }
+
+  /**
    * Describe el estado de pagos de un expediente autorizado.
    *
    * @return array<string,mixed>|WP_Error
@@ -156,6 +181,9 @@ class Casanova_Payments_Service {
         'label' => __('Aplazame', 'casanova-portal'),
       ],
     ];
+    $mulligans = self::get_mulligans_snapshot($user_id);
+    $mulligans_available = max(0, (int) ($mulligans['points'] ?? 0));
+
     return [
       'user_id' => $user_id,
       'idCliente' => $idCliente,
@@ -171,6 +199,7 @@ class Casanova_Payments_Service {
       'history' => self::fetch_cobros_history($idExpediente, $idCliente, $payer_default),
       'expediente_pagado' => $is_paid,
       'mulligans_used' => casanova_mulligans_used_for_expediente($idExpediente, $idCliente),
+      'mulligans_available' => $mulligans_available,
       'payment_options' => $payment_options,
       'payment_methods' => $payment_methods,
       'actions' => [

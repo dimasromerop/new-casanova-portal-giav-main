@@ -105,6 +105,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
   const firstEnabledMethod = (methods.find((method) => method && method.enabled) || methods[0] || { id: "card" }).id;
   const [payMethod, setPayMethod] = useState(firstEnabledMethod);
   const [payType, setPayType] = useState(null);
+  const [cardBrand, setCardBrand] = useState("other");
 
   useEffect(() => {
     const enabledIds = methods.filter((method) => method && method.enabled).map((method) => method.id);
@@ -156,13 +157,17 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
     setState({ loading: type, error: null });
     try {
       const qs = mock ? "?mock=1" : "";
+      const body = {
+        expediente_id: Number(expediente),
+        type,
+        method,
+      };
+      if (method === "card") {
+        body.card_brand = cardBrand;
+      }
       const payload = await api(`/payments/intent${qs}`, {
         method: "POST",
-        body: {
-          expediente_id: Number(expediente),
-          type,
-          method,
-        },
+        body,
       });
 
       if (payload?.ok && method === "aplazame" && payload?.checkout_id) {
@@ -239,6 +244,8 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
         ? tt("transferencia")
         : activeMethodObj.id === "aplazame"
           ? tt("Aplazame")
+          : cardBrand === "amex"
+            ? tt("AMEX")
           : (activeMethodObj.label || tt("tarjeta")).toLowerCase())
     : "";
 
@@ -297,6 +304,35 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
           })}
         </div>
       </div>
+
+      {payMethod === "card" ? (
+        <div className="cp-pay-card-brand">
+          <div className="cp-pay-card-brand__label">{tt("Tipo de tarjeta")}</div>
+          <div className="cp-pay-card-brand__choices" role="radiogroup" aria-label={tt("Tipo de tarjeta")}>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={cardBrand === "other"}
+              className={`cp-pay-card-brand__choice ${cardBrand === "other" ? "is-active" : ""}`}
+              onClick={() => setCardBrand("other")}
+            >
+              <span className="cp-pay-card-brand__choice-title">{tt("Otra tarjeta")}</span>
+              <span className="cp-pay-card-brand__choice-hint">{tt("Visa, Mastercard y similares.")}</span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={cardBrand === "amex"}
+              className={`cp-pay-card-brand__choice ${cardBrand === "amex" ? "is-active" : ""}`}
+              onClick={() => setCardBrand("amex")}
+            >
+              <span className="cp-pay-card-brand__choice-title">{tt("American Express (AMEX)")}</span>
+              <span className="cp-pay-card-brand__choice-hint">{tt("Selecciona esta opcion si vas a pagar con AMEX.")}</span>
+            </button>
+          </div>
+          <div className="cp-pay-card-brand__hint">{tt("Elige con que tarjeta quieres realizar el pago.")}</div>
+        </div>
+      ) : null}
 
       {payMethod === "bank_transfer" ? (
         <div className="cp-pay-method-note">

@@ -60,9 +60,12 @@ if (!function_exists('casanova_redsys_normalize_sig')) {
 }
 
 if (!function_exists('casanova_redsys_get_secret')) {
-  function casanova_redsys_get_secret(): string {
+  function casanova_redsys_get_secret(string $tpv_key = '', array $context = []): string {
     if (function_exists('casanova_redsys_config')) {
-      $cfg = casanova_redsys_config();
+      $resolved_tpv_key = $tpv_key !== ''
+        ? $tpv_key
+        : (function_exists('casanova_redsys_select_tpv_key') ? casanova_redsys_select_tpv_key($context) : 'default');
+      $cfg = casanova_redsys_config($resolved_tpv_key);
       if (!empty($cfg['secret_key'])) return (string)$cfg['secret_key'];
     }
     return '';
@@ -70,7 +73,7 @@ if (!function_exists('casanova_redsys_get_secret')) {
 }
 
 if (!function_exists('casanova_redsys_verify')) {
-  function casanova_redsys_verify(string $mpB64, array $params, string $sigProvided): bool {
+  function casanova_redsys_verify(string $mpB64, array $params, string $sigProvided, array $context = []): bool {
     if (!function_exists('casanova_redsys_signature')) return false;
 
     // IMPORTANTE: La firma se deriva usando el Ds_Order que viene DENTRO de MerchantParameters.
@@ -80,7 +83,8 @@ if (!function_exists('casanova_redsys_verify')) {
     $order = trim($order);
     if ($order === '') return false;
 
-    $secret = casanova_redsys_get_secret();
+    $context['params'] = $params;
+    $secret = casanova_redsys_get_secret('', $context);
     if ($secret === '') return false;
 
     $expected = casanova_redsys_signature($mpB64, $order, $secret);
@@ -160,12 +164,16 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
       return $result;
     }
 
-    $id_forma_pago = 0;
-    if (defined('CASANOVA_GIAV_IDFORMAPAGO_REDSYS')) {
-      $id_forma_pago = (int)CASANOVA_GIAV_IDFORMAPAGO_REDSYS;
-    }
+    $id_forma_pago = function_exists('casanova_redsys_giav_method_id')
+      ? casanova_redsys_giav_method_id('', ['intent' => $intent, 'params' => $params])
+      : 0;
     if ($id_forma_pago <= 0) {
-      $id_forma_pago = (int) get_option('casanova_giav_idformapago_redsys', 1027);
+      if (defined('CASANOVA_GIAV_IDFORMAPAGO_REDSYS')) {
+        $id_forma_pago = (int)CASANOVA_GIAV_IDFORMAPAGO_REDSYS;
+      }
+      if ($id_forma_pago <= 0) {
+        $id_forma_pago = (int) get_option('casanova_giav_idformapago_redsys', 1027);
+      }
     }
 
     // Oficina: algunos GIAV requieren idOficina para permitir Cobro_POST (si no, 'No se tiene acceso al registro').
@@ -404,11 +412,11 @@ function casanova_handle_tpv_return(): void {
     exit;
   }
 
-  $is_valid = casanova_redsys_verify($mpB64, $params, $sig);
+  $is_valid = casanova_redsys_verify($mpB64, $params, $sig, ['intent' => $intent]);
   // Fallback: si falla la firma pero tenemos intent y order guardado, probamos con ese order.
   // Esto cubre variaciones raras de Ds_Order y/o decodificación (manteniendo el token como ancla de seguridad).
   if (!$is_valid && !empty($intent->order_redsys) && function_exists('casanova_redsys_signature')) {
-    $secret = casanova_redsys_get_secret();
+    $secret = casanova_redsys_get_secret('', ['intent' => $intent, 'params' => $params]);
     if ($secret !== '') {
       $expected2 = casanova_redsys_signature($mpB64, trim((string)$intent->order_redsys), $secret);
       if ($expected2 !== '') {
@@ -517,10 +525,10 @@ function casanova_handle_tpv_notify(): void {
   }
 
   // Validación de firma usando el Ds_Order que viene dentro de MerchantParameters.
-  $is_valid = casanova_redsys_verify($mpB64, $params, $sig);
+  $is_valid = casanova_redsys_verify($mpB64, $params, $sig, ['intent' => $intent]);
   // Fallback: si falla la firma pero tenemos el order guardado del intent, probamos también con ese order.
   if (!$is_valid && !empty($intent->order_redsys) && function_exists('casanova_redsys_signature')) {
-    $secret = casanova_redsys_get_secret();
+    $secret = casanova_redsys_get_secret('', ['intent' => $intent, 'params' => $params]);
     if ($secret !== '') {
       $expected2 = casanova_redsys_signature($mpB64, trim((string)$intent->order_redsys), $secret);
       if ($expected2 !== '') {

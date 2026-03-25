@@ -253,6 +253,16 @@ function casanova_handle_group_pay_request(string $token): void {
     $selected_method = isset($_POST['method']) ? strtolower(trim((string)$_POST['method'])) : 'card';
     if ($selected_method !== 'card' && $selected_method !== 'bank_transfer') $selected_method = 'card';
     if ($selected_method === 'bank_transfer' && !$inespay_enabled) $selected_method = 'card';
+    if (function_exists('casanova_redsys_normalize_card_brand')) {
+      $selected_card_brand = $selected_method === 'card'
+        ? casanova_redsys_normalize_card_brand($_POST['card_brand'] ?? '')
+        : 'other';
+    } else {
+      $selected_card_brand_raw = strtolower(trim((string)($_POST['card_brand'] ?? '')));
+      $selected_card_brand = ($selected_method === 'card' && ($selected_card_brand_raw === 'amex' || $selected_card_brand_raw === 'american_express'))
+        ? 'amex'
+        : 'other';
+    }
 
     $link = casanova_payment_link_create([
       'id_expediente' => $idExpediente,
@@ -277,6 +287,7 @@ function casanova_handle_group_pay_request(string $token): void {
         'group_token_id' => (int)$group->id,
         'id_reserva_pq' => $idReservaPQ,
         'preferred_method' => $selected_method,
+        'preferred_card_brand' => $selected_card_brand,
         'auto_start' => true,
         'total_due' => $total_due,
         'deposit_total' => ($mode === 'deposit') ? $deposit_total : 0,
@@ -433,6 +444,21 @@ function casanova_handle_group_pay_request(string $token): void {
     echo '<div class="casanova-public-field__hint">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
   }
 
+  echo '<div id="casanova-card-brand-wrap">';
+  echo '<div class="casanova-public-section-label">' . esc_html__('Tipo de tarjeta', 'casanova-portal') . '</div>';
+  echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
+  echo '<label class="casanova-public-choice casanova-public-choice--compact">';
+  echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="other" checked />' . esc_html__('Otra tarjeta', 'casanova-portal');
+  echo '<span class="casanova-public-choice__hint">' . esc_html__('Visa, Mastercard y similares.', 'casanova-portal') . '</span>';
+  echo '</label>';
+  echo '<label class="casanova-public-choice casanova-public-choice--compact">';
+  echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="amex" />' . esc_html__('American Express (AMEX)', 'casanova-portal');
+  echo '<span class="casanova-public-choice__hint">' . esc_html__('Selecciona esta opcion si vas a pagar con AMEX.', 'casanova-portal') . '</span>';
+  echo '</label>';
+  echo '</div>';
+  echo '<div class="casanova-public-field__hint">' . esc_html__('Elige con que tarjeta quieres realizar el pago.', 'casanova-portal') . '</div>';
+  echo '</div>';
+
   echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Personas incluidas en este pago', 'casanova-portal') . '</span>';
   echo '<select class="casanova-public-field__control" name="units" required>';
   for ($i = 1; $i <= 10; $i++) {
@@ -499,6 +525,7 @@ function casanova_handle_group_pay_request(string $token): void {
         const modeInputs = form.querySelectorAll("input[name=mode]");
         const methodInputs = form.querySelectorAll("input[name=method]");
         const methodNote = document.getElementById("casanova-method-note");
+        const cardBrandWrap = document.getElementById("casanova-card-brand-wrap");
         const summary = document.getElementById("casanova-group-summary");
         const btn = document.getElementById("casanova-group-pay-button");
 
@@ -530,6 +557,7 @@ function casanova_handle_group_pay_request(string $token): void {
           const isDeposit = (mode === "deposit" && dep > 0.009 && dep + 0.01 < total);
           const amount = isDeposit ? dep : total;
           if (methodNote) methodNote.classList.toggle("casanova-hidden", method !== "bank_transfer");
+          if (cardBrandWrap) cardBrandWrap.classList.toggle("casanova-hidden", method !== "card");
           if (summary) {
             const lines = [
               amountTemplate.replace("__AMOUNT__", fmt(unitTotal)),

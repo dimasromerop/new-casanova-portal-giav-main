@@ -305,6 +305,7 @@ function MulligansView({ data }) {
   const bonus = Number(m.bonus || 0);
   const used = Number(m.used || 0);
   const ledger = Array.isArray(m.ledger) ? m.ledger : [];
+  const redeemedCount = ledger.filter((item) => String(item?.type || "") === "redeem").length;
 
   const tierLabel = (t) => {
     const map = { birdie: "Birdie", eagle: "Eagle", eagle_plus: "Eagle+", albatross: "Albatross" };
@@ -496,7 +497,7 @@ function MulligansView({ data }) {
           <div className="cp-mul-stat__icon is-purple"><IconSparkle /></div>
           <p className="cp-mul-stat__label">{tt("Usados")}</p>
           <p className="cp-mul-stat__value">{fmtPts(used)}</p>
-          <p className="cp-mul-stat__sub">0 {tt("canjes")}</p>
+          <p className="cp-mul-stat__sub">{fmtPts(redeemedCount)} {tt("canjes")}</p>
         </div>
       </div>
 

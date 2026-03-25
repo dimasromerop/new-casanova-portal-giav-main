@@ -381,6 +381,12 @@ function casanova_handle_payment_link_request(string $token): void {
   $prefill_dni = !empty($meta_prefill['billing_dni']) ? (string)$meta_prefill['billing_dni'] : '';
   $prefill_mode = !empty($meta_prefill['mode']) ? strtolower((string)$meta_prefill['mode']) : '';
   $prefill_method = !empty($meta_prefill['preferred_method']) ? strtolower((string)$meta_prefill['preferred_method']) : '';
+  if (function_exists('casanova_redsys_normalize_card_brand')) {
+    $prefill_card_brand = casanova_redsys_normalize_card_brand($meta_prefill['preferred_card_brand'] ?? '');
+  } else {
+    $prefill_card_brand_raw = strtolower(trim((string)($meta_prefill['preferred_card_brand'] ?? '')));
+    $prefill_card_brand = ($prefill_card_brand_raw === 'amex' || $prefill_card_brand_raw === 'american_express') ? 'amex' : 'other';
+  }
   $auto_start = !empty($meta_prefill['auto_start']);
   $public_locale = function_exists('casanova_portal_get_public_requested_locale')
     ? casanova_portal_get_public_requested_locale()
@@ -483,6 +489,7 @@ function casanova_handle_payment_link_request(string $token): void {
 
   if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && !empty($_GET['autostart']) && $auto_start && $prefill_name !== '' && $prefill_lastname !== '' && $prefill_dni !== '') {
     $method = ($prefill_method === 'bank_transfer' && $inespay_enabled) ? 'bank_transfer' : 'card';
+    $card_brand = $method === 'card' ? $prefill_card_brand : 'other';
     $mode_prefill = $autostart_mode !== '' ? $autostart_mode : $prefill_mode;
     $mode = ($mode_prefill === 'deposit' && $deposit_effective) ? 'deposit' : 'full';
     $nonce = wp_create_nonce('casanova_pay_link_' . (int)$link->id);
@@ -500,6 +507,7 @@ function casanova_handle_payment_link_request(string $token): void {
     echo '<input type="hidden" name="billing_dni" value="' . esc_attr($prefill_dni) . '" />';
     echo '<input type="hidden" name="mode" value="' . esc_attr($mode) . '" />';
     echo '<input type="hidden" name="method" value="' . esc_attr($method) . '" />';
+    echo '<input type="hidden" name="card_brand" value="' . esc_attr($card_brand) . '" />';
     echo '</form>';
     echo '<script>document.getElementById("casanova-auto").submit();</script>';
     exit;
@@ -570,6 +578,17 @@ function casanova_handle_payment_link_request(string $token): void {
     $selected_method = isset($_POST['method']) ? strtolower(trim((string)$_POST['method'])) : 'card';
     if ($selected_method !== 'card' && $selected_method !== 'bank_transfer') $selected_method = 'card';
 
+    if (function_exists('casanova_redsys_normalize_card_brand')) {
+      $selected_card_brand = $selected_method === 'card'
+        ? casanova_redsys_normalize_card_brand($_POST['card_brand'] ?? '')
+        : 'other';
+    } else {
+      $selected_card_brand_raw = strtolower(trim((string)($_POST['card_brand'] ?? '')));
+      $selected_card_brand = ($selected_method === 'card' && ($selected_card_brand_raw === 'amex' || $selected_card_brand_raw === 'american_express'))
+        ? 'amex'
+        : 'other';
+    }
+
     if ($selected_method === 'bank_transfer' && !$inespay_enabled) {
       casanova_render_payment_link_error(__('Transferencia no disponible.', 'casanova-portal'));
       exit;
@@ -583,6 +602,7 @@ function casanova_handle_payment_link_request(string $token): void {
       'billing_email' => $billing_email,
       'mode' => $mode,
       'preferred_method' => $selected_method,
+      'preferred_card_brand' => $selected_card_brand,
       'locale' => $public_locale,
     ];
     if ($scope === 'individual_link') {
@@ -600,6 +620,7 @@ function casanova_handle_payment_link_request(string $token): void {
       'pending_at_create' => round($pending, 2),
       'mode' => $mode,
       'method' => $selected_method,
+      'card_brand' => $selected_card_brand,
       'billing_dni' => $dni,
       'billing_name' => $billing_name,
       'billing_lastname' => $billing_lastname,
@@ -771,74 +792,41 @@ function casanova_handle_payment_link_request(string $token): void {
     casanova_payment_intent_update((int)$intent->id, ['order_redsys' => $order]);
     $intent->order_redsys = $order;
 
-    if (!function_exists('casanova_redsys_config')) {
+    if (!function_exists('casanova_redsys_prepare_redirect_data')) {
       casanova_render_payment_link_error(__('Config Redsys no disponible.', 'casanova-portal'));
       exit;
     }
 
-    $cfg = casanova_redsys_config();
-    if (empty($cfg['endpoint']) || empty($cfg['merchant_code']) || empty($cfg['terminal']) || empty($cfg['currency']) || empty($cfg['secret_key'])) {
-      casanova_render_payment_link_error(__('Config Redsys incompleta.', 'casanova-portal'));
+    $redsys_redirect = casanova_redsys_prepare_redirect_data($intent, [
+      'source' => 'payment_link',
+      'mode' => $mode,
+      'card_brand' => $selected_card_brand,
+      'id_expediente' => $idExpediente,
+      'id_cliente' => $idCliente,
+      'payment_link_id' => (int)($link->id ?? 0),
+      'payment_link_token' => (string)($link->token ?? ''),
+    ]);
+    if (is_wp_error($redsys_redirect)) {
+      casanova_render_payment_link_error($redsys_redirect->get_error_message());
       exit;
     }
 
-    $url_notify = function_exists('casanova_tpv_notify_url')
-      ? casanova_tpv_notify_url()
-      : home_url('/wp-json/casanova/v1/redsys/notify');
-    $intent_token = (string)$intent->token;
-
-    $url_ok = function_exists('casanova_tpv_return_url')
-      ? casanova_tpv_return_url(true, $intent_token)
-      : add_query_arg([
-        'action' => 'casanova_tpv_return',
-        'result' => 'ok',
-        'token'  => $intent_token,
-      ], admin_url('admin-post.php'));
-
-    $url_ko = function_exists('casanova_tpv_return_url')
-      ? casanova_tpv_return_url(false, $intent_token)
-      : add_query_arg([
-        'action' => 'casanova_tpv_return',
-        'result' => 'ko',
-        'token'  => $intent_token,
-      ], admin_url('admin-post.php'));
-
-    $amount_cents = (string)((int) round(((float)$intent->amount) * 100));
-
-    if (!function_exists('casanova_redsys_encode_params') || !function_exists('casanova_redsys_signature')) {
-      casanova_render_payment_link_error(__('Redsys no disponible.', 'casanova-portal'));
-      exit;
-    }
-
-    $merchantParams = [
-      'DS_MERCHANT_AMOUNT' => $amount_cents,
-      'DS_MERCHANT_ORDER' => (string)$intent->order_redsys,
-      'DS_MERCHANT_MERCHANTCODE' => (string)$cfg['merchant_code'],
-      'DS_MERCHANT_CURRENCY'     => (string)$cfg['currency'],
-      'DS_MERCHANT_TERMINAL'     => (string)$cfg['terminal'],
-      'DS_MERCHANT_TRANSACTIONTYPE' => '0',
-      'DS_MERCHANT_MERCHANTURL' => $url_notify,
-      'DS_MERCHANT_URLOK' => $url_ok,
-      'DS_MERCHANT_URLKO' => $url_ko,
-      'DS_MERCHANT_MERCHANTDATA' => (string)$intent->token,
-    ];
-
-    $mpB64 = casanova_redsys_encode_params($merchantParams);
-    $signature = casanova_redsys_signature($mpB64, (string)$intent->order_redsys, (string)$cfg['secret_key']);
-
-    if ($signature === '') {
-      casanova_render_payment_link_error(__('Firma Redsys invalida.', 'casanova-portal'));
-      exit;
+    if (function_exists('casanova_redsys_attach_intent_tpv')) {
+      casanova_redsys_attach_intent_tpv(
+        (int)$intent->id,
+        $intent->payload ?? null,
+        (string)($redsys_redirect['tpv_key'] ?? 'default')
+      );
     }
 
     casanova_payment_intent_update((int)$intent->id, ['status' => 'redirecting']);
 
     while (ob_get_level()) ob_end_clean();
 
-    echo '<form id="redsys" action="' . esc_url($cfg['endpoint']) . '" method="post">';
-    echo '<input type="hidden" name="Ds_SignatureVersion" value="HMAC_SHA256_V1">';
-    echo '<input type="hidden" name="Ds_MerchantParameters" value="' . esc_attr($mpB64) . '">';
-    echo '<input type="hidden" name="Ds_Signature" value="' . esc_attr($signature) . '">';
+    echo '<form id="redsys" action="' . esc_url((string)$redsys_redirect['endpoint']) . '" method="post">';
+    echo '<input type="hidden" name="Ds_SignatureVersion" value="' . esc_attr((string)$redsys_redirect['sig_version']) . '">';
+    echo '<input type="hidden" name="Ds_MerchantParameters" value="' . esc_attr((string)$redsys_redirect['merchant_parameters']) . '">';
+    echo '<input type="hidden" name="Ds_Signature" value="' . esc_attr((string)$redsys_redirect['signature']) . '">';
     echo '</form>';
     echo '<script>document.getElementById("redsys").submit();</script>';
     exit;
@@ -961,6 +949,22 @@ function casanova_handle_payment_link_request(string $token): void {
     echo '<div class="casanova-public-field__hint">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
   }
 
+  $card_brand_wrap_class = ($inespay_enabled && $prefill_method === 'bank_transfer') ? 'casanova-hidden' : '';
+  echo '<div id="casanova-card-brand-wrap" class="' . esc_attr($card_brand_wrap_class) . '">';
+  echo '<div class="casanova-public-section-label">' . esc_html__('Tipo de tarjeta', 'casanova-portal') . '</div>';
+  echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
+  echo '<label class="casanova-public-choice casanova-public-choice--compact">';
+  echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="other" ' . ($prefill_card_brand === 'amex' ? '' : 'checked') . ' />' . esc_html__('Otra tarjeta', 'casanova-portal');
+  echo '<span class="casanova-public-choice__hint">' . esc_html__('Visa, Mastercard y similares.', 'casanova-portal') . '</span>';
+  echo '</label>';
+  echo '<label class="casanova-public-choice casanova-public-choice--compact">';
+  echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="amex" ' . ($prefill_card_brand === 'amex' ? 'checked' : '') . ' />' . esc_html__('American Express (AMEX)', 'casanova-portal');
+  echo '<span class="casanova-public-choice__hint">' . esc_html__('Selecciona esta opcion si vas a pagar con AMEX.', 'casanova-portal') . '</span>';
+  echo '</label>';
+  echo '</div>';
+  echo '<div class="casanova-public-field__hint">' . esc_html__('Usaremos el TPV correcto segun la tarjeta que vayas a usar.', 'casanova-portal') . '</div>';
+  echo '</div>';
+
   if ($deposit_effective) {
     echo '<label class="casanova-public-choice">';
     echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="deposit" ' . ($checked_deposit ? 'checked' : '') . ' />';
@@ -996,12 +1000,16 @@ function casanova_handle_payment_link_request(string $token): void {
     echo '<script>
       (function(){
         const note = document.getElementById("casanova-method-note");
+        const cardBrandWrap = document.getElementById("casanova-card-brand-wrap");
         if (!note) return;
         const inputs = document.querySelectorAll("input[name=method]");
         function update(){
           let method = "card";
           Array.prototype.forEach.call(inputs, function(i){ if (i.checked) method = i.value; });
           note.classList.toggle("casanova-hidden", method !== "bank_transfer");
+          if (cardBrandWrap) {
+            cardBrandWrap.classList.toggle("casanova-hidden", method !== "card");
+          }
         }
         Array.prototype.forEach.call(inputs, function(i){ i.addEventListener("change", update); });
         update();

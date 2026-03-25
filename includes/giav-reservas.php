@@ -321,7 +321,7 @@ function casanova_calc_pago_expediente(int $idExpediente, int $idCliente, array 
 }
 
 /**
- * Devuelve los Mulligans usados (custom data 2179) para el expediente.
+ * Devuelve los Mulligans usados para el expediente usando el campo configurado en GIAV.
  */
 function casanova_mulligans_used_for_expediente(int $idExpediente, int $idCliente = 0): int {
   if ($idExpediente <= 0 || !function_exists('casanova_giav_expediente_get')) {
@@ -336,9 +336,13 @@ function casanova_mulligans_used_for_expediente(int $idExpediente, int $idClient
     return 0;
   }
 
+  $used_field_id = function_exists('casanova_mulligans_giav_used_field_id')
+    ? casanova_mulligans_giav_used_field_id()
+    : 2238;
+
   $value = null;
   if (function_exists('casanova_mulligans_giav_custom_value')) {
-    $value = casanova_mulligans_giav_custom_value($exp_obj, 2238);
+    $value = casanova_mulligans_giav_custom_value($exp_obj, $used_field_id);
   } else {
     $cdv = $exp_obj->customDataValues ?? ($exp_obj->CustomDataValues ?? null);
     $items = null;
@@ -354,7 +358,7 @@ function casanova_mulligans_used_for_expediente(int $idExpediente, int $idClient
       foreach ($items as $it) {
         if (!is_object($it)) continue;
         $k = $it->Key ?? ($it->key ?? null);
-        if ((int)$k !== 2238) continue;
+        if ((int)$k !== (int)$used_field_id) continue;
         $value = (string)($it->Value ?? ($it->value ?? ''));
         break;
       }

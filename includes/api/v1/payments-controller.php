@@ -40,6 +40,15 @@ class Casanova_Payments_Controller {
             return $v === '' || in_array($v, self::$ALLOWED_METHODS, true);
           },
         ],
+        'card_brand' => [
+          'type' => 'string',
+          'required' => false,
+          'description' => 'amex|other',
+          'validate_callback' => function ($value) {
+            $v = strtolower(trim((string)$value));
+            return $v === '' || $v === 'amex' || $v === 'other';
+          },
+        ],
       ],
     ]);
   }
@@ -65,6 +74,7 @@ class Casanova_Payments_Controller {
       'expediente_id' => (int) $request->get_param('expediente_id'),
       'type' => (string) $request->get_param('type'),
       'method' => (string) $request->get_param('method'),
+      'card_brand' => (string) $request->get_param('card_brand'),
     ]);
     $mock = (int) $request->get_param('mock') === 1 && current_user_can('manage_options');
     if ($mock) {
@@ -101,6 +111,16 @@ class Casanova_Payments_Controller {
         'invalid_method',
         400
       );
+    }
+
+    $card_brand = 'other';
+    if ($method === 'card') {
+      if (function_exists('casanova_redsys_normalize_card_brand')) {
+        $card_brand = casanova_redsys_normalize_card_brand($request->get_param('card_brand'));
+      } else {
+        $card_brand_raw = strtolower(trim((string)$request->get_param('card_brand')));
+        $card_brand = ($card_brand_raw === 'amex' || $card_brand_raw === 'american_express') ? 'amex' : 'other';
+      }
     }
 
     $user_id = function_exists('casanova_portal_get_effective_user_id')
@@ -160,7 +180,11 @@ class Casanova_Payments_Controller {
       }
 
       $mode = $type === 'deposit' ? 'deposit' : 'full';
-      $redirect_url = esc_url_raw(add_query_arg(['mode' => $mode], $pay_url));
+      $redirect_url = esc_url_raw(add_query_arg([
+        'autostart' => 1,
+        'mode' => $mode,
+        'card_brand' => $card_brand,
+      ], $pay_url));
 
       return rest_ensure_response([
         'ok' => true,

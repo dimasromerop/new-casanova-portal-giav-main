@@ -103,7 +103,7 @@ export default function TripDetailView({
         : null);
   const isPaid = pendingAmount !== null ? pendingAmount <= 0.01 : false;
   const currency = payments?.currency || "EUR";
-  const mulligansUsed = payments?.mulligans_used ?? 0;
+  const mulligansUsed = Math.max(0, Number(payments?.mulligans_used ?? 0));
   const totalLabel = Number.isFinite(totalAmount) ? euro(totalAmount, currency) : "—";
   const paidLabel = Number.isFinite(paidAmount) ? euro(paidAmount, currency) : "—";
   const pendingLabel = pendingAmount !== null && Number.isFinite(pendingAmount) ? euro(pendingAmount, currency) : "—";
@@ -114,7 +114,7 @@ export default function TripDetailView({
   const pendingPct = Number.isFinite(totalAmount) && totalAmount > 0 && pendingAmount !== null
     ? Math.round((pendingAmount / totalAmount) * 100)
     : 0;
-  const mulligansAvailable = payments?.mulligans_available ?? 0;
+  const mulligansAvailable = Math.max(0, Number(payments?.mulligans_available ?? 0));
 
   const paymentKpiItems = payments
     ? [

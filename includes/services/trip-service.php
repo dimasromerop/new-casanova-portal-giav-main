@@ -2104,6 +2104,7 @@ class Casanova_Trip_Service {
     $calc = is_array($ctx['calc'] ?? null) ? $ctx['calc'] : [];
     $is_paid = !empty($ctx['expediente_pagado']) || !empty($calc['expediente_pagado']);
     $mulligans_used = (int)($ctx['mulligans_used'] ?? 0);
+    $mulligans_available = max(0, (int)($ctx['mulligans_available'] ?? 0));
     $payment_options = is_array($ctx['payment_options'] ?? null) ? $ctx['payment_options'] : null;
 
     return [
@@ -2114,6 +2115,7 @@ class Casanova_Trip_Service {
       'history' => $history,
       'is_paid' => $is_paid,
       'mulligans_used' => $mulligans_used,
+      'mulligans_available' => $mulligans_available,
       'payment_options' => $payment_options,
       'payment_methods' => is_array($ctx['payment_methods'] ?? null) ? $ctx['payment_methods'] : null,
       'can_pay' => (bool) ($ctx['can_pay'] ?? false),
