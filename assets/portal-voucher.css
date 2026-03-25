@@ -1,194 +1,319 @@
-@page{
-  margin:18mm 16mm;
+@page {
+  margin: 16mm 14mm;
 }
 
-body.casanova-voucher-body{
-  font-family:Helvetica, sans-serif;
-  color:#1C2926;
-  max-width:800px;
-  margin:10px auto;
-  font-size:12px;
+body.casanova-voucher-body {
+  margin: 0;
+  padding: 24px 18px;
+  background: #ffffff;
+  color: #1a1a18;
+  font-family: "DejaVu Sans", Helvetica, Arial, sans-serif;
+  font-size: 12px;
 }
 
-.page{
-  border:2px solid #eee;
-  padding:14px;
-  background:#fff;
+.casanova-voucher-page {
+  max-width: 820px;
+  margin: 0 auto;
 }
 
-.muted{
-  color:#444;
-  opacity:.9;
+.casanova-voucher-card {
+  background: #ffffff;
+  border: 1px solid #dedad3;
+  border-left: 5px solid #0f6e56;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.h1{
-  font-size:18px;
-  font-weight:800;
+.no-break {
+  page-break-inside: avoid;
 }
 
-.h2{
-  font-size:13px;
-  font-weight:800;
-  text-transform:uppercase;
-  letter-spacing:.3px;
+.casanova-voucher__download {
+  padding: 16px 32px 14px;
+  text-align: right;
+  border-bottom: 1px solid #ece7df;
 }
 
-.hr{
-  border-top:1px solid #eaeaea;
-  margin:10px 0;
+.casanova-voucher__download-link {
+  display: inline-block;
+  padding: 10px 18px;
+  border: 1px solid #dfdad3;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1a1a18;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.box{
-  border:1px solid #eaeaea;
-  border-radius:10px;
-  padding:10px;
+.casanova-voucher__download-icon {
+  margin-right: 6px;
+  color: #6b6a65;
 }
 
-.no-break{
-  page-break-inside:avoid;
+.casanova-voucher__section {
+  padding: 16px 32px;
+  border-bottom: 1px solid #ece7df;
 }
 
-table{
-  width:100%;
-  border-collapse:collapse;
+.casanova-voucher__section--header {
+  padding-top: 22px;
+  padding-bottom: 18px;
 }
 
-.t-head td{
-  vertical-align:top;
+.casanova-voucher__header-table,
+.casanova-voucher__meta-table,
+.casanova-voucher__service-table,
+.casanova-voucher__detail-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.ref{
-  background:#F8F4F1;
-  border-radius:10px;
-  padding:10px;
+.casanova-voucher__brand-cell {
+  width: 70%;
+  vertical-align: top;
 }
 
-.ref-big{
-  font-size:18px;
-  font-weight:900;
-  letter-spacing:.3px;
+.casanova-voucher__summary-cell {
+  width: 30%;
+  vertical-align: top;
+  text-align: right;
 }
 
-.grid td{
-  padding:6px 8px;
-  border-bottom:1px solid #f0f0f0;
+.casanova-voucher__logo-wrap {
+  margin-bottom: 10px;
 }
 
-.grid tr:last-child td{
-  border-bottom:0;
+.casanova-voucher__logo {
+  display: block;
+  max-width: 180px;
+  max-height: 56px;
 }
 
-.grid .k{
-  font-weight:700;
-  opacity:.75;
-  width:28%;
+.casanova-voucher__eyebrow {
+  margin-bottom: 4px;
+  color: #a8a095;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
 }
 
-.grid .v{
-  font-weight:700;
-  width:72%;
+.casanova-voucher__company {
+  color: #1a1a18;
+  font-size: 15px;
+  font-weight: 700;
 }
 
-ul{
-  margin:6px 0 0 18px;
-  padding:0;
+.casanova-voucher__company-meta {
+  margin-top: 6px;
+  color: #6b6a65;
+  font-size: 11px;
+  line-height: 1.55;
 }
 
-.casanova-voucher__download{
-  text-align:right;
-  margin-bottom:0;
+.casanova-voucher__pill {
+  display: inline-block;
+  padding: 6px 15px;
+  border-radius: 9px;
+  background: #e1f5ee;
+  color: #085041;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.casanova-voucher__download-link{
-  display:inline-block;
-  padding:7px 10px;
-  border:1px solid #e5e7eb;
-  border-radius:10px;
-  text-decoration:none;
-  color:inherit;
+.casanova-voucher__summary-type {
+  margin-top: 6px;
+  color: #6b6a65;
+  font-size: 12px;
 }
 
-.casanova-voucher__logo-cell{
-  width:100%;
-  text-align:center;
+.casanova-voucher__meta-cell {
+  width: 50%;
+  vertical-align: top;
 }
 
-.casanova-voucher__logo{
-  height:110px;
-  margin-bottom:6px;
+.casanova-voucher__meta-cell--right {
+  text-align: right;
 }
 
-.casanova-voucher__agency-col{
-  width:55%;
+.casanova-voucher__meta-label {
+  margin-bottom: 4px;
+  color: #6b6a65;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 
-.casanova-voucher__summary-col{
-  width:45%;
-  text-align:right;
+.casanova-voucher__meta-value {
+  color: #1a1a18;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.casanova-voucher__agency-title{
-  font-weight:900;
-  font-size:16px;
+.casanova-voucher__service-ref-col {
+  width: 22%;
+  vertical-align: top;
 }
 
-.casanova-voucher__agency-meta{
-  margin-top:4px;
-  line-height:1.4;
+.casanova-voucher__service-main-col {
+  width: 78%;
+  vertical-align: top;
 }
 
-.casanova-voucher__meta-line--xs{
-  margin-top:4px;
+.casanova-voucher__service-ref {
+  color: #1a1a18;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.casanova-voucher__meta-line--sm{
-  margin-top:6px;
+.casanova-voucher__service-subref {
+  margin-top: 4px;
+  color: #6b6a65;
+  font-size: 11px;
 }
 
-.casanova-voucher__meta-line--md{
-  margin-top:8px;
+.casanova-voucher__service-name {
+  margin-bottom: 8px;
+  color: #1a1a18;
+  font-size: 17px;
+  font-weight: 700;
 }
 
-.casanova-voucher__ref-col{
-  width:40%;
-  vertical-align:top;
+.casanova-voucher__service-meta-line {
+  color: #6b6a65;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
-.casanova-voucher__service-col{
-  width:60%;
-  vertical-align:top;
+.casanova-voucher__service-meta-item {
+  display: inline-block;
+  margin-right: 18px;
 }
 
-.casanova-voucher__service-title{
-  font-weight:900;
-  font-size:14px;
+.casanova-voucher__service-meta-item strong {
+  color: #1a1a18;
+  font-weight: 700;
 }
 
-.casanova-voucher__spacer{
-  height:10px;
+.casanova-voucher__section-title {
+  margin-bottom: 12px;
+  color: #6b6a65;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
 }
 
-.casanova-voucher__section-title{
-  margin-bottom:6px;
+.casanova-voucher__detail-row td {
+  border-bottom: 1px solid #ece7df;
 }
 
-.casanova-voucher__section{
-  margin-top:8px;
+.casanova-voucher__detail-row--last td {
+  border-bottom: none;
 }
 
-.casanova-voucher__section-title--compact{
-  font-size:12px;
+.casanova-voucher__detail-cell {
+  width: 50%;
+  padding: 10px 12px 10px 0;
+  vertical-align: top;
 }
 
-.casanova-voucher__text-pre{
-  white-space:pre-wrap;
+.casanova-voucher__detail-cell--right {
+  padding-right: 0;
+  padding-left: 12px;
+  text-align: right;
 }
 
-.casanova-voucher__text-pre--remarks{
-  line-height:1.45;
+.casanova-voucher__detail-cell--empty {
+  color: transparent;
 }
 
-.casanova-voucher__footer{
-  font-size:11px;
-  line-height:1.35;
+.casanova-voucher__detail-label {
+  margin-bottom: 3px;
+  color: #6b6a65;
+  font-size: 11px;
+}
+
+.casanova-voucher__detail-value {
+  color: #1a1a18;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.casanova-voucher__note-box {
+  padding: 10px 14px;
+  background: #f5f4f0;
+  border-radius: 10px;
+}
+
+.casanova-voucher__text-pre {
+  color: #1a1a18;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.casanova-voucher__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.casanova-voucher__list-item {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: #f5f4f0;
+  border-radius: 10px;
+  color: #1a1a18;
+  font-weight: 700;
+}
+
+.casanova-voucher__list-item:first-child {
+  margin-top: 0;
+}
+
+.casanova-voucher__contact-line {
+  color: #6b6a65;
+  line-height: 1.55;
+}
+
+.casanova-voucher__footer {
+  padding: 14px 32px;
+  background: #f5f4f0;
+  color: #9c968d;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.casanova-voucher__footer-line {
+  margin-top: 2px;
+}
+
+.casanova-voucher__footer-line:first-child {
+  margin-top: 0;
+}
+
+.casanova-voucher__footer strong {
+  color: #6b6a65;
+  font-weight: 700;
+}
+
+@media print {
+  body.casanova-voucher-body {
+    padding: 0;
+    background: #ffffff;
+  }
+
+  .casanova-voucher__download {
+    display: none;
+  }
+
+  .casanova-voucher-page {
+    max-width: none;
+  }
+
+  .casanova-voucher-card {
+    border-radius: 0;
+  }
 }

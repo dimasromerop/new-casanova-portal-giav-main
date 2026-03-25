@@ -18,6 +18,62 @@ function casanova_portal_require_owner(int $idExpediente, int $idCliente): void 
   }
 }
 
+if (!function_exists('casanova_portal_voucher_client_name')) {
+  function casanova_portal_voucher_client_name(int $user_id = 0, int $idCliente = 0): string {
+    $user_id = $user_id > 0
+      ? $user_id
+      : (function_exists('casanova_portal_get_effective_user_id') ? (int) casanova_portal_get_effective_user_id() : (int) get_current_user_id());
+
+    if ($idCliente <= 0 && function_exists('casanova_portal_get_effective_client_id')) {
+      $idCliente = (int) casanova_portal_get_effective_client_id($user_id);
+    }
+
+    if ($idCliente > 0 && function_exists('casanova_giav_cliente_get_by_id')) {
+      $client = casanova_giav_cliente_get_by_id($idCliente);
+      if (!is_wp_error($client) && is_object($client)) {
+        $giav_name = trim((string) (($client->Nombre ?? '') . ' ' . ($client->Apellidos ?? '')));
+        $giav_name = preg_replace('/\s+/', ' ', $giav_name);
+        if (is_string($giav_name) && $giav_name !== '') {
+          return $giav_name;
+        }
+      }
+    }
+
+    $user = null;
+    if (function_exists('casanova_portal_get_effective_user')) {
+      $user = casanova_portal_get_effective_user();
+    }
+    if (!$user instanceof WP_User && $user_id > 0) {
+      $user = get_userdata($user_id);
+    }
+
+    if ($user instanceof WP_User) {
+      $first_name = trim((string) get_user_meta($user->ID, 'first_name', true));
+      $last_name  = trim((string) get_user_meta($user->ID, 'last_name', true));
+      $full_name  = trim($first_name . ' ' . $last_name);
+      $full_name  = preg_replace('/\s+/', ' ', $full_name);
+      if (is_string($full_name) && $full_name !== '') {
+        return $full_name;
+      }
+
+      $display_name = trim((string) $user->display_name);
+      $display_name = preg_replace('/\s+/', ' ', $display_name);
+      if (is_string($display_name) && $display_name !== '') {
+        return $display_name;
+      }
+
+      $user_login = trim((string) $user->user_login);
+      if ($user_login !== '') {
+        return $user_login;
+      }
+    }
+
+    return function_exists('casanova_portal_impersonation_client_name')
+      ? trim((string) casanova_portal_impersonation_client_name())
+      : '';
+  }
+}
+
 
 /**
  * ============================================================
@@ -133,11 +189,7 @@ function casanova_handle_voucher_html(): void {
   }
 
   // Cliente
-  $u = function_exists('casanova_portal_get_effective_user') ? casanova_portal_get_effective_user() : wp_get_current_user();
-  $cliente_nombre = $u ? trim((string)$u->display_name) : '';
-  if ($cliente_nombre === '' && function_exists('casanova_portal_impersonation_client_name')) {
-    $cliente_nombre = trim((string) casanova_portal_impersonation_client_name());
-  }
+  $cliente_nombre = casanova_portal_voucher_client_name($user_id, $idCliente);
 
   // Proveedor
   $idProveedor = (int)($reserva->IdProveedor ?? 0);
@@ -267,11 +319,7 @@ function casanova_handle_voucher_pdf(): void {
   $pasajeros = casanova_giav_pasajeros_para_bono($idReserva, $idExpediente);
 
   // Cliente
-  $u = function_exists('casanova_portal_get_effective_user') ? casanova_portal_get_effective_user() : wp_get_current_user();
-  $cliente_nombre = $u ? trim((string)$u->display_name) : '';
-  if ($cliente_nombre === '' && function_exists('casanova_portal_impersonation_client_name')) {
-    $cliente_nombre = trim((string) casanova_portal_impersonation_client_name());
-  }
+  $cliente_nombre = casanova_portal_voucher_client_name($user_id, $idCliente);
 
   // HTML
   $html = casanova_render_voucher_html([

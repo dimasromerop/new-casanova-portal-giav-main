@@ -36,7 +36,7 @@ function casanova_portal_agency_profile(): array {
     'nombre'    => defined('CASANOVA_AGENCY_NAME') ? CASANOVA_AGENCY_NAME : 'Casanova Golf',
     'email'     => defined('CASANOVA_AGENCY_EMAIL') ? CASANOVA_AGENCY_EMAIL : '',
     'tel'       => defined('CASANOVA_AGENCY_PHONE') ? CASANOVA_AGENCY_PHONE : '',
-    'web'       => defined('CASANOVA_AGENCY_WEB') ? CASANOVA_AGENCY_WEB : '',
+    'web'       => defined('CASANOVA_AGENCY_WEB') ? CASANOVA_AGENCY_WEB : 'https://www.casanova.golf/',
     'direccion' => defined('CASANOVA_AGENCY_ADDR') ? CASANOVA_AGENCY_ADDR : '',
   ];
 
