@@ -2,9 +2,12 @@
 if (!defined('ABSPATH')) exit;
 
 /**
- * PDF Programa del viaje (v2):
- * - Vuelos: sección independiente con segmentos.
- * - Hotel: "Alojamiento en" cada día + check-in/check-out.
+ * PDF Programa del viaje (v3):
+ * - Redesign aligned with client portal aesthetics.
+ * - Flights: independent section with segments.
+ * - Hotel: Check-in card on arrival day only; subsequent days show
+ *   a subtle lodging footer; Check-out card on departure day.
+ * - Activities (golf, other): clear event cards per day.
  */
 function casanova_render_itinerary_html(array $payload): string {
   $trip = $payload['trip'] ?? null;
@@ -94,35 +97,58 @@ function casanova_render_itinerary_html(array $payload): string {
       $checkin = $extract_time($notes, 'in');
       $checkout = $extract_time($notes, 'out');
 
-      // Lodging entries: start..last_lodging_day (inclusive)
-      $ts = $start_ts;
+      $board_meta = trim((string)($service['details']['board'] ?? ''));
+      $rooming_meta = trim((string)($service['details']['rooming'] ?? ''));
+
+      // Check-in entry on first day
+      $service_entries[] = [
+        'service' => $service,
+        'date' => $start_day,
+        'timestamp' => $start_ts,
+        'itinerary' => [
+          'title' => $title_base,
+          'role' => 'checkin',
+          'checkin' => $checkin,
+          'checkout' => $checkout,
+          'board' => $board_meta,
+          'rooming' => $rooming_meta,
+        ],
+      ];
+
+      // Stay entries for intermediate days (subtle lodging footer)
+      $ts = $start_ts + $day_seconds;
       while (date('Y-m-d', $ts) <= $last_lodging_day) {
         $date_key = date('Y-m-d', $ts);
-        $role = ($date_key === $start_day) ? 'checkin' : 'stay';
-        $service_entries[] = [
-          'service' => $service,
-          'date' => $date_key,
-          'timestamp' => $ts,
-          'itinerary' => [
-            'title' => sprintf(__('Alojamiento en: %s', 'casanova-portal'), $title_base),
-            'role' => $role,
-            'checkin' => $checkin,
-            'checkout' => $checkout,
-          ],
-        ];
+        if ($date_key !== $start_day) {
+          $service_entries[] = [
+            'service' => $service,
+            'date' => $date_key,
+            'timestamp' => $ts,
+            'itinerary' => [
+              'title' => $title_base,
+              'role' => 'stay',
+              'checkin' => '',
+              'checkout' => '',
+              'board' => '',
+              'rooming' => '',
+            ],
+          ];
+        }
         $ts += $day_seconds;
       }
 
-      // Checkout entry on checkout_day
+      // Checkout entry on departure day
       $service_entries[] = [
         'service' => $service,
         'date' => $checkout_day,
         'timestamp' => $end_ts,
         'itinerary' => [
-          'title' => sprintf(__('Check-out de: %s', 'casanova-portal'), $title_base),
+          'title' => $title_base,
           'role' => 'checkout',
-          'checkin' => $checkin,
+          'checkin' => '',
           'checkout' => $checkout,
+          'board' => '',
+          'rooming' => '',
         ],
       ];
 
@@ -165,7 +191,8 @@ function casanova_render_itinerary_html(array $payload): string {
     }
     $days[$date_key] = [
       'number' => $day_index,
-      'label' => sprintf(__('Día %d - %s, %s', 'casanova-portal'), $day_index, $day_name, date_i18n('j \d\e F \d\e Y', $ts)),
+      'day_name' => $day_name,
+      'formatted' => date_i18n('j \d\e F \d\e Y', $ts),
       'timestamp' => $ts,
     ];
     $day_index++;
@@ -179,16 +206,16 @@ function casanova_render_itinerary_html(array $payload): string {
     $events_by_day[$date][] = $entry;
   }
 
+  // Sort events within each day: activities first, hotel stays last
   foreach ($events_by_day as &$day_events) {
     usort($day_events, function($a, $b) {
-      $as = $a['service'] ?? [];
-      $bs = $b['service'] ?? [];
-      $aid = (string)($as['id'] ?? ($as['product_id'] ?? ($as['supplier_id'] ?? '')));
-      $bid = (string)($bs['id'] ?? ($bs['product_id'] ?? ($bs['supplier_id'] ?? '')));
-      if ($aid === $bid) {
-        return ((int)($a['timestamp'] ?? 0)) <=> ((int)($b['timestamp'] ?? 0));
-      }
-      return strcmp($aid, $bid);
+      $a_role = (string)(($a['itinerary'] ?? [])['role'] ?? '');
+      $b_role = (string)(($b['itinerary'] ?? [])['role'] ?? '');
+      // stays go to end
+      $a_weight = $a_role === 'stay' ? 99 : ($a_role === 'checkout' ? 0 : ($a_role === 'checkin' ? 50 : 10));
+      $b_weight = $b_role === 'stay' ? 99 : ($b_role === 'checkout' ? 0 : ($b_role === 'checkin' ? 50 : 10));
+      if ($a_weight !== $b_weight) return $a_weight <=> $b_weight;
+      return ((int)($a['timestamp'] ?? 0)) <=> ((int)($b['timestamp'] ?? 0));
     });
   }
   unset($day_events);
@@ -202,7 +229,7 @@ function casanova_render_itinerary_html(array $payload): string {
   if ($trip_code !== '' && $trip_id > 0) $expediente_label = $trip_code . ' (#' . $trip_id . ')';
   elseif ($trip_code !== '') $expediente_label = $trip_code;
   elseif ($trip_id > 0) $expediente_label = '#' . $trip_id;
-  else $expediente_label = __('Expediente', 'casanova-portal');
+  else $expediente_label = '';
 
   $display_dates = trim((string)($trip['date_range'] ?? ''));
   if ($display_dates === '' && !empty($trip['date_start']) && !empty($trip['date_end'])) {
@@ -219,12 +246,8 @@ function casanova_render_itinerary_html(array $payload): string {
     if ($candidate !== '') { $board = $candidate; break; }
   }
 
-  $type_labels = [
-    'hotel' => __('Hotel', 'casanova-portal'),
-    'golf' => __('Golf', 'casanova-portal'),
-    'flight' => __('Vuelo', 'casanova-portal'),
-    'other' => __('Servicio', 'casanova-portal'),
-  ];
+  $total_days = count($days);
+  $total_nights = max(0, $total_days - 1);
 
   $itinerary_css_path = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal-itinerary.css';
   $itinerary_css_href = add_query_arg(
@@ -245,32 +268,53 @@ function casanova_render_itinerary_html(array $payload): string {
 <body class="casanova-itinerary-body">
   <div class="page">
 
-    <div class="itinerary-header">
-      <?php if ($logo !== ''): ?>
-        <img src="<?php echo esc_attr($logo); ?>" class="itinerary-logo" alt="<?php echo esc_attr__('Logo', 'casanova-portal'); ?>">
-      <?php endif; ?>
-      <div class="itinerary-title"><?php echo esc_html($trip_title); ?></div>
-      <div class="itinerary-subtitle">
-        <?php echo esc_html__('Programa del viaje por expediente', 'casanova-portal'); ?>
-        <?php if ($expediente_label !== ''): ?>
-          · <strong><?php echo esc_html($expediente_label); ?></strong>
+    <!-- ══════ HEADER ══════ -->
+    <div class="it-header">
+      <div class="it-header-top">
+        <?php if ($logo !== ''): ?>
+          <img src="<?php echo esc_attr($logo); ?>" class="it-logo" alt="<?php echo esc_attr__('Logo', 'casanova-portal'); ?>">
         <?php endif; ?>
+        <div class="it-title"><?php echo esc_html($trip_title); ?></div>
+        <div class="it-subtitle">
+          <?php echo esc_html__('Programa del viaje', 'casanova-portal'); ?>
+          <?php if ($expediente_label !== ''): ?>
+            &middot; <?php echo esc_html($expediente_label); ?>
+          <?php endif; ?>
+        </div>
       </div>
-      <div class="itinerary-info">
-        <?php if ($display_dates !== ''): ?>
-          <span class="itinerary-chip"><?php echo esc_html__('Fechas:', 'casanova-portal'); ?> <?php echo esc_html($display_dates); ?></span>
-        <?php endif; ?>
-        <?php if ($pax_label !== ''): ?>
-          <span class="itinerary-chip"><?php echo esc_html__('Pax:', 'casanova-portal'); ?> <?php echo esc_html($pax_label); ?></span>
-        <?php endif; ?>
-        <?php if ($board !== ''): ?>
-          <span class="itinerary-chip"><?php echo esc_html__('Régimen:', 'casanova-portal'); ?> <?php echo esc_html($board); ?></span>
-        <?php endif; ?>
-      </div>
+      <table class="it-meta-row" cellspacing="0" cellpadding="0">
+        <tr>
+          <?php if ($display_dates !== ''): ?>
+            <td>
+              <span class="it-meta-label"><?php echo esc_html__('Fechas', 'casanova-portal'); ?></span>
+              <span class="it-meta-value"><?php echo esc_html($display_dates); ?></span>
+            </td>
+          <?php endif; ?>
+          <?php if ($total_days > 0): ?>
+            <td>
+              <span class="it-meta-label"><?php echo esc_html__('Duración', 'casanova-portal'); ?></span>
+              <span class="it-meta-value"><?php echo esc_html(sprintf(__('%d días / %d noches', 'casanova-portal'), $total_days, $total_nights)); ?></span>
+            </td>
+          <?php endif; ?>
+          <?php if ($pax_label !== ''): ?>
+            <td>
+              <span class="it-meta-label"><?php echo esc_html__('Viajeros', 'casanova-portal'); ?></span>
+              <span class="it-meta-value"><?php echo esc_html($pax_label); ?></span>
+            </td>
+          <?php endif; ?>
+          <?php if ($board !== ''): ?>
+            <td>
+              <span class="it-meta-label"><?php echo esc_html__('Régimen', 'casanova-portal'); ?></span>
+              <span class="it-meta-value"><?php echo esc_html($board); ?></span>
+            </td>
+          <?php endif; ?>
+        </tr>
+      </table>
     </div>
 
+    <!-- ══════ FLIGHTS ══════ -->
     <?php if (!empty($flight_services)): ?>
-      <div class="section-title"><?php echo esc_html__('Vuelos', 'casanova-portal'); ?></div>
+      <div class="it-section"><?php echo esc_html__('Vuelos', 'casanova-portal'); ?></div>
       <?php foreach ($flight_services as $fs): ?>
         <?php
           $title = trim((string)($fs['title'] ?? ''));
@@ -284,21 +328,21 @@ function casanova_render_itinerary_html(array $payload): string {
           $segments = is_array($details['segments'] ?? null) ? $details['segments'] : [];
           $date = casanova_fmt_date_range($fs['date_from'] ?? null, $fs['date_to'] ?? null);
         ?>
-        <div class="event">
-          <div class="event-title-row">
-            <div class="event-title"><?php echo esc_html($route !== '' ? $route : $title); ?></div>
-            <span class="event-type"><?php echo esc_html($type_labels['flight']); ?></span>
+        <div class="it-flight">
+          <div class="it-flight-title">
+            <?php echo esc_html($route !== '' ? $route : $title); ?>
+            <span class="it-flight-badge"><?php echo esc_html__('Vuelo', 'casanova-portal'); ?></span>
           </div>
-          <div class="event-meta">
+          <div class="it-flight-meta">
             <?php if ($code !== ''): ?><span><?php echo esc_html($code); ?></span><?php endif; ?>
             <?php if ($schedule !== ''): ?><span><?php echo esc_html($schedule); ?></span><?php endif; ?>
-            <?php if ($locator !== ''): ?><span><?php echo esc_html__('Localizador', 'casanova-portal'); ?>: <?php echo esc_html($locator); ?></span><?php endif; ?>
+            <?php if ($locator !== ''): ?><span><strong><?php echo esc_html__('Localizador', 'casanova-portal'); ?>:</strong> <?php echo esc_html($locator); ?></span><?php endif; ?>
             <?php if ($pax !== ''): ?><span><?php echo esc_html($pax); ?></span><?php endif; ?>
             <?php if ($date !== ''): ?><span><?php echo esc_html($date); ?></span><?php endif; ?>
           </div>
           <?php if (!empty($segments)): ?>
-            <div class="flight-seg">
-              <strong><?php echo esc_html__('Segmentos:', 'casanova-portal'); ?></strong>
+            <div class="it-segments">
+              <strong><?php echo esc_html__('Segmentos', 'casanova-portal'); ?></strong>
               <ul>
                 <?php foreach ($segments as $seg): ?>
                   <li><?php echo esc_html((string)$seg); ?></li>
@@ -310,74 +354,159 @@ function casanova_render_itinerary_html(array $payload): string {
       <?php endforeach; ?>
     <?php endif; ?>
 
-    <?php if (empty($days)): ?>
-      <p class="itinerary-empty"><?php echo esc_html__('No hay servicios programados.', 'casanova-portal'); ?></p>
-    <?php else: ?>
+    <!-- ══════ ITINERARY ══════ -->
+    <?php if (!empty($days)): ?>
+      <div class="it-section"><?php echo esc_html__('Itinerario', 'casanova-portal'); ?></div>
+
       <?php foreach ($days as $date_key => $day): ?>
-        <div class="day-block">
-          <div class="day-label"><?php echo esc_html($day['label']); ?></div>
+        <div class="it-day">
+          <div class="it-day-header">
+            <span class="it-day-num"><?php echo esc_html(sprintf(__('DÍA %d', 'casanova-portal'), $day['number'])); ?></span>
+            <span class="it-day-date"><?php echo esc_html($day['day_name'] . ', ' . $day['formatted']); ?></span>
+          </div>
+
           <?php if (!empty($events_by_day[$date_key])): ?>
-            <?php foreach ($events_by_day[$date_key] as $event): ?>
+            <?php
+              $stay_entries = [];
+              $regular_entries = [];
+              foreach ($events_by_day[$date_key] as $event) {
+                $role = (string)(($event['itinerary'] ?? [])['role'] ?? '');
+                if ($role === 'stay') {
+                  $stay_entries[] = $event;
+                } else {
+                  $regular_entries[] = $event;
+                }
+              }
+            ?>
+
+            <?php foreach ($regular_entries as $event): ?>
               <?php
                 $service = $event['service'] ?? [];
                 $semantic = (string)($service['semantic_type'] ?? 'other');
-                $type_label = $type_labels[$semantic] ?? $type_labels['other'];
+                $override = is_array($event['itinerary'] ?? null) ? $event['itinerary'] : [];
+                $role = (string)($override['role'] ?? '');
 
                 $title = trim((string)($service['title'] ?? ''));
-                if ($title === '') $title = trim((string)($service['detail']['code'] ?? 'Servicio'));
-
-                $override = is_array($event['itinerary'] ?? null) ? $event['itinerary'] : [];
+                if ($title === '') $title = trim((string)($service['detail']['code'] ?? __('Servicio', 'casanova-portal')));
                 if (!empty($override['title'])) $title = (string)$override['title'];
 
-                $range = casanova_fmt_date_range($service['date_from'] ?? null, $service['date_to'] ?? null);
-                $board_meta = trim((string)($service['details']['board'] ?? ''));
-                $rooming_meta = trim((string)($service['details']['rooming'] ?? ''));
-                $players = (int)($service['details']['players'] ?? 0);
-                $notes = trim((string)($service['detail']['bonus_text'] ?? ''));
+                $range = '';
+                $board_meta = '';
+                $rooming_meta = '';
+                $players = 0;
+                $notes = '';
+                $checkin_time = '';
+                $checkout_time = '';
 
-                $role = (string)($override['role'] ?? '');
-                $checkin = trim((string)($override['checkin'] ?? ''));
-                $checkout = trim((string)($override['checkout'] ?? ''));
+                if ($semantic === 'hotel') {
+                  $checkin_time = trim((string)($override['checkin'] ?? ''));
+                  $checkout_time = trim((string)($override['checkout'] ?? ''));
+                  $board_meta = trim((string)($override['board'] ?? ''));
+                  $rooming_meta = trim((string)($override['rooming'] ?? ''));
+                } else {
+                  $range = casanova_fmt_date_range($service['date_from'] ?? null, $service['date_to'] ?? null);
+                  $board_meta = trim((string)($service['details']['board'] ?? ''));
+                  $rooming_meta = trim((string)($service['details']['rooming'] ?? ''));
+                  $players = (int)($service['details']['players'] ?? 0);
+                  $notes = trim((string)($service['detail']['bonus_text'] ?? ''));
+                }
+
+                // Determine CSS class and tag
+                if ($semantic === 'hotel') {
+                  $event_class = 'is-hotel';
+                  if ($role === 'checkin') {
+                    $tag_class = 'tag-checkin';
+                    $tag_label = __('Check-in', 'casanova-portal');
+                  } else {
+                    $tag_class = 'tag-checkout';
+                    $tag_label = __('Check-out', 'casanova-portal');
+                  }
+                } elseif ($semantic === 'golf') {
+                  $event_class = 'is-golf';
+                  $tag_class = 'tag-golf';
+                  $tag_label = __('Golf', 'casanova-portal');
+                } else {
+                  $event_class = 'is-other';
+                  $tag_class = 'tag-other';
+                  $tag_label = __('Servicio', 'casanova-portal');
+                }
               ?>
-              <div class="event">
-                <div class="event-title-row">
-                  <div class="event-title"><?php echo esc_html($title); ?></div>
-                  <span class="event-type"><?php echo esc_html($type_label); ?></span>
+              <div class="it-event <?php echo esc_attr($event_class); ?>">
+                <div class="it-event-row">
+                  <span class="it-event-title"><?php echo esc_html($title); ?></span>
+                  <span class="it-event-tag <?php echo esc_attr($tag_class); ?>"><?php echo esc_html($tag_label); ?></span>
                 </div>
-                <div class="event-meta">
-                  <?php if ($semantic !== 'hotel' && $range !== ''): ?>
-                    <span><?php echo esc_html($range); ?></span>
-                  <?php endif; ?>
-                  <?php if ($board_meta !== '' && $semantic === 'hotel'): ?>
-                    <span><?php echo esc_html__('Régimen', 'casanova-portal'); ?>: <?php echo esc_html($board_meta); ?></span>
-                  <?php endif; ?>
-                  <?php if ($rooming_meta !== ''): ?>
-                    <span><?php echo esc_html__('Rooming', 'casanova-portal'); ?>: <?php echo esc_html($rooming_meta); ?></span>
-                  <?php endif; ?>
-                  <?php if ($players > 0 && $semantic === 'golf'): ?>
-                    <span><?php echo esc_html__('Jugadores', 'casanova-portal'); ?>: <?php echo esc_html((string)$players); ?></span>
-                  <?php endif; ?>
-                  <?php if ($semantic === 'hotel' && $role === 'checkin' && $checkin !== ''): ?>
-                    <span><?php echo esc_html__('Check-in', 'casanova-portal'); ?>: <?php echo esc_html($checkin); ?></span>
-                  <?php endif; ?>
-                  <?php if ($semantic === 'hotel' && $role === 'checkout' && $checkout !== ''): ?>
-                    <span><?php echo esc_html__('Check-out', 'casanova-portal'); ?>: <?php echo esc_html($checkout); ?></span>
-                  <?php endif; ?>
-                </div>
-                <?php if ($notes !== '' && $semantic !== 'hotel'): ?>
-                  <div class="event-note">
-                    <strong><?php echo esc_html__('Observaciones:', 'casanova-portal'); ?></strong>
-                    <?php echo esc_html($notes); ?>
+                <?php
+                  $has_detail = ($range !== '' && $semantic !== 'hotel')
+                    || ($board_meta !== '')
+                    || ($rooming_meta !== '')
+                    || ($players > 0 && $semantic === 'golf')
+                    || ($semantic === 'hotel' && $role === 'checkin' && $checkin_time !== '')
+                    || ($semantic === 'hotel' && $role === 'checkout' && $checkout_time !== '');
+                ?>
+                <?php if ($has_detail): ?>
+                  <div class="it-event-detail">
+                    <?php if ($semantic !== 'hotel' && $range !== ''): ?>
+                      <span><?php echo esc_html($range); ?></span>
+                    <?php endif; ?>
+                    <?php if ($board_meta !== ''): ?>
+                      <span><?php echo esc_html__('Régimen', 'casanova-portal'); ?>: <?php echo esc_html($board_meta); ?></span>
+                    <?php endif; ?>
+                    <?php if ($rooming_meta !== ''): ?>
+                      <span><?php echo esc_html__('Rooming', 'casanova-portal'); ?>: <?php echo esc_html($rooming_meta); ?></span>
+                    <?php endif; ?>
+                    <?php if ($players > 0 && $semantic === 'golf'): ?>
+                      <span><?php echo esc_html__('Jugadores', 'casanova-portal'); ?>: <?php echo esc_html((string)$players); ?></span>
+                    <?php endif; ?>
+                    <?php if ($semantic === 'hotel' && $role === 'checkin' && $checkin_time !== ''): ?>
+                      <span><?php echo esc_html__('Check-in', 'casanova-portal'); ?>: <?php echo esc_html($checkin_time); ?></span>
+                    <?php endif; ?>
+                    <?php if ($semantic === 'hotel' && $role === 'checkout' && $checkout_time !== ''): ?>
+                      <span><?php echo esc_html__('Check-out', 'casanova-portal'); ?>: <?php echo esc_html($checkout_time); ?></span>
+                    <?php endif; ?>
                   </div>
+                <?php endif; ?>
+                <?php if ($notes !== '' && $semantic !== 'hotel'): ?>
+                  <div class="it-event-note"><?php echo esc_html($notes); ?></div>
                 <?php endif; ?>
               </div>
             <?php endforeach; ?>
+
+            <?php
+              // Render subtle lodging footer for "stay" entries (hotel continues)
+              if (!empty($stay_entries)):
+                $hotel_names = [];
+                foreach ($stay_entries as $stay) {
+                  $name = trim((string)(($stay['itinerary'] ?? [])['title'] ?? ''));
+                  if ($name !== '' && !in_array($name, $hotel_names, true)) {
+                    $hotel_names[] = $name;
+                  }
+                }
+            ?>
+              <?php if (!empty($hotel_names)): ?>
+                <div class="it-lodging-footer">
+                  <span class="it-lodging-icon">&#9790;</span>
+                  <?php echo esc_html(sprintf(
+                    __('Alojamiento: %s', 'casanova-portal'),
+                    implode(' / ', $hotel_names)
+                  )); ?>
+                </div>
+              <?php endif; ?>
+            <?php endif; ?>
+
           <?php else: ?>
-            <div class="itinerary-empty"><?php echo esc_html__('Sin servicios programados para este día.', 'casanova-portal'); ?></div>
+            <div class="it-empty"><?php echo esc_html__('Sin servicios programados para este día.', 'casanova-portal'); ?></div>
           <?php endif; ?>
         </div>
       <?php endforeach; ?>
+    <?php else: ?>
+      <p class="it-empty"><?php echo esc_html__('No hay servicios programados.', 'casanova-portal'); ?></p>
     <?php endif; ?>
+
+    <!-- ══════ FOOTER ══════ -->
+    <div class="it-footer">
+      <strong>Casanova Golf</strong> &middot; <?php echo esc_html__('Programa sujeto a posibles cambios. Confirma siempre con tu asesor.', 'casanova-portal'); ?>
+    </div>
 
   </div>
 </body>

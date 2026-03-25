@@ -338,7 +338,7 @@ function casanova_mulligans_used_for_expediente(int $idExpediente, int $idClient
 
   $value = null;
   if (function_exists('casanova_mulligans_giav_custom_value')) {
-    $value = casanova_mulligans_giav_custom_value($exp_obj, 2179);
+    $value = casanova_mulligans_giav_custom_value($exp_obj, 2238);
   } else {
     $cdv = $exp_obj->customDataValues ?? ($exp_obj->CustomDataValues ?? null);
     $items = null;
@@ -354,7 +354,7 @@ function casanova_mulligans_used_for_expediente(int $idExpediente, int $idClient
       foreach ($items as $it) {
         if (!is_object($it)) continue;
         $k = $it->Key ?? ($it->key ?? null);
-        if ((int)$k !== 2179) continue;
+        if ((int)$k !== 2238) continue;
         $value = (string)($it->Value ?? ($it->value ?? ''));
         break;
       }

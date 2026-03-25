@@ -263,7 +263,7 @@ function casanova_mulligans_giav_custom_value($expediente, int $key): ?string {
  * GIAV: detecta Mulligans usados por expediente (custom field 2179) y crea movimientos redeem.
  * Devuelve ['total_used' => float, 'movements' => array].
  */
-function casanova_mulligans_giav_used_movements(int $idCliente, int $field_used = 2179, int $field_note = 2180): array|WP_Error {
+function casanova_mulligans_giav_used_movements(int $idCliente, int $field_used = 2237, int $field_note = 2238): array|WP_Error {
   if (!function_exists('casanova_giav_expedientes_por_cliente')) {
     return new WP_Error('missing', 'GIAV expedientes helper missing');
   }
@@ -376,7 +376,7 @@ function casanova_mulligans_sync_user(int $user_id, bool $force = false): array|
   }
 
   // 3) Used: canjes desde GIAV (custom fields por expediente)
-  $used_pack = casanova_mulligans_giav_used_movements($idCliente, 2179, 2180);
+  $used_pack = casanova_mulligans_giav_used_movements($idCliente, 2237, 2238);
   if (is_wp_error($used_pack)) return $used_pack;
 
   $used_movs = (array)($used_pack['movements'] ?? []);

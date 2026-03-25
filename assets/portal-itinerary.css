@@ -1,155 +1,324 @@
-@page{
-  margin:18mm 16mm;
+/* ═══════════════════════════════════════════════════════
+   Casanova Golf — Itinerary PDF v3
+   Design aligned with client portal (DM Sans / Playfair)
+   Rendered by Dompdf — limited CSS support
+   ═══════════════════════════════════════════════════════ */
+
+@page {
+  margin: 16mm 14mm 18mm;
 }
 
-body.casanova-itinerary-body{
-  font-family:"DejaVu Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  color:#111827;
-  background:#fff;
+/* ── Base ── */
+body.casanova-itinerary-body {
+  font-family: "DejaVu Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #1a1a18;
+  background: #fff;
 }
 
-.page{
-  max-width:960px;
-  margin:6px auto;
-  padding:8px 10px;
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 6px;
 }
 
-.itinerary-header{
-  border-bottom:1px solid #e5e7eb;
-  padding-bottom:12px;
-  margin-bottom:12px;
+/* ── Header ── */
+.it-header {
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #334842;
 }
 
-.itinerary-logo{
-  height:90px;
-  margin-bottom:8px;
-  display:block;
+.it-header-top {
+  display: block;
+  margin-bottom: 10px;
 }
 
-.itinerary-title{
-  font-size:22px;
-  font-weight:700;
-  margin:4px 0 6px;
+.it-logo {
+  height: 60px;
+  display: block;
+  margin-bottom: 12px;
 }
 
-.itinerary-subtitle{
-  font-size:14px;
-  color:#475569;
-  margin-bottom:10px;
+.it-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a18;
+  margin: 0 0 2px;
+  letter-spacing: -0.02em;
 }
 
-.itinerary-info{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  font-size:13px;
-  color:#1f2933;
+.it-subtitle {
+  font-size: 12px;
+  color: #6b6a65;
+  margin: 0 0 12px;
 }
 
-.itinerary-chip{
-  background:#f8fafc;
-  border:1px solid #e2e8f0;
-  border-radius:999px;
-  padding:4px 10px;
-  font-size:12px;
-  font-weight:600;
-  color:#0f172a;
+.it-meta-row {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.section-title{
-  font-size:16px;
-  font-weight:700;
-  margin:16px 0 8px;
-  color:#0f172a;
+.it-meta-row td {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #1a1a18;
+  border: 1px solid #e5e7eb;
+  background: #faf9f6;
 }
 
-.day-block{
-  margin-top:18px;
-  page-break-inside:avoid;
+.it-meta-label {
+  font-weight: 700;
+  color: #6b6a65;
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  display: block;
+  margin-bottom: 1px;
 }
 
-.day-label{
-  font-size:16px;
-  font-weight:700;
-  margin-bottom:8px;
-  color:#0f172a;
+.it-meta-value {
+  font-weight: 500;
+  font-size: 11.5px;
 }
 
-.event{
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  padding:10px 12px 12px;
-  margin-bottom:10px;
-  background:#fff;
+/* ── Section Titles ── */
+.it-section {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334842;
+  margin: 22px 0 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(42,92,40,0.15);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.event-title-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:10px;
-  flex-wrap:wrap;
+/* ── Flights ── */
+.it-flight {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: #fff;
+  page-break-inside: avoid;
 }
 
-.event-title{
-  font-size:14px;
-  font-weight:700;
-  color:#111827;
-  margin:0;
+.it-flight-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a18;
+  margin-bottom: 4px;
 }
 
-.event-type{
-  background:#e0f2fe;
-  color:#0369a1;
-  border-radius:999px;
-  padding:2px 8px;
-  font-size:11px;
-  font-weight:600;
-  letter-spacing:.5px;
-  text-transform:uppercase;
+.it-flight-badge {
+  display: inline-block;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
-.event-meta{
-  font-size:12px;
-  color:#475569;
-  margin-top:6px;
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
+.it-flight-meta {
+  font-size: 11px;
+  color: #6b6a65;
+  margin-top: 4px;
+  line-height: 1.55;
 }
 
-.event-meta span{
-  background:#f1f5f9;
-  border-radius:6px;
-  padding:2px 8px;
+.it-flight-meta span {
+  margin-right: 10px;
 }
 
-.event-note{
-  margin-top:8px;
-  font-size:12px;
-  color:#1f2937;
-  line-height:1.4;
-  white-space:pre-wrap;
+.it-segments {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #1a1a18;
 }
 
-.itinerary-empty{
-  font-size:12px;
-  font-style:italic;
-  color:#475569;
+.it-segments strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #6b6a65;
 }
 
-.flight-seg{
-  margin-top:6px;
-  font-size:12px;
-  color:#1f2937;
-  line-height:1.4;
+.it-segments ul {
+  margin: 0 0 0 16px;
+  padding: 0;
 }
 
-.flight-seg ul{
-  margin:6px 0 0 18px;
-  padding:0;
+.it-segments li {
+  margin: 2px 0;
 }
 
-.flight-seg li{
-  margin:2px 0;
+/* ── Day Block ── */
+.it-day {
+  margin-top: 18px;
+  page-break-inside: avoid;
+}
+
+.it-day-header {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.it-day-num {
+  display: inline-block;
+  background: #334842;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 4px;
+  margin-right: 8px;
+  vertical-align: middle;
+  letter-spacing: 0.3px;
+}
+
+.it-day-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a18;
+  vertical-align: middle;
+}
+
+/* ── Event Card ── */
+.it-event {
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #b8860b;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: #fff;
+  page-break-inside: avoid;
+}
+
+.it-event.is-hotel {
+  border-left-color: #2a5c28;
+}
+
+.it-event.is-golf {
+  border-left-color: #b8860b;
+}
+
+.it-event.is-other {
+  border-left-color: #6b6a65;
+}
+
+.it-event-row {
+  display: block;
+}
+
+.it-event-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a18;
+  display: inline;
+}
+
+.it-event-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.it-event-tag.tag-hotel {
+  background: #e8f0e6;
+  color: #2a5c28;
+}
+
+.it-event-tag.tag-golf {
+  background: #faf3e0;
+  color: #8a6b08;
+}
+
+.it-event-tag.tag-other {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.it-event-tag.tag-checkin {
+  background: #e8f0e6;
+  color: #2a5c28;
+}
+
+.it-event-tag.tag-checkout {
+  background: #fdecea;
+  color: #c0392b;
+}
+
+.it-event-detail {
+  font-size: 11px;
+  color: #6b6a65;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.it-event-detail span {
+  margin-right: 8px;
+}
+
+.it-event-note {
+  margin-top: 5px;
+  font-size: 11px;
+  color: #475569;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+/* ── Hotel Lodging Footer (stays) ── */
+.it-lodging-footer {
+  margin-top: 6px;
+  padding: 5px 10px;
+  background: #f7f6f3;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 5px;
+  font-size: 10.5px;
+  color: #6b6a65;
+  page-break-inside: avoid;
+}
+
+.it-lodging-footer .it-lodging-icon {
+  display: inline;
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+/* ── Empty ── */
+.it-empty {
+  font-size: 11px;
+  font-style: italic;
+  color: #a3a19b;
+  padding: 6px 0;
+}
+
+/* ── Footer ── */
+.it-footer {
+  margin-top: 28px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 10px;
+  color: #a3a19b;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.it-footer strong {
+  color: #6b6a65;
 }
