@@ -315,20 +315,19 @@ export default function TripDetailView({
                   </div>
                 </div>
 
-                {/* Payment actions (methods + amount + CTA) */}
-                <PaymentActions
-                  expediente={expediente}
-                  payments={payments}
-                  mock={mock}
-                  readOnly={readOnly}
-                  readOnlyMessage={readOnlyMessage}
-                />
-
                 {isPaid ? (
                   <div className="cp-mt-12">
                     <div className="cp-pill cp-pill--success">{tt("Pagado")}</div>
                   </div>
-                ) : null}
+                ) : (
+                  <PaymentActions
+                    expediente={expediente}
+                    payments={payments}
+                    mock={mock}
+                    readOnly={readOnly}
+                    readOnlyMessage={readOnlyMessage}
+                  />
+                )}
 
                 {/* Payment history card */}
                 <div className="cp-pay-history">
