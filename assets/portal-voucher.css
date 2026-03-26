@@ -1,5 +1,5 @@
 @page {
-  margin: 16mm 14mm;
+  margin: 8mm;
 }
 
 body.casanova-voucher-body {
@@ -7,8 +7,8 @@ body.casanova-voucher-body {
   padding: 24px 18px;
   background: #ffffff;
   color: #1a1a18;
-  font-family: "DejaVu Sans", Helvetica, Arial, sans-serif;
-  font-size: 12px;
+  font-family: "DM Sans", Helvetica, Arial, sans-serif;
+  font-size: 11px;
 }
 
 .casanova-voucher-page {
@@ -52,7 +52,7 @@ body.casanova-voucher-body {
 }
 
 .casanova-voucher__section {
-  padding: 16px 32px;
+  padding: 10px 32px;
   border-bottom: 1px solid #ece7df;
 }
 
@@ -85,7 +85,7 @@ body.casanova-voucher-body {
 }
 
 .casanova-voucher__logo {
-  display: block;
+  display: inline-flex;
   max-width: 180px;
   max-height: 56px;
 }
@@ -243,7 +243,7 @@ body.casanova-voucher-body {
 }
 
 .casanova-voucher__note-box {
-  padding: 10px 14px;
+  padding: 5px 14px;
   background: #f5f4f0;
   border-radius: 10px;
 }
@@ -262,8 +262,8 @@ body.casanova-voucher-body {
 
 .casanova-voucher__list-item {
   margin-top: 8px;
-  padding: 10px 14px;
-  background: #f5f4f0;
+  padding: 4px 14px;
+  /*background: #f5f4f0;*/
   border-radius: 10px;
   color: #1a1a18;
   font-weight: 700;

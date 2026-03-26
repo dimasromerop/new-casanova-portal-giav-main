@@ -190,6 +190,8 @@ function casanova_render_voucher_html(array $data): string {
     rawurlencode(file_exists($voucher_css_path) ? (string) filemtime($voucher_css_path) : '1'),
     CASANOVA_GIAV_PLUGIN_URL . 'assets/portal-voucher.css'
   );
+  $is_pdf = ($pdf_url === '');
+  $body_style = $is_pdf ? 'padding: 8px 6px;' : '';
 
   ob_start();
   $issue_date = date_i18n('d/m/Y');
@@ -200,8 +202,11 @@ function casanova_render_voucher_html(array $data): string {
   <meta charset="utf-8">
   <title><?php echo esc_html(trim(($desc !== '' ? $desc . ' · ' : '') . __('Bono/Voucher', 'casanova-portal'))); ?></title>
   <link rel="stylesheet" href="<?php echo esc_url($voucher_css_href); ?>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 </head>
-<body class="casanova-voucher-body">
+<body class="casanova-voucher-body" style="<?php echo esc_attr($body_style); ?>">
   <div class="casanova-voucher-page">
     <div class="casanova-voucher-card">
 
@@ -218,12 +223,7 @@ function casanova_render_voucher_html(array $data): string {
         <table class="casanova-voucher__header-table">
           <tr>
             <td class="casanova-voucher__brand-cell">
-              <?php if (!empty($logo)): ?>
-                <div class="casanova-voucher__logo-wrap">
-                  <img class="casanova-voucher__logo" src="<?php echo esc_attr($logo); ?>" alt="">
-                </div>
-              <?php endif; ?>
-              <div class="casanova-voucher__eyebrow"><?php echo esc_html__('Bono / Voucher', 'casanova-portal'); ?></div>
+                     <div class="casanova-voucher__eyebrow"><?php echo esc_html__('Bono / Voucher', 'casanova-portal'); ?></div>
               <?php if ($ag_nombre !== ''): ?>
                 <div class="casanova-voucher__company"><?php echo esc_html($ag_nombre); ?></div>
               <?php endif; ?>
@@ -237,6 +237,11 @@ function casanova_render_voucher_html(array $data): string {
               </div>
             </td>
             <td class="casanova-voucher__summary-cell">
+              <?php if (!empty($logo)): ?>
+                <div class="casanova-voucher__logo-wrap">
+                  <img class="casanova-voucher__logo" src="<?php echo esc_attr($logo); ?>" alt="">
+                </div>
+              <?php endif; ?>
               <?php if ($voucher_ref !== ''): ?>
                 <div class="casanova-voucher__pill"><?php echo esc_html($voucher_ref); ?></div>
               <?php endif; ?>
