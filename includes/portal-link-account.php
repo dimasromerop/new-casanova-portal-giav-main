@@ -3,7 +3,7 @@
 /**
  * Shortcode: [casanova_link_account]
  *
- * Renders a 2-step linking flow (DNI -> Email OTP) that doesn't depend on
+ * Renders a 2-step linking flow (DNI or GIAV ID -> Email OTP) that doesn't depend on
  * Bricks conditional logic.
  */
 
@@ -70,16 +70,27 @@ function casanova_portal_shortcode_link_account($atts = []): string {
   <div class="casanova-link-account" data-casanova-link-account>
     <div class="casanova-link-account__card">
       <h3 class="casanova-link-account__title"><?php echo esc_html__('Vincula tu cuenta', 'casanova-portal'); ?></h3>
-      <p class="casanova-link-account__intro"><?php echo esc_html__('Introduce tu DNI. Te enviaremos un código al email asociado a tu reserva para verificar que eres el titular.', 'casanova-portal'); ?></p>
+      <p class="casanova-link-account__intro"><?php echo esc_html__('Introduce tu DNI o el ID de usuario que te hayamos facilitado. Te enviaremos un código al email asociado a tu reserva para verificar que eres el titular.', 'casanova-portal'); ?></p>
 
       <div class="casanova-link-account__alert casanova-link-account__alert--hidden" data-casanova-linking-alert></div>
 
       <!-- Step 1 -->
       <form class="casanova-link-account__form" data-casanova-linking-step="1">
         <label class="casanova-link-account__label">
-          <span><?php echo esc_html__('DNI', 'casanova-portal'); ?></span>
-          <input class="casanova-link-account__input" type="text" name="dni" autocomplete="off" inputmode="text" value="<?php echo $dni_prefill; ?>" placeholder="<?php echo esc_attr__('Ej.: 12345678Z', 'casanova-portal'); ?>" required>
+          <span><?php echo esc_html__('Vincular por', 'casanova-portal'); ?></span>
+          <select class="casanova-link-account__input" name="identifier_type" data-casanova-linking-identifier-type>
+            <option value="dni"><?php echo esc_html__('DNI', 'casanova-portal'); ?></option>
+            <option value="giav_id"><?php echo esc_html__('ID de Usuario', 'casanova-portal'); ?></option>
+          </select>
         </label>
+
+        <label class="casanova-link-account__label">
+          <span data-casanova-linking-identifier-label><?php echo esc_html__('DNI', 'casanova-portal'); ?></span>
+          <input class="casanova-link-account__input" type="text" name="identifier" data-casanova-linking-identifier autocomplete="off" inputmode="text" value="<?php echo $dni_prefill; ?>" placeholder="<?php echo esc_attr__('Ej.: 12345678Z', 'casanova-portal'); ?>" required>
+        </label>
+
+        <p class="casanova-link-account__hint"><?php echo esc_html__('Si no tienes DNI, usa el ID de Usuario que te hayamos facilitado.', 'casanova-portal'); ?></p>
+
         <button class="casanova-link-account__btn" type="submit" data-casanova-linking-submit>
           <?php echo esc_html__('Enviar código', 'casanova-portal'); ?>
         </button>

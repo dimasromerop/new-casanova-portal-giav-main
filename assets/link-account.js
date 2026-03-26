@@ -94,7 +94,9 @@
     var step2 = qs(root, "[data-casanova-linking-step='2']");
     if (!step1 || !step2) return;
 
-    var dniInput = qs(step1, "input[name='dni']");
+    var identifierTypeInput = qs(step1, "[data-casanova-linking-identifier-type]");
+    var identifierLabel = qs(step1, "[data-casanova-linking-identifier-label]");
+    var identifierInput = qs(step1, "[data-casanova-linking-identifier]");
     var otpInput = qs(step2, "input[name='otp']");
     var sentHint = qs(step2, "[data-casanova-linking-sent-hint]");
 
@@ -107,6 +109,63 @@
 
     var resendCooldown = 0;
     var resendTimer = null;
+    var identifierDrafts = {
+      dni: (identifierInput && identifierInput.value) ? identifierInput.value : "",
+      giav_id: "",
+    };
+    var currentIdentifierType = "dni";
+
+    function getIdentifierType() {
+      return identifierTypeInput && identifierTypeInput.value === "giav_id" ? "giav_id" : "dni";
+    }
+
+    function getIdentifierConfig(type) {
+      if (type === "giav_id") {
+        return {
+          label: tt("ID de Usuario"),
+          placeholder: tt("Ej.: 12345"),
+          inputmode: "numeric",
+          pattern: "[0-9]*",
+          emptyMessage: tt("Introduce tu ID de Usuario."),
+        };
+      }
+
+      return {
+        label: tt("DNI"),
+        placeholder: tt("Ej.: 12345678Z"),
+        inputmode: "text",
+        pattern: "",
+        emptyMessage: tt("Introduce tu DNI."),
+      };
+    }
+
+    function syncIdentifierUi(swapValue) {
+      var nextType = getIdentifierType();
+      var config = getIdentifierConfig(nextType);
+
+      if (!identifierInput) return config;
+
+      if (swapValue && nextType !== currentIdentifierType) {
+        identifierDrafts[currentIdentifierType] = identifierInput.value || "";
+        identifierInput.value = identifierDrafts[nextType] || "";
+      }
+
+      currentIdentifierType = nextType;
+
+      if (identifierLabel) {
+        identifierLabel.textContent = config.label;
+      }
+
+      identifierInput.placeholder = config.placeholder;
+      identifierInput.setAttribute("inputmode", config.inputmode);
+      if (config.pattern) {
+        identifierInput.setAttribute("pattern", config.pattern);
+      } else {
+        identifierInput.removeAttribute("pattern");
+      }
+
+      return config;
+    }
 
     function startCooldown(seconds) {
       resendCooldown = seconds || 60;
@@ -144,19 +203,28 @@
       startCooldown(60);
     }
 
+    syncIdentifierUi(false);
+    if (identifierTypeInput) {
+      identifierTypeInput.addEventListener("change", function () {
+        syncIdentifierUi(true);
+      });
+    }
+
     step1.addEventListener("submit", function (e) {
       e.preventDefault();
       alertBox(root, null, null);
 
-      var dni = (dniInput && dniInput.value) ? dniInput.value.trim() : "";
-      if (!dni) {
-        alertBox(root, "error", tt("Introduce tu DNI."));
+      var identifierType = getIdentifierType();
+      var identifierConfig = syncIdentifierUi(false);
+      var identifier = (identifierInput && identifierInput.value) ? identifierInput.value.trim() : "";
+      if (!identifier) {
+        alertBox(root, "error", identifierConfig.emptyMessage);
         return;
       }
 
       setBusy(submitBtn, true);
 
-      postJson(base + "/linking/request", { dni: dni })
+      postJson(base + "/linking/request", { identifierType: identifierType, identifier: identifier })
         .then(function (r) {
           var j = r.json || {};
           if (!r.ok || !j.ok) {
@@ -177,10 +245,12 @@
       e.preventDefault();
       alertBox(root, null, null);
 
-      var dni = (dniInput && dniInput.value) ? dniInput.value.trim() : "";
+      var identifierType = getIdentifierType();
+      var identifierConfig = syncIdentifierUi(false);
+      var identifier = (identifierInput && identifierInput.value) ? identifierInput.value.trim() : "";
       var otp = (otpInput && otpInput.value) ? otpInput.value.trim() : "";
-      if (!dni) {
-        alertBox(root, "error", tt("Introduce tu DNI."));
+      if (!identifier) {
+        alertBox(root, "error", identifierConfig.emptyMessage);
         return;
       }
       if (!otp) {
@@ -190,7 +260,7 @@
 
       setBusy(verifyBtn, true);
 
-      postJson(base + "/linking/verify", { dni: dni, otp: otp })
+      postJson(base + "/linking/verify", { identifierType: identifierType, identifier: identifier, otp: otp })
         .then(function (r) {
           var j = r.json || {};
           if (!r.ok || !j.ok) {
@@ -212,14 +282,16 @@
         if (resendBtn.disabled) return;
 
         alertBox(root, null, null);
-        var dni = (dniInput && dniInput.value) ? dniInput.value.trim() : "";
-        if (!dni) {
-          alertBox(root, "error", tt("Introduce tu DNI."));
+        var identifierType = getIdentifierType();
+        var identifierConfig = syncIdentifierUi(false);
+        var identifier = (identifierInput && identifierInput.value) ? identifierInput.value.trim() : "";
+        if (!identifier) {
+          alertBox(root, "error", identifierConfig.emptyMessage);
           return;
         }
 
         setBusy(resendBtn, true);
-        postJson(base + "/linking/request", { dni: dni })
+        postJson(base + "/linking/request", { identifierType: identifierType, identifier: identifier })
           .then(function (r) {
             var j = r.json || {};
             if (!r.ok || !j.ok) {

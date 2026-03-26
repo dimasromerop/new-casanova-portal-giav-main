@@ -27,19 +27,162 @@ function casanova_portal_hash_value(string $value): string {
   return hash_hmac('sha256', $value, wp_salt('casanova_portal_otp'));
 }
 
-function casanova_portal_otp_is_rate_limited(int $user_id, string $dni, string $ip): bool {
+function casanova_portal_linking_normalize_identifier_type(?string $type): string {
+  $type = sanitize_key((string) $type);
+
+  if (in_array($type, ['giav', 'giav_id', 'giavid', 'id_giav', 'idcliente', 'cliente_id', 'client_id'], true)) {
+    return 'giav_id';
+  }
+
+  return 'dni';
+}
+
+function casanova_portal_linking_normalize_identifier(string $identifier, string $identifier_type = 'dni'): string {
+  $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
+  $identifier = sanitize_text_field($identifier);
+
+  if ($identifier_type === 'giav_id') {
+    return (string) preg_replace('/\D+/', '', trim($identifier));
+  }
+
+  return (string) preg_replace('/\s+/', '', strtoupper(trim($identifier)));
+}
+
+function casanova_portal_linking_missing_identifier_message(string $identifier_type): string {
+  $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
+
+  if ($identifier_type === 'giav_id') {
+    return __('Introduce tu ID de GIAV.', 'casanova-portal');
+  }
+
+  return __('Introduce tu DNI.', 'casanova-portal');
+}
+
+function casanova_portal_linking_invalid_identifier_message(string $identifier_type): string {
+  $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
+
+  if ($identifier_type === 'giav_id') {
+    return __('Introduce un ID de GIAV válido.', 'casanova-portal');
+  }
+
+  return __('DNI inválido.', 'casanova-portal');
+}
+
+function casanova_portal_linking_not_found_message(string $identifier_type): string {
+  $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
+
+  if ($identifier_type === 'giav_id') {
+    return __('No encontramos ningún cliente con ese ID de GIAV. Si ya has viajado con nosotros, escríbenos y lo revisamos.', 'casanova-portal');
+  }
+
+  return __('No encontramos ninguna reserva asociada a ese DNI. Si ya has viajado con nosotros, escríbenos y lo revisamos.', 'casanova-portal');
+}
+
+function casanova_portal_linking_fetch_customer_by_id(int $giav_customer_id) {
+  if ($giav_customer_id <= 0) {
+    return new WP_Error('bad_id', __('ID de cliente inválido.', 'casanova-portal'));
+  }
+
+  if (function_exists('casanova_giav_cliente_get_by_id')) {
+    return casanova_giav_cliente_get_by_id($giav_customer_id);
+  }
+
+  if (!function_exists('casanova_giav_call')) {
+    return new WP_Error('giav_unavailable', __('No podemos consultar el sistema en este momento. Inténtalo más tarde.', 'casanova-portal'));
+  }
+
+  $p = new stdClass();
+  $p->apikey = defined('CASANOVA_GIAV_APIKEY') ? CASANOVA_GIAV_APIKEY : '';
+  $p->id = $giav_customer_id;
+
+  $resp = casanova_giav_call('Cliente_GET', $p);
+  if (is_wp_error($resp)) {
+    return $resp;
+  }
+
+  $customer = $resp->Cliente_GETResult ?? null;
+  if ($customer && is_object($customer)) {
+    return $customer;
+  }
+
+  return new WP_Error('giav_empty', __('No se han podido cargar los datos del cliente.', 'casanova-portal'));
+}
+
+function casanova_portal_linking_resolve_customer_id(string $identifier_type, string $identifier): WP_Error|int {
+  $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
+  $identifier = casanova_portal_linking_normalize_identifier($identifier, $identifier_type);
+
+  if ($identifier === '') {
+    return new WP_Error('missing_identifier', casanova_portal_linking_missing_identifier_message($identifier_type));
+  }
+
+  if ($identifier_type === 'giav_id') {
+    $giav_customer_id = (int) $identifier;
+    if ($giav_customer_id <= 0) {
+      return new WP_Error('invalid_identifier', casanova_portal_linking_invalid_identifier_message($identifier_type));
+    }
+
+    $customer = casanova_portal_linking_fetch_customer_by_id($giav_customer_id);
+    if (is_wp_error($customer)) {
+      if (in_array($customer->get_error_code(), ['bad_id', 'giav_empty'], true)) {
+        return new WP_Error('not_found', casanova_portal_linking_not_found_message($identifier_type));
+      }
+
+      return new WP_Error('giav_error', __('No hemos podido consultar el sistema. Inténtalo más tarde.', 'casanova-portal'));
+    }
+
+    return $giav_customer_id;
+  }
+
+  if (!function_exists('casanova_giav_cliente_search_por_dni')) {
+    return new WP_Error('giav_unavailable', __('No podemos consultar el sistema en este momento. Inténtalo más tarde.', 'casanova-portal'));
+  }
+
+  $resp = casanova_giav_cliente_search_por_dni($identifier);
+  if (is_wp_error($resp)) {
+    return new WP_Error('giav_error', __('No hemos podido consultar el sistema. Inténtalo más tarde.', 'casanova-portal'));
+  }
+
+  $giav_customer_id = function_exists('casanova_giav_extraer_idcliente')
+    ? (int) casanova_giav_extraer_idcliente($resp)
+    : 0;
+
+  if ($giav_customer_id <= 0) {
+    return new WP_Error('not_found', casanova_portal_linking_not_found_message($identifier_type));
+  }
+
+  return $giav_customer_id;
+}
+
+function casanova_portal_otp_is_rate_limited(int $user_id, string $identifier, string $ip, string $identifier_type = 'dni'): bool {
   global $wpdb;
   $table = casanova_portal_otp_table_name();
-  $dni_hash = casanova_portal_hash_value($dni);
+  $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
+  $identifier = casanova_portal_linking_normalize_identifier($identifier, $identifier_type);
+  if ($identifier === '') return false;
 
-  // Limit: max 3 sends per 15 minutes per (user_id + dni)
+  $identifier_hash = casanova_portal_hash_value($identifier);
+
+  // Limit: max 3 sends per 15 minutes per (user_id + identifier)
   $since = gmdate('Y-m-d H:i:s', time() - 15 * 60);
-  $count = (int) $wpdb->get_var($wpdb->prepare(
-    "SELECT SUM(sent_count) FROM {$table} WHERE user_id=%d AND dni_hash=%s AND last_sent_at >= %s",
-    $user_id,
-    $dni_hash,
-    $since
-  ));
+  if ($identifier_type === 'dni') {
+    $count = (int) $wpdb->get_var($wpdb->prepare(
+      "SELECT SUM(sent_count) FROM {$table} WHERE user_id=%d AND last_sent_at >= %s AND ((lookup_type=%s AND lookup_hash=%s) OR dni_hash=%s)",
+      $user_id,
+      $since,
+      'dni',
+      $identifier_hash,
+      $identifier_hash
+    ));
+  } else {
+    $count = (int) $wpdb->get_var($wpdb->prepare(
+      "SELECT SUM(sent_count) FROM {$table} WHERE user_id=%d AND last_sent_at >= %s AND lookup_type=%s AND lookup_hash=%s",
+      $user_id,
+      $since,
+      $identifier_type,
+      $identifier_hash
+    ));
+  }
 
   if ($count >= 3) return true;
 
@@ -54,11 +197,15 @@ function casanova_portal_otp_is_rate_limited(int $user_id, string $dni, string $
   return $count_ip >= 10;
 }
 
-function casanova_portal_send_linking_otp(int $user_id, string $dni, int $giav_customer_id): WP_Error|array {
+function casanova_portal_send_linking_otp(int $user_id, string $identifier, int $giav_customer_id, string $identifier_type = 'dni'): WP_Error|array {
   global $wpdb;
 
-  $dni = preg_replace('/\s+/', '', strtoupper(trim($dni)));
-  if ($dni === '') return new WP_Error('otp_missing_dni', __('DNI inválido.', 'casanova-portal'));
+  $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
+  $identifier = casanova_portal_linking_normalize_identifier($identifier, $identifier_type);
+
+  if ($identifier === '') {
+    return new WP_Error('otp_missing_identifier', casanova_portal_linking_missing_identifier_message($identifier_type));
+  }
   if ($giav_customer_id <= 0) return new WP_Error('otp_missing_customer', __('Cliente inválido.', 'casanova-portal'));
 
   // Fetch email from GIAV
@@ -89,13 +236,14 @@ function casanova_portal_send_linking_otp(int $user_id, string $dni, int $giav_c
   $ip = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
   $ua = isset($_SERVER['HTTP_USER_AGENT']) ? substr((string) $_SERVER['HTTP_USER_AGENT'], 0, 250) : '';
 
-  if (casanova_portal_otp_is_rate_limited($user_id, $dni, $ip)) {
+  if (casanova_portal_otp_is_rate_limited($user_id, $identifier, $ip, $identifier_type)) {
     return new WP_Error('otp_rate_limited', __('Has hecho demasiados intentos. Espera unos minutos y vuelve a intentarlo.', 'casanova-portal'));
   }
 
   $code = casanova_portal_generate_otp_code();
   $otp_hash = wp_hash_password($code);
-  $dni_hash = casanova_portal_hash_value($dni);
+  $identifier_hash = casanova_portal_hash_value($identifier);
+  $dni_hash = $identifier_type === 'dni' ? $identifier_hash : '';
   $email_hash = casanova_portal_hash_value(strtolower($email));
   $email_masked = casanova_portal_mask_email($email);
 
@@ -105,6 +253,8 @@ function casanova_portal_send_linking_otp(int $user_id, string $dni, int $giav_c
   $table = casanova_portal_otp_table_name();
   $wpdb->insert($table, [
     'user_id' => $user_id,
+    'lookup_type' => $identifier_type,
+    'lookup_hash' => $identifier_hash,
     'dni_hash' => $dni_hash,
     'giav_customer_id' => $giav_customer_id,
     'email_masked' => $email_masked,
@@ -138,7 +288,13 @@ function casanova_portal_send_linking_otp(int $user_id, string $dni, int $giav_c
 
   // Store pending info for UI / next step
   update_user_meta($user_id, 'casanova_pending_idcliente', (string) $giav_customer_id);
-  update_user_meta($user_id, 'casanova_pending_dni', $dni);
+  update_user_meta($user_id, 'casanova_pending_identifier', $identifier);
+  update_user_meta($user_id, 'casanova_pending_identifier_type', $identifier_type);
+  if ($identifier_type === 'dni') {
+    update_user_meta($user_id, 'casanova_pending_dni', $identifier);
+  } else {
+    delete_user_meta($user_id, 'casanova_pending_dni');
+  }
 
   return [
     'emailMasked' => $email_masked,
@@ -146,24 +302,53 @@ function casanova_portal_send_linking_otp(int $user_id, string $dni, int $giav_c
   ];
 }
 
-function casanova_portal_verify_linking_otp(int $user_id, string $dni, string $otp): WP_Error|array {
+function casanova_portal_verify_linking_otp(int $user_id, string $identifier, string $otp, string $identifier_type = 'dni'): WP_Error|array {
   global $wpdb;
-  $dni = preg_replace('/\s+/', '', strtoupper(trim($dni)));
+
+  $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
+  $identifier = casanova_portal_linking_normalize_identifier($identifier, $identifier_type);
   $otp = preg_replace('/\s+/', '', trim($otp));
 
-  if ($dni === '' || $otp === '') {
+  $pending_identifier = (string) get_user_meta($user_id, 'casanova_pending_identifier', true);
+  $pending_identifier_type = (string) get_user_meta($user_id, 'casanova_pending_identifier_type', true);
+
+  if ($pending_identifier === '') {
+    $legacy_pending_dni = (string) get_user_meta($user_id, 'casanova_pending_dni', true);
+    if ($legacy_pending_dni !== '') {
+      $pending_identifier = $legacy_pending_dni;
+      $pending_identifier_type = 'dni';
+    }
+  }
+
+  if ($identifier === '' && $pending_identifier !== '') {
+    $identifier_type = casanova_portal_linking_normalize_identifier_type($pending_identifier_type);
+    $identifier = casanova_portal_linking_normalize_identifier($pending_identifier, $identifier_type);
+  }
+
+  if ($identifier === '' || $otp === '') {
     return new WP_Error('otp_missing', __('Introduce el código que te hemos enviado.', 'casanova-portal'));
   }
 
-  $dni_hash = casanova_portal_hash_value($dni);
+  $identifier_hash = casanova_portal_hash_value($identifier);
   $table = casanova_portal_otp_table_name();
   $now = gmdate('Y-m-d H:i:s');
 
-  $row = $wpdb->get_row($wpdb->prepare(
-    "SELECT * FROM {$table} WHERE user_id=%d AND dni_hash=%s AND status='pending' ORDER BY id DESC LIMIT 1",
-    $user_id,
-    $dni_hash
-  ));
+  if ($identifier_type === 'dni') {
+    $row = $wpdb->get_row($wpdb->prepare(
+      "SELECT * FROM {$table} WHERE user_id=%d AND status='pending' AND ((lookup_type=%s AND lookup_hash=%s) OR dni_hash=%s) ORDER BY id DESC LIMIT 1",
+      $user_id,
+      'dni',
+      $identifier_hash,
+      $identifier_hash
+    ));
+  } else {
+    $row = $wpdb->get_row($wpdb->prepare(
+      "SELECT * FROM {$table} WHERE user_id=%d AND lookup_type=%s AND lookup_hash=%s AND status='pending' ORDER BY id DESC LIMIT 1",
+      $user_id,
+      $identifier_type,
+      $identifier_hash
+    ));
+  }
 
   if (!$row) {
     return new WP_Error('otp_not_found', __('No encontramos un código activo. Solicita uno nuevo.', 'casanova-portal'));
@@ -190,6 +375,8 @@ function casanova_portal_verify_linking_otp(int $user_id, string $dni, string $o
   $giav_customer_id = (int) $row->giav_customer_id;
   update_user_meta($user_id, 'casanova_idcliente', (string) $giav_customer_id);
   delete_user_meta($user_id, 'casanova_pending_idcliente');
+  delete_user_meta($user_id, 'casanova_pending_identifier');
+  delete_user_meta($user_id, 'casanova_pending_identifier_type');
   delete_user_meta($user_id, 'casanova_pending_dni');
 
   $wpdb->update($table, ['status' => 'verified'], ['id' => (int) $row->id]);

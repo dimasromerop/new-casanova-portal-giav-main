@@ -14,14 +14,14 @@ function casanova_giav_cliente_search_por_dni(string $dni) {
 
   // Filtro principal
   $p->documento = $dni;
-  $p->documentoModo = 'Solo_NIF';      // <-- CLAVE (ya lo has comprobado)
+  $p->documentoModo = 'Solo_NIF';
   $p->documentoExacto = true;
 
-  // Para no filtrar por RGPD, usa NoAplicar (según tu ayuda)
+  // Para no filtrar por RGPD, usa NoAplicar
   $p->rgpdSigned = 'NoAplicar';
 
   // Si no quieres filtrar por fechas, mejor NO mandar modoFecha,
-  // pero para evitar "Encoding missing property", lo declaramos con null:
+  // pero para evitar "Encoding missing property", lo declaramos con null.
   $p->modoFecha = 'Creacion';
   $p->fechaHoraDesde = null;
   $p->fechaHoraHasta = null;
@@ -30,9 +30,6 @@ function casanova_giav_cliente_search_por_dni(string $dni) {
   $p->incluirDeshabilitados = false;
   $p->pageSize = 50;
   $p->pageIndex = 0;
-
-  // OJO: también existen muchos más filtros (nombre, email, idsCliente, etc.)
-  // pero no los enviamos si no hacen falta.
 
   $resp = casanova_giav_call('Cliente_SEARCH', $p);
   if (is_wp_error($resp)) return $resp;
@@ -45,12 +42,12 @@ function casanova_giav_cliente_search_por_dni(string $dni) {
 
 /**
  * Extraer idCliente de la respuesta (tolerante).
- * Ajustaremos si tu estructura concreta es distinta, pero esto cubre lo típico.
+ * Ajustaremos si tu estructura concreta es distinta, pero esto cubre lo tipico.
  */
 function casanova_giav_extraer_idcliente($resp): ?string {
   if (!is_object($resp)) return null;
 
-  // Caso REAL de tu API: Cliente_SEARCHResult->WsCliente->Id
+  // Caso real de tu API: Cliente_SEARCHResult->WsCliente->Id
   if (
     isset($resp->Cliente_SEARCHResult)
     && is_object($resp->Cliente_SEARCHResult)
@@ -61,7 +58,7 @@ function casanova_giav_extraer_idcliente($resp): ?string {
     return (string) $resp->Cliente_SEARCHResult->WsCliente->Id;
   }
 
-  // Si en algún caso viniera un array/lista de WsCliente
+  // Si en algun caso viniera un array/lista de WsCliente
   if (
     isset($resp->Cliente_SEARCHResult)
     && is_object($resp->Cliente_SEARCHResult)
@@ -90,12 +87,12 @@ function casanova_giav_extraer_idcliente($resp): ?string {
 
       if (isset($r->Clientes) && is_object($r->Clientes) && isset($r->Clientes->Cliente)) {
         $c = $r->Clientes->Cliente;
-        if (is_array($c) && isset($c[0]->idCliente)) return (string)$c[0]->idCliente;
-        if (is_object($c) && isset($c->idCliente)) return (string)$c->idCliente;
+        if (is_array($c) && isset($c[0]->idCliente)) return (string) $c[0]->idCliente;
+        if (is_object($c) && isset($c->idCliente)) return (string) $c->idCliente;
       }
 
       if (isset($r->Cliente) && is_object($r->Cliente) && isset($r->Cliente->idCliente)) {
-        return (string)$r->Cliente->idCliente;
+        return (string) $r->Cliente->idCliente;
       }
     }
   }
@@ -104,10 +101,9 @@ function casanova_giav_extraer_idcliente($resp): ?string {
 }
 
 /**
- * BRICKS: Vincular cuenta (formId wkwkgw, campo DNI form-field-a1a1f7)
+ * BRICKS: Vincular cuenta (formId wkwkgw, campo principal form-field-a1a1f7)
  */
 add_action('bricks/form/custom_action', function($form) {
-
   $fields = $form->get_fields();
 
   // Solo tu formulario
@@ -122,8 +118,25 @@ add_action('bricks/form/custom_action', function($form) {
     return;
   }
 
-  $dni_raw = $fields['form-field-a1a1f7'] ?? '';
-  $dni = preg_replace('/\s+/', '', strtoupper(sanitize_text_field($dni_raw)));
+  $identifier_type = 'dni';
+  foreach ($fields as $k => $v) {
+    if (!is_scalar($v)) continue;
+
+    $raw_value = sanitize_key((string) $v);
+    $candidate_type = function_exists('casanova_portal_linking_normalize_identifier_type')
+      ? casanova_portal_linking_normalize_identifier_type((string) $v)
+      : 'dni';
+
+    if ($candidate_type === 'giav_id' || $raw_value === 'dni') {
+      $identifier_type = $candidate_type;
+      break;
+    }
+  }
+
+  $identifier_raw = (string) ($fields['form-field-a1a1f7'] ?? '');
+  $identifier = function_exists('casanova_portal_linking_normalize_identifier')
+    ? casanova_portal_linking_normalize_identifier($identifier_raw, $identifier_type)
+    : preg_replace('/\s+/', '', strtoupper(sanitize_text_field($identifier_raw)));
 
   // Optional OTP field (add it in Bricks to enable secure linking)
   $otp_raw = '';
@@ -135,17 +148,23 @@ add_action('bricks/form/custom_action', function($form) {
   }
   $otp = preg_replace('/\s+/', '', sanitize_text_field($otp_raw));
 
-  if ($dni === '') {
+  if ($identifier === '') {
+    $message = function_exists('casanova_portal_linking_missing_identifier_message')
+      ? casanova_portal_linking_missing_identifier_message($identifier_type)
+      : 'Introduce tu DNI.';
+
     $form->set_result([
       'action'  => 'casanova_vincular',
       'type'    => 'error',
-      'message' => 'Introduce tu DNI.',
+      'message' => $message,
     ]);
     return;
   }
 
   $user_id = get_current_user_id();
-  update_user_meta($user_id, 'casanova_dni', $dni);
+  if ($identifier_type === 'dni') {
+    update_user_meta($user_id, 'casanova_dni', $identifier);
+  }
 
   // Step 2: verify OTP (if provided)
   if ($otp !== '') {
@@ -158,7 +177,7 @@ add_action('bricks/form/custom_action', function($form) {
       return;
     }
 
-    $vr = casanova_portal_verify_linking_otp($user_id, $dni, $otp);
+    $vr = casanova_portal_verify_linking_otp($user_id, $identifier, $otp, $identifier_type);
     if (is_wp_error($vr)) {
       $form->set_result([
         'action'  => 'casanova_vincular',
@@ -177,9 +196,7 @@ add_action('bricks/form/custom_action', function($form) {
     return;
   }
 
-  $resp = casanova_giav_cliente_search_por_dni($dni);
-
-  if (is_wp_error($resp)) {
+  if (!function_exists('casanova_portal_linking_resolve_customer_id')) {
     $form->set_result([
       'action'  => 'casanova_vincular',
       'type'    => 'error',
@@ -188,40 +205,12 @@ add_action('bricks/form/custom_action', function($form) {
     return;
   }
 
-  // Si el result viene vacío, no hay cliente
-  $isEmptyResult =
-    !isset($resp->Cliente_SEARCHResult)
-    || !is_object($resp->Cliente_SEARCHResult)
-    || (
-      !isset($resp->Cliente_SEARCHResult->WsCliente)
-      && count(get_object_vars($resp->Cliente_SEARCHResult)) === 0
-    );
-
-  if ($isEmptyResult) {
+  $idCliente = casanova_portal_linking_resolve_customer_id($identifier_type, $identifier);
+  if (is_wp_error($idCliente)) {
     $form->set_result([
       'action'  => 'casanova_vincular',
       'type'    => 'error',
-      'message' => 'No encontramos ningún cliente con ese DNI. Si ya has viajado con nosotros, escríbenos y lo revisamos.',
-    ]);
-    return;
-  }
-
-  // ✅EXTRAER idCliente REAL (tu API lo devuelve como WsCliente->Id)
-  $idCliente = null;
-  if (
-    isset($resp->Cliente_SEARCHResult->WsCliente)
-    && is_object($resp->Cliente_SEARCHResult->WsCliente)
-    && isset($resp->Cliente_SEARCHResult->WsCliente->Id)
-  ) {
-    $idCliente = (string) $resp->Cliente_SEARCHResult->WsCliente->Id;
-  }
-
-  if (empty($idCliente)) {
-    error_log('[CASANOVA] Cliente_SEARCH sin Id. Resp: ' . print_r($resp, true));
-    $form->set_result([
-      'action'  => 'casanova_vincular',
-      'type'    => 'error',
-      'message' => 'Hemos encontrado tu ficha, pero no hemos podido vincularla automáticamente. Contacta con nosotros.',
+      'message' => $idCliente->get_error_message(),
     ]);
     return;
   }
@@ -236,7 +225,7 @@ add_action('bricks/form/custom_action', function($form) {
     return;
   }
 
-  $sr = casanova_portal_send_linking_otp($user_id, $dni, (int) $idCliente);
+  $sr = casanova_portal_send_linking_otp($user_id, $identifier, (int) $idCliente, $identifier_type);
   if (is_wp_error($sr)) {
     $form->set_result([
       'action'  => 'casanova_vincular',

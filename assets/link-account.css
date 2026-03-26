@@ -52,6 +52,10 @@
   outline: none;
 }
 
+select.casanova-link-account__input {
+  background: #fff;
+}
+
 .casanova-link-account__input:focus {
   border-color: rgba(0,0,0,0.28);
 }

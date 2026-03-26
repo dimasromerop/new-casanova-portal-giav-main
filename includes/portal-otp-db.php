@@ -1,7 +1,7 @@
 <?php
 
 /**
- * OTP DB table for secure account linking (DNI -> GIAV customer).
+ * OTP DB table for secure account linking (identifier -> GIAV customer).
  *
  * We keep OTPs server-side only (hashed), with rate limiting metadata.
  */
@@ -21,6 +21,8 @@ function casanova_portal_otp_install(): void {
   $sql = "CREATE TABLE {$table} (
     id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id BIGINT(20) UNSIGNED NOT NULL,
+    lookup_type VARCHAR(20) NOT NULL DEFAULT 'dni',
+    lookup_hash VARCHAR(128) NOT NULL DEFAULT '',
     dni_hash VARCHAR(128) NOT NULL,
     giav_customer_id BIGINT(20) UNSIGNED NOT NULL,
     email_masked VARCHAR(190) NULL,
@@ -36,6 +38,7 @@ function casanova_portal_otp_install(): void {
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     PRIMARY KEY  (id),
     KEY user_id (user_id),
+    KEY lookup_key (lookup_type, lookup_hash),
     KEY dni_hash (dni_hash),
     KEY giav_customer_id (giav_customer_id),
     KEY status (status),
@@ -43,4 +46,14 @@ function casanova_portal_otp_install(): void {
   ) {$charset_collate};";
 
   dbDelta($sql);
+
+  $columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+  if (is_array($columns)) {
+    if (in_array('lookup_hash', $columns, true) && in_array('dni_hash', $columns, true)) {
+      $wpdb->query("UPDATE {$table} SET lookup_hash = dni_hash WHERE lookup_hash = '' AND dni_hash <> ''");
+    }
+    if (in_array('lookup_type', $columns, true)) {
+      $wpdb->query("UPDATE {$table} SET lookup_type = 'dni' WHERE lookup_type = '' OR lookup_type IS NULL");
+    }
+  }
 }

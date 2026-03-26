@@ -93,6 +93,32 @@ function casanova_payment_intent_email_context(object $intent): array {
   ];
 }
 
+function casanova_expediente_paid_mail_meta_key(int $idExpediente): string {
+  return 'casanova_paid_email_sent_v1_' . (int) $idExpediente;
+}
+
+function casanova_has_expediente_paid_mail_been_sent(int $user_id, int $idExpediente): bool {
+  $user_id = $user_id > 0 ? $user_id : get_current_user_id();
+  $idExpediente = (int) $idExpediente;
+
+  if ($user_id <= 0 || $idExpediente <= 0) {
+    return false;
+  }
+
+  return !empty(get_user_meta($user_id, casanova_expediente_paid_mail_meta_key($idExpediente), true));
+}
+
+function casanova_mark_expediente_paid_mail_sent(int $user_id, int $idExpediente): void {
+  $user_id = $user_id > 0 ? $user_id : get_current_user_id();
+  $idExpediente = (int) $idExpediente;
+
+  if ($user_id <= 0 || $idExpediente <= 0) {
+    return;
+  }
+
+  update_user_meta($user_id, casanova_expediente_paid_mail_meta_key($idExpediente), current_time('mysql'));
+}
+
 /**
  * Detecta cambios y encola emails.
  * - Llamar a esto después de calcular $pago en la vista del expediente.
@@ -135,9 +161,9 @@ function casanova_portal_payments_tick(int $idExpediente, int $idCliente, array 
 
   // (2) EXPEDIENTE PAGADO: transición a pagado completo
   $is_paid_now = !empty($pago['expediente_pagado']);
-  $meta_key_paid_sent = 'casanova_paid_email_sent_v1_' . $idExpediente;
+  $user_id = get_current_user_id();
 
-  if ($is_paid_now && !get_user_meta(get_current_user_id(), $meta_key_paid_sent, true)) {
+  if ($is_paid_now && !casanova_has_expediente_paid_mail_been_sent($user_id, $idExpediente)) {
     if (!wp_next_scheduled('casanova_job_send_expediente_paid_email', [$idExpediente, $idCliente])) {
       wp_schedule_single_event(time() + 20, 'casanova_job_send_expediente_paid_email', [$idExpediente, $idCliente]);
     }
@@ -301,7 +327,8 @@ function casanova_on_payment_cobro_recorded_mulligans(int $intent_id): void {
 /**
  * Emails al reconciliar (expediente pagado).
  * - Puede mandar payment_confirmed si aún no se mandó.
- * - Debe mandar expediente_paid una vez por intent (mail_expediente_sent_at).
+ * - Debe mandar expediente_paid una vez por expediente y usuario.
+ * - mail_expediente_sent_at queda como trazabilidad del intent ganador.
  */
 function casanova_on_payment_reconciled_send_emails(int $intent_id): void {
 
@@ -401,9 +428,14 @@ function casanova_on_payment_reconciled_send_emails(int $intent_id): void {
     }
   }
 
-  // 2) Expediente pagado (1 vez por intent)
+  // 2) Expediente pagado (1 vez por expediente y usuario)
   if (!empty($intent->mail_expediente_sent_at)) {
     error_log('[CASANOVA][MAIL] SKIP: mail_expediente ya enviado');
+    return;
+  }
+
+  if (casanova_has_expediente_paid_mail_been_sent((int) $user->ID, $exp_id)) {
+    error_log('[CASANOVA][MAIL] SKIP: expediente_paid ya enviado para expediente=' . $exp_id . ' user_id=' . (int) $user->ID);
     return;
   }
 
@@ -437,6 +469,7 @@ function casanova_on_payment_reconciled_send_emails(int $intent_id): void {
   error_log('[CASANOVA][MAIL] SENT expediente_paid ok=' . ($ok_paid ? 'YES' : 'NO'));
 
   if ($ok_paid) {
+    casanova_mark_expediente_paid_mail_sent((int) $user->ID, $exp_id);
     casanova_payment_intent_update($intent_id, [
       'mail_expediente_sent_at' => current_time('mysql'),
     ]);
