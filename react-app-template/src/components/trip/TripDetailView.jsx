@@ -36,6 +36,7 @@ export default function TripDetailView({
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
+  const [historyPage, setHistoryPage] = useState(1);
 
   useEffect(() => {
     let alive = true;
@@ -92,7 +93,9 @@ export default function TripDetailView({
   const invoices = Array.isArray(detail?.invoices) ? detail.invoices : [];
   const bonuses = detail?.bonuses ?? { available: false, items: [] };
   const voucherItems = Array.isArray(bonuses.items) ? bonuses.items : [];
-  const chargeHistory = payments?.history ?? [];
+  const chargeHistory = Array.isArray(payments?.history) ? payments.history : [];
+  const payerTotals = Array.isArray(payments?.payer_totals) ? payments.payer_totals : [];
+  const showGroupContributionSummary = payments?.economic_scope === "expediente" && payerTotals.length > 0;
   const totalAmount = typeof payments?.total === "number" ? payments.total : Number.NaN;
   const paidAmount = typeof payments?.paid === "number" ? payments.paid : Number.NaN;
   const pendingCandidate = typeof payments?.pending === "number" ? payments.pending : Number.NaN;
@@ -115,6 +118,17 @@ export default function TripDetailView({
     ? Math.round((pendingAmount / totalAmount) * 100)
     : 0;
   const mulligansAvailable = Math.max(0, Number(payments?.mulligans_available ?? 0));
+  const historyPageSize = 12;
+  const historyTotalPages = Math.max(1, Math.ceil(chargeHistory.length / historyPageSize));
+  const historyCurrentPage = Math.min(historyPage, historyTotalPages);
+  const pagedChargeHistory = chargeHistory.slice(
+    (historyCurrentPage - 1) * historyPageSize,
+    historyCurrentPage * historyPageSize,
+  );
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [expediente, chargeHistory.length]);
 
   const paymentKpiItems = payments
     ? [
@@ -330,6 +344,39 @@ export default function TripDetailView({
                 )}
 
                 {/* Payment history card */}
+                {showGroupContributionSummary ? (
+                  <div className="cp-pay-history">
+                    <div className="cp-pay-history__title">
+                      {tt("Aportaciones del grupo")}
+                      <span className="cp-pay-history__count">
+                        {payerTotals.length} {tt("pagadores")}
+                      </span>
+                    </div>
+                    <div className="cp-table-wrap">
+                      <table className="cp-payments-history__table">
+                        <thead>
+                          <tr>
+                            <th>{tt("Pagador")}</th>
+                            <th>{tt("Movimientos")}</th>
+                            <th>{tt("Último movimiento")}</th>
+                            <th className="is-right">{tt("Total neto")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {payerTotals.map((row) => (
+                            <tr key={row.id}>
+                              <td>{row.payer || "—"}</td>
+                              <td>{row.count ?? 0}</td>
+                              <td>{row.last_date ? formatDateES(row.last_date) : "—"}</td>
+                              <td className="is-right">{euro(Number(row.amount ?? 0), currency)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="cp-pay-history">
                   <div className="cp-pay-history__title">
                     {tt("Historial de pagos")}
@@ -338,41 +385,69 @@ export default function TripDetailView({
                     </span>
                   </div>
                   {chargeHistory.length > 0 ? (
-                    <div className="cp-table-wrap">
-                      <table className="cp-payments-history__table">
-                        <thead>
-                          <tr>
-                            <th>{tt("Fecha")}</th>
-                            <th>{tt("Tipo")}</th>
-                            <th>{tt("Concepto")}</th>
-                            <th>{tt("Pagador")}</th>
-                            <th className="is-right">{tt("Importe")}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {chargeHistory.map((row) => {
-                            const historyBadge = getHistoryBadge(row);
-                            return (
-                              <tr key={row.id}>
-                                <td>{formatDateES(row.date)}</td>
-                                <td>
-                                  <BadgeLabel
-                                    label={historyBadge.label}
-                                    variant={historyBadge.variant}
-                                    className="cp-history-badge"
-                                  />
-                                </td>
-                                <td>{row.concept}</td>
-                                <td>{row.payer || row.document || "—"}</td>
-                                <td className="is-right">
-                                  {euro(row.is_refund ? -row.amount : row.amount, currency)}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                    <>
+                      <div className="cp-table-wrap">
+                        <table className="cp-payments-history__table">
+                          <thead>
+                            <tr>
+                              <th>{tt("Fecha")}</th>
+                              <th>{tt("Tipo")}</th>
+                              <th>{tt("Concepto")}</th>
+                              <th>{tt("Pagador")}</th>
+                              <th className="is-right">{tt("Importe")}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pagedChargeHistory.map((row) => {
+                              const historyBadge = getHistoryBadge(row);
+                              return (
+                                <tr key={row.id}>
+                                  <td>{formatDateES(row.date)}</td>
+                                  <td>
+                                    <BadgeLabel
+                                      label={historyBadge.label}
+                                      variant={historyBadge.variant}
+                                      className="cp-history-badge"
+                                    />
+                                  </td>
+                                  <td>{row.concept}</td>
+                                  <td>{row.payer || row.document || "—"}</td>
+                                  <td className="is-right">
+                                    {euro(row.is_refund ? -row.amount : row.amount, currency)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      {historyTotalPages > 1 ? (
+                        <div className="cp-pay-history__pagination">
+                          <button
+                            type="button"
+                            className="cp-btn cp-btn--ghost"
+                            onClick={() => setHistoryPage((page) => Math.max(1, page - 1))}
+                            disabled={historyCurrentPage <= 1}
+                          >
+                            {tt("Anterior")}
+                          </button>
+                          <span className="cp-pay-history__page">
+                            {ttf("Página {current} de {total}", {
+                              current: historyCurrentPage,
+                              total: historyTotalPages,
+                            })}
+                          </span>
+                          <button
+                            type="button"
+                            className="cp-btn cp-btn--ghost"
+                            onClick={() => setHistoryPage((page) => Math.min(historyTotalPages, page + 1))}
+                            disabled={historyCurrentPage >= historyTotalPages}
+                          >
+                            {tt("Siguiente")}
+                          </button>
+                        </div>
+                      ) : null}
+                    </>
                   ) : (
                     <div className="cp-pay-history__empty">
                       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.3">

@@ -84,8 +84,8 @@ function casanova_giav_cobros_por_expediente(int $idExpediente, int $idCliente, 
   $p = new stdClass();
   $p->apikey = defined('CASANOVA_GIAV_APIKEY') ? CASANOVA_GIAV_APIKEY : '';
 
-  // OJO: idsExpedientes (plural)
-  $p->idsExpedientes = (object) ['int' => [(int)$idExpediente]];
+  // El contrato SOAP usa idsExpediente (singular), no idsExpedientes.
+  $p->idsExpediente = (object) ['int' => [(int)$idExpediente]];
 
   if ($idCliente > 0) {
     $p->idsCliente = (object) ['int' => [(int)$idCliente]];
@@ -169,6 +169,43 @@ function casanova_giav_cobros_por_expediente_all_uncached(int $idExpediente, int
   return $all;
 }
 
+function casanova_giav_portal_cobros_context(int $idExpediente, int $idCliente): array|WP_Error {
+  $is_group = function_exists('casanova_giav_expediente_is_group_by_id')
+    ? casanova_giav_expediente_is_group_by_id($idExpediente)
+    : false;
+
+  $scope = $is_group ? 'expediente' : 'cliente';
+  $scope_client_id = $is_group ? 0 : max(0, (int) $idCliente);
+
+  $items = casanova_giav_cobros_por_expediente_all($idExpediente, $scope_client_id);
+
+  if (is_wp_error($items) && $scope_client_id === 0 && $idCliente > 0) {
+    $scope = 'cliente';
+    $scope_client_id = (int) $idCliente;
+    $items = casanova_giav_cobros_por_expediente_all($idExpediente, $scope_client_id);
+  }
+
+  if (is_wp_error($items)) {
+    return $items;
+  }
+
+  return [
+    'items' => is_array($items) ? $items : [],
+    'scope' => $scope,
+    'idCliente' => $scope_client_id,
+    'is_group' => $is_group,
+  ];
+}
+
+function casanova_giav_cobros_por_expediente_all_portal_view(int $idExpediente, int $idCliente): array|WP_Error {
+  $context = casanova_giav_portal_cobros_context($idExpediente, $idCliente);
+  if (is_wp_error($context)) {
+    return $context;
+  }
+
+  return is_array($context['items'] ?? null) ? $context['items'] : [];
+}
+
 /**
  * ==========================================
  * Cálculo pago expediente (ventas - cobros)
@@ -223,11 +260,18 @@ function casanova_calc_pago_expediente(int $idExpediente, int $idCliente, array 
   $reemb_real  = 0.0;
 
   $all = [];
+  $economic_scope = 'cliente';
+  $is_group = false;
+  $history_client_id = (int) $idCliente;
   $used_cached_history = false;
-  if (function_exists('casanova_giav_cobros_por_expediente_all')) {
-    $all_cached = casanova_giav_cobros_por_expediente_all($idExpediente, $idCliente);
-    if (is_array($all_cached)) {
-      $all = $all_cached;
+
+  if (function_exists('casanova_giav_portal_cobros_context')) {
+    $history_context = casanova_giav_portal_cobros_context($idExpediente, $idCliente);
+    if (is_array($history_context)) {
+      $all = is_array($history_context['items'] ?? null) ? $history_context['items'] : [];
+      $economic_scope = (string) ($history_context['scope'] ?? 'cliente');
+      $is_group = !empty($history_context['is_group']);
+      $history_client_id = (int) ($history_context['idCliente'] ?? $idCliente);
       $used_cached_history = true;
     }
   }
@@ -235,7 +279,7 @@ function casanova_calc_pago_expediente(int $idExpediente, int $idCliente, array 
   if (!$used_cached_history) {
     $pageIndex = 0;
     while (true) {
-      $chunk = casanova_giav_cobros_por_expediente($idExpediente, $idCliente, 100, $pageIndex);
+      $chunk = casanova_giav_cobros_por_expediente($idExpediente, $history_client_id, 100, $pageIndex);
       if (is_wp_error($chunk)) { $chunk = []; break; }
       if (empty($chunk)) break;
 
@@ -305,6 +349,25 @@ function casanova_calc_pago_expediente(int $idExpediente, int $idCliente, array 
     if ($fallback > 0.0001) $pagado_neto = $fallback;
   }
 
+  if ($is_group && function_exists('casanova_giav_expediente_info_economica_get')) {
+    $info_economica = casanova_giav_expediente_info_economica_get($idExpediente);
+    if (!is_wp_error($info_economica) && is_object($info_economica) && isset($info_economica->PendienteCobrar)) {
+      $pendiente_real = max(0.0, (float) $info_economica->PendienteCobrar);
+      $total_objetivo = max(0.0, $pagado_neto + $pendiente_real);
+      $expediente_pagado = ($pendiente_real <= 0.01);
+
+      return [
+        'total_objetivo' => $total_objetivo,
+        'pagado' => $pagado_neto,
+        'pendiente_real' => $pendiente_real,
+        'expediente_pagado' => $expediente_pagado,
+        'cobros_count' => count($all),
+        'economic_scope' => $economic_scope,
+        'is_group' => $is_group,
+      ];
+    }
+  }
+
   // 3) Pendiente real
   $pendiente_real = $total_objetivo - $pagado_neto;
   if ($pendiente_real < 0) $pendiente_real = 0;
@@ -317,6 +380,8 @@ function casanova_calc_pago_expediente(int $idExpediente, int $idCliente, array 
     'pendiente_real' => $pendiente_real,
     'expediente_pagado' => $expediente_pagado,
     'cobros_count' => count($all),
+    'economic_scope' => $economic_scope,
+    'is_group' => $is_group,
   ];
 }
 
@@ -512,7 +577,7 @@ function casanova_portal_render_cobros(array $ctx, bool $wrap_in_details = true)
   $idExpediente = (int)($ctx['idExpediente'] ?? 0);
   $idCliente = (int)($ctx['idCliente'] ?? 0);
 
-  $cobros = casanova_giav_cobros_por_expediente_all($idExpediente, $idCliente);
+  $cobros = casanova_giav_cobros_por_expediente_all_portal_view($idExpediente, $idCliente);
   if (is_wp_error($cobros) || empty($cobros)) return '';
 
   usort($cobros, function($a, $b){

@@ -183,6 +183,14 @@ class Casanova_Payments_Service {
     ];
     $mulligans = self::get_mulligans_snapshot($user_id);
     $mulligans_available = max(0, (int) ($mulligans['points'] ?? 0));
+    $history = self::fetch_cobros_history($idExpediente, $idCliente, $payer_default);
+    $payer_totals = self::summarize_payer_totals($history);
+
+    if (empty($payer_totals) && !empty($calc['is_group'])) {
+      $payer_totals = self::summarize_payer_totals(
+        self::fetch_group_passenger_totals_history($idExpediente)
+      );
+    }
 
     return [
       'user_id' => $user_id,
@@ -196,7 +204,10 @@ class Casanova_Payments_Service {
       'currency' => 'EUR',
       'can_pay' => !$is_read_only && $pending > 0.01,
       'pay_url' => $pay_url,
-      'history' => self::fetch_cobros_history($idExpediente, $idCliente, $payer_default),
+      'history' => $history,
+      'payer_totals' => $payer_totals,
+      'is_group' => !empty($calc['is_group']),
+      'economic_scope' => (string) ($calc['economic_scope'] ?? 'cliente'),
       'expediente_pagado' => $is_paid,
       'mulligans_used' => casanova_mulligans_used_for_expediente($idExpediente, $idCliente),
       'mulligans_available' => $mulligans_available,
@@ -221,11 +232,11 @@ class Casanova_Payments_Service {
    * - "payer" sustituye el genérico "WP user X" por el nombre del cliente.
    */
   private static function fetch_cobros_history(int $idExpediente, int $idCliente, string $payer_default = ''): array {
-    if ($idExpediente <= 0 || $idCliente <= 0 || !function_exists('casanova_giav_cobros_por_expediente_all')) {
+    if ($idExpediente <= 0 || $idCliente <= 0 || !function_exists('casanova_giav_cobros_por_expediente_all_portal_view')) {
       return [];
     }
 
-    $items = casanova_giav_cobros_por_expediente_all($idExpediente, $idCliente);
+    $items = casanova_giav_cobros_por_expediente_all_portal_view($idExpediente, $idCliente);
     if (is_wp_error($items) || !is_array($items)) {
       return [];
     }
@@ -233,6 +244,10 @@ class Casanova_Payments_Service {
     $rows = [];
     foreach ($items as $item) {
       if (!is_object($item)) continue;
+
+      $externals = isset($item->DatosExternos) && is_object($item->DatosExternos)
+        ? $item->DatosExternos
+        : null;
 
       $date_raw = trim((string) ($item->FechaCobro ?? ''));
       $ts = $date_raw ? strtotime($date_raw) : 0;
@@ -255,12 +270,29 @@ class Casanova_Payments_Service {
       if ($concept === '') {
         $concept = trim((string) ($item->Documento ?? ''));
       }
+      if ($concept === '' && $externals) {
+        $concept = trim((string) ($externals->NombreFormaPago ?? ''));
+      }
       if ($concept === '') {
         $concept = __('Pago', 'casanova-portal');
       }
 
       $payer = trim((string) ($item->Pagador ?? ''));
       $doc = trim((string) ($item->Documento ?? ''));
+
+      if ($payer === '' && $externals) {
+        foreach ([
+          $externals->NombreClienteAlias ?? '',
+          $externals->PasajeroNombre ?? '',
+          $externals->NombreCliente ?? '',
+        ] as $candidate) {
+          $candidate = trim(rtrim((string) $candidate, ', '));
+          if ($candidate !== '') {
+            $payer = $candidate;
+            break;
+          }
+        }
+      }
 
       // --- Enriquecimiento para cobros del portal (Redsys) ---
       // 1) Normalizar pagador: evitar "WP user X"
@@ -321,6 +353,257 @@ class Casanova_Payments_Service {
 
     usort($rows, function($a, $b) {
       return ($a['timestamp'] ?? 0) <=> ($b['timestamp'] ?? 0);
+    });
+
+    return $rows;
+  }
+
+  /**
+   * Fallback local para expedientes de grupo cuando GIAV no devuelve cobros por expediente.
+   *
+   * @return array<int,array<string,mixed>>
+   */
+  private static function fetch_local_intents_history(int $idExpediente, string $payer_default = ''): array {
+    if ($idExpediente <= 0 || !function_exists('casanova_payments_table')) {
+      return [];
+    }
+
+    global $wpdb;
+    if (!isset($wpdb) || !($wpdb instanceof wpdb)) {
+      return [];
+    }
+
+    $table = casanova_payments_table();
+    $items = $wpdb->get_results(
+      $wpdb->prepare(
+        "SELECT id, amount, currency, provider, method, status, order_redsys, provider_payment_id, provider_reference, payload, created_at, updated_at
+         FROM {$table}
+         WHERE id_expediente = %d
+         ORDER BY COALESCE(updated_at, created_at) ASC, id ASC",
+        $idExpediente
+      )
+    );
+
+    if (!is_array($items) || empty($items)) {
+      return [];
+    }
+
+    $rows = [];
+    foreach ($items as $item) {
+      if (!is_object($item)) {
+        continue;
+      }
+
+      $payload = [];
+      $payload_raw = (string) ($item->payload ?? '');
+      if ($payload_raw !== '') {
+        $decoded = json_decode($payload_raw, true);
+        if (is_array($decoded)) {
+          $payload = $decoded;
+        }
+      }
+
+      $giav_cobro = is_array($payload['giav_cobro'] ?? null) ? $payload['giav_cobro'] : [];
+      $has_success_marker = !empty($giav_cobro['cobro_id']) || !empty($giav_cobro['inserted_at']) || (string) ($item->status ?? '') === 'reconciled';
+      if (!$has_success_marker) {
+        continue;
+      }
+
+      $date_raw = '';
+      foreach ([
+        $giav_cobro['inserted_at'] ?? null,
+        $payload['inespay_callback']['received_at'] ?? null,
+        $payload['redsys_notify']['time'] ?? null,
+        $payload['redsys_return']['time'] ?? null,
+        $item->updated_at ?? null,
+        $item->created_at ?? null,
+      ] as $candidate) {
+        $candidate = trim((string) $candidate);
+        if ($candidate !== '') {
+          $date_raw = $candidate;
+          break;
+        }
+      }
+
+      $ts = $date_raw !== '' ? strtotime($date_raw) : 0;
+      $date = $ts ? date_i18n('Y-m-d', $ts) : '';
+
+      $mode = strtolower(trim((string) ($payload['mode'] ?? '')));
+      $reference = trim((string) ($item->provider_payment_id ?? $item->provider_reference ?? $item->order_redsys ?? ''));
+
+      if ($mode === 'deposit') {
+        $concept = $reference !== ''
+          ? sprintf(__('Depósito (portal %s)', 'casanova-portal'), $reference)
+          : __('Depósito', 'casanova-portal');
+      } elseif ($mode === 'full') {
+        $concept = $reference !== ''
+          ? sprintf(__('Pago (portal %s)', 'casanova-portal'), $reference)
+          : __('Pago', 'casanova-portal');
+      } else {
+        $concept = $reference !== ''
+          ? sprintf(__('Pago (portal %s)', 'casanova-portal'), $reference)
+          : __('Pago', 'casanova-portal');
+      }
+
+      $payer = trim((string) ($payload['billing_fullname'] ?? ''));
+      if ($payer === '') {
+        $payer = trim((string) ($payload['billing_name'] ?? ''));
+      }
+      if ($payer === '') {
+        $payer = trim((string) ($payload['payer_name'] ?? ''));
+      }
+      if ($payer === '') {
+        $payer = $payer_default;
+      }
+
+      $rows[] = [
+        'id' => 'intent-' . (int) ($item->id ?? 0),
+        'date' => $date,
+        'timestamp' => $ts,
+        'type' => __('Cobro', 'casanova-portal'),
+        'is_refund' => false,
+        'concept' => $concept,
+        'payer' => $payer,
+        'document' => $reference,
+        'amount' => abs((float) ($item->amount ?? 0)),
+      ];
+    }
+
+    usort($rows, static function($a, $b) {
+      return ($a['timestamp'] ?? 0) <=> ($b['timestamp'] ?? 0);
+    });
+
+    return $rows;
+  }
+
+  /**
+   * Fallback final para grupos: usa el total acumulado por pasajero que GIAV expone en el expediente.
+   *
+   * @return array<int,array<string,mixed>>
+   */
+  private static function fetch_group_passenger_totals_history(int $idExpediente): array {
+    if ($idExpediente <= 0 || !function_exists('casanova_giav_pasajeros_por_expediente')) {
+      return [];
+    }
+
+    $items = casanova_giav_pasajeros_por_expediente($idExpediente);
+    if (!is_array($items) || empty($items)) {
+      return [];
+    }
+
+    $rows = [];
+    foreach ($items as $item) {
+      if (!is_object($item)) {
+        continue;
+      }
+
+      $externals = isset($item->DatosExternos) && is_object($item->DatosExternos)
+        ? $item->DatosExternos
+        : null;
+
+      $amount = (float) ($externals->TotalCobrosPasajeroExp ?? 0);
+      if ($amount <= 0.0) {
+        continue;
+      }
+
+      $payer = trim((string) ($externals->NombrePasajero ?? $externals->Nombre ?? $item->NombrePasajero ?? $item->Nombre ?? ''));
+      $document = trim((string) ($item->Documento ?? ($externals->Documento ?? '')));
+      if ($payer === '') {
+        $payer = $document !== '' ? $document : __('Pasajero', 'casanova-portal');
+      }
+
+      $rows[] = [
+        'id' => 'pasajero-exp-' . (int) ($item->IdPasajero ?? $item->Id ?? count($rows) + 1),
+        'date' => '',
+        'timestamp' => 0,
+        'type' => __('Aportación', 'casanova-portal'),
+        'is_refund' => false,
+        'concept' => __('Total registrado por pasajero', 'casanova-portal'),
+        'payer' => $payer,
+        'document' => $document,
+        'amount' => abs($amount),
+      ];
+    }
+
+    usort($rows, static function(array $a, array $b): int {
+      $amount_cmp = ((float) ($b['amount'] ?? 0)) <=> ((float) ($a['amount'] ?? 0));
+      if ($amount_cmp !== 0) {
+        return $amount_cmp;
+      }
+
+      return strcmp((string) ($a['payer'] ?? ''), (string) ($b['payer'] ?? ''));
+    });
+
+    return $rows;
+  }
+
+  /**
+   * @param array<int,array<string,mixed>> $rows
+   * @return array<int,array<string,mixed>>
+   */
+  private static function summarize_payer_totals(array $rows): array {
+    if (empty($rows)) {
+      return [];
+    }
+
+    $summary = [];
+    foreach ($rows as $row) {
+      if (!is_array($row)) {
+        continue;
+      }
+
+      $payer = trim((string) ($row['payer'] ?? ''));
+      $document = trim((string) ($row['document'] ?? ''));
+      $label = $payer !== '' ? $payer : ($document !== '' ? $document : __('Pago sin identificar', 'casanova-portal'));
+      $key = function_exists('mb_strtolower')
+        ? mb_strtolower($label, 'UTF-8')
+        : strtolower($label);
+
+      if (!isset($summary[$key])) {
+        $summary[$key] = [
+          'id' => md5($key),
+          'payer' => $label,
+          'count' => 0,
+          'payments_count' => 0,
+          'refunds_count' => 0,
+          'last_date' => '',
+          'last_timestamp' => 0,
+          'amount' => 0.0,
+        ];
+      }
+
+      $amount = abs((float) ($row['amount'] ?? 0));
+      $is_refund = !empty($row['is_refund']);
+      $timestamp = (int) ($row['timestamp'] ?? 0);
+      $date = trim((string) ($row['date'] ?? ''));
+
+      $summary[$key]['count']++;
+      $summary[$key]['amount'] += $is_refund ? -$amount : $amount;
+
+      if ($is_refund) {
+        $summary[$key]['refunds_count']++;
+      } else {
+        $summary[$key]['payments_count']++;
+      }
+
+      if ($timestamp >= (int) $summary[$key]['last_timestamp']) {
+        $summary[$key]['last_timestamp'] = $timestamp;
+        $summary[$key]['last_date'] = $date;
+      }
+    }
+
+    $rows = array_values(array_map(static function(array $item): array {
+      $item['amount'] = round((float) ($item['amount'] ?? 0), 2);
+      return $item;
+    }, $summary));
+
+    usort($rows, static function(array $a, array $b): int {
+      $amount_cmp = abs((float) ($b['amount'] ?? 0)) <=> abs((float) ($a['amount'] ?? 0));
+      if ($amount_cmp !== 0) {
+        return $amount_cmp;
+      }
+
+      return (int) ($b['last_timestamp'] ?? 0) <=> (int) ($a['last_timestamp'] ?? 0);
     });
 
     return $rows;

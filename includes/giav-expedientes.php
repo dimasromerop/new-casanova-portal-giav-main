@@ -320,6 +320,95 @@ function casanova_giav_expediente_get_uncached(int $idExpediente) {
   return null;
 }
 
+if (!function_exists('casanova_giav_expediente_info_economica_get')) {
+  function casanova_giav_expediente_info_economica_get(int $idExpediente) {
+    if ($idExpediente <= 0) {
+      return null;
+    }
+
+    if (function_exists('casanova_cache_remember')) {
+      return casanova_cache_remember(
+        'giav:expediente_info_economica:' . $idExpediente,
+        300,
+        function () use ($idExpediente) {
+          return casanova_giav_expediente_info_economica_get_uncached($idExpediente);
+        }
+      );
+    }
+
+    return casanova_giav_expediente_info_economica_get_uncached($idExpediente);
+  }
+}
+
+if (!function_exists('casanova_giav_expediente_info_economica_get_uncached')) {
+  function casanova_giav_expediente_info_economica_get_uncached(int $idExpediente) {
+    $p = new stdClass();
+    $p->apikey = CASANOVA_GIAV_APIKEY;
+    $p->id = (int) $idExpediente;
+
+    $resp = casanova_giav_call('Expediente_InfoEconomica_GET', $p);
+    if (is_wp_error($resp)) {
+      return $resp;
+    }
+
+    $result = $resp->Expediente_InfoEconomica_GETResult ?? null;
+    return is_object($result) ? $result : null;
+  }
+}
+
+if (!function_exists('casanova_giav_expediente_is_group')) {
+  function casanova_giav_expediente_is_group($expediente): bool {
+    if (!is_object($expediente)) {
+      return false;
+    }
+
+    foreach (['esGrupo', 'EsGrupo'] as $key) {
+      if (!isset($expediente->$key)) {
+        continue;
+      }
+
+      $value = $expediente->$key;
+      if (is_bool($value)) {
+        return $value;
+      }
+
+      if (is_numeric($value)) {
+        return ((int) $value) === 1;
+      }
+
+      $normalized = strtolower(trim((string) $value));
+      if (in_array($normalized, ['1', 'true', 'si', 'yes'], true)) {
+        return true;
+      }
+      if (in_array($normalized, ['0', 'false', 'no', ''], true)) {
+        return false;
+      }
+    }
+
+    return false;
+  }
+}
+
+if (!function_exists('casanova_giav_expediente_is_group_by_id')) {
+  function casanova_giav_expediente_is_group_by_id(int $idExpediente): bool {
+    static $cache = [];
+
+    $idExpediente = (int) $idExpediente;
+    if ($idExpediente <= 0) {
+      return false;
+    }
+
+    if (array_key_exists($idExpediente, $cache)) {
+      return $cache[$idExpediente];
+    }
+
+    $expediente = casanova_giav_expediente_get($idExpediente);
+    $cache[$idExpediente] = !is_wp_error($expediente) && casanova_giav_expediente_is_group($expediente);
+
+    return $cache[$idExpediente];
+  }
+}
+
 add_shortcode('casanova_expediente_detalle', function() {
   if (!is_user_logged_in()) return '<p>' . esc_html__('Debes iniciar sesión.', 'casanova-portal') . '</p>';
 
