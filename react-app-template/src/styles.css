@@ -1462,7 +1462,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--accent);
   color: white;
 }
-.cp-btn.primary:hover { background: var(--accent-2); }
+.cp-btn.primary:hover { background: var(--accent-2); color: #ffffff; }
 .cp-btn.gold {
   border-color: transparent;
   background: var(--gold);
@@ -2973,7 +2973,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .cp-trip-card__cta:hover{
-  background:#1e4a1c;
+  background:#13464099;
 }
 
 .cp-trip-card__secondary{
