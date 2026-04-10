@@ -75,6 +75,7 @@ class Casanova_Trip_Service {
       self::debug_add('map', $map);
       self::debug_add('weather_is_null', $weather === null);
       $passengers = self::build_passengers($expediente_id);
+      $trip = self::enrich_trip_pax($trip, $reservas, $passengers);
       $services = [];
       $payments = self::build_payments($user_id, $idCliente, $expediente_id, $services);
       
@@ -1334,6 +1335,7 @@ class Casanova_Trip_Service {
     $product_id  = (int) ($m['id_producto'] ?? ($r->IdProducto ?? 0));
 
     $prestatario_id = (int) ($m['id_prestatario'] ?? ($r->IdPrestatario ?? 0));
+    $travellers = self::extract_traveller_counts($r, $m);
 
     return [
       'id' => $code ?: ('srv-' . $rid),
@@ -1350,6 +1352,7 @@ class Casanova_Trip_Service {
       'date_from' => $date_from,
       'date_to' => $date_to,
       'date_range' => $dates,
+      'travellers' => $travellers,
       'observations' => $observations,
       'details' => $details,
       'price' => $price,
@@ -1365,6 +1368,7 @@ class Casanova_Trip_Service {
         'locator' => (string) ($r->Localizador ?? ''),
         'observations' => $observations,
         'bonus_text' => trim((string) ($r->TextoBono ?? '')),
+        'travellers' => $travellers,
         'details' => $details,
       ],
     ];
@@ -1519,12 +1523,8 @@ class Casanova_Trip_Service {
    * @return array<string,mixed>
    */
   private static function map_golf_service($r, array $mapped): array {
-    $players = 0;
-    if (!empty($mapped['pax'])) {
-      $players = (int) $mapped['pax'];
-    } elseif (is_object($r) && isset($r->NumPax)) {
-      $players = (int) $r->NumPax;
-    }
+    $travellers = self::extract_traveller_counts($r, $mapped);
+    $players = (int) ($travellers['pax'] ?? 0);
 
     return [
       'players' => $players,
@@ -1671,15 +1671,10 @@ class Casanova_Trip_Service {
    * @param array<string,mixed> $mapped
    */
   private static function build_passengers_summary($r, array $mapped): string {
-    $pax = (int) ($mapped['pax'] ?? 0);
-    $adult = (int) ($mapped['adultos'] ?? 0);
-    $child = (int) ($mapped['ninos'] ?? 0);
-
-    if (is_object($r)) {
-      if (!$pax && isset($r->NumPax)) $pax = (int) $r->NumPax;
-      if (!$adult && isset($r->NumAdultos)) $adult = (int) $r->NumAdultos;
-      if (!$child && isset($r->NumNinos)) $child = (int) $r->NumNinos;
-    }
+    $travellers = self::extract_traveller_counts($r, $mapped);
+    $pax = (int) ($travellers['pax'] ?? 0);
+    $adult = (int) ($travellers['adults'] ?? 0);
+    $child = (int) ($travellers['children'] ?? 0);
 
     $parts = [];
     if ($adult > 0) {
@@ -1698,6 +1693,121 @@ class Casanova_Trip_Service {
     }
 
     return '';
+  }
+
+  /**
+   * @param array<string,mixed> $mapped
+   * @return array{pax:int, adults:int, children:int}
+   */
+  private static function extract_traveller_counts($r, array $mapped = []): array {
+    $dx = is_object($r) ? ($r->DatosExternos ?? null) : null;
+
+    $pax = self::pick_first_positive_int([
+      $mapped['pax'] ?? null,
+      is_object($r) ? ($r->NumPax ?? null) : null,
+      is_object($r) ? ($r->Pax ?? null) : null,
+      is_object($dx) ? ($dx->NumPax ?? null) : null,
+      is_object($dx) ? ($dx->Pax ?? null) : null,
+    ]);
+
+    $adults = self::pick_first_positive_int([
+      $mapped['adultos'] ?? null,
+      is_object($r) ? ($r->NumAdultos ?? null) : null,
+      is_object($r) ? ($r->Adultos ?? null) : null,
+      is_object($r) ? ($r->NumAdults ?? null) : null,
+      is_object($dx) ? ($dx->NumAdultos ?? null) : null,
+      is_object($dx) ? ($dx->Adultos ?? null) : null,
+      is_object($dx) ? ($dx->NumAdults ?? null) : null,
+    ]);
+
+    $children = self::pick_first_positive_int([
+      $mapped['ninos'] ?? null,
+      is_object($r) ? ($r->NumNinos ?? null) : null,
+      is_object($r) ? ($r->Ninos ?? null) : null,
+      is_object($r) ? ($r->NumChildren ?? null) : null,
+      is_object($r) ? ($r->Children ?? null) : null,
+      is_object($dx) ? ($dx->NumNinos ?? null) : null,
+      is_object($dx) ? ($dx->Ninos ?? null) : null,
+      is_object($dx) ? ($dx->NumChildren ?? null) : null,
+      is_object($dx) ? ($dx->Children ?? null) : null,
+    ]);
+
+    if ($pax <= 0 && ($adults + $children) > 0) {
+      $pax = $adults + $children;
+    }
+
+    return [
+      'pax' => $pax,
+      'adults' => $adults,
+      'children' => $children,
+    ];
+  }
+
+  /**
+   * @param array<int,mixed> $values
+   */
+  private static function pick_first_positive_int(array $values): int {
+    foreach ($values as $value) {
+      if ($value === null || $value === '') continue;
+      if (!is_numeric($value)) continue;
+      $int_value = (int) $value;
+      if ($int_value > 0) {
+        return $int_value;
+      }
+    }
+
+    return 0;
+  }
+
+  private static function resolve_trip_pax_from_reservas(array $reservas): int {
+    $best_priority = PHP_INT_MAX;
+    $best_pax = 0;
+
+    foreach ($reservas as $r) {
+      if (!is_object($r)) continue;
+
+      $mapped = function_exists('casanova_map_wsreserva') ? casanova_map_wsreserva($r) : [];
+      $travellers = self::extract_traveller_counts($r, $mapped);
+      $pax = (int) ($travellers['pax'] ?? 0);
+      if ($pax <= 0) continue;
+
+      $type = strtoupper(trim((string) ($mapped['tipo'] ?? ($r->TipoReserva ?? ''))));
+      $has_parent = (int) ($r->Anidacion_IdReservaContenedora ?? 0) > 0;
+      $priority = match ($type) {
+        'PQ' => $has_parent ? 1 : 0,
+        'HT' => 2,
+        default => 3,
+      };
+
+      if ($priority < $best_priority || ($priority === $best_priority && $pax > $best_pax)) {
+        $best_priority = $priority;
+        $best_pax = $pax;
+      }
+    }
+
+    return $best_pax;
+  }
+
+  /**
+   * @param array<string,mixed>|null $trip
+   * @param array<int,array<string,string>> $passengers
+   * @return array<string,mixed>|null
+   */
+  private static function enrich_trip_pax(?array $trip, array $reservas, array $passengers): ?array {
+    if (!is_array($trip)) return $trip;
+
+    // Prefer the pax defined on PQ/HT reservations over expediente-level totals.
+    $pax = self::resolve_trip_pax_from_reservas($reservas);
+    if ($pax <= 0) {
+      $pax = (int) ($trip['pax'] ?? 0);
+    }
+    if ($pax <= 0 && !empty($passengers)) {
+      $pax = count($passengers);
+    }
+
+    $trip['pax'] = $pax > 0 ? $pax : null;
+
+    return $trip;
   }
 
   /**

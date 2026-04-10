@@ -236,7 +236,39 @@ function casanova_render_itinerary_html(array $payload): string {
     $display_dates = casanova_fmt_date_range($trip['date_start'], $trip['date_end']);
   }
 
-  $pax_count = (int)($trip['pax'] ?? 0);
+  $resolve_service_pax = function($package, array $services): int {
+    $best_priority = PHP_INT_MAX;
+    $best_pax = 0;
+
+    $push_service = function($service) use (&$best_priority, &$best_pax) {
+      if (!is_array($service)) return;
+
+      $travellers = is_array($service['travellers'] ?? null) ? $service['travellers'] : [];
+      $pax = (int)($travellers['pax'] ?? 0);
+      if ($pax <= 0) {
+        $pax = (int)($travellers['adults'] ?? 0) + (int)($travellers['children'] ?? 0);
+      }
+      if ($pax <= 0) return;
+
+      $type = strtoupper(trim((string)($service['type'] ?? ($service['giav_type'] ?? ''))));
+      $priority = $type === 'PQ' ? 0 : ($type === 'HT' ? 1 : 2);
+
+      if ($priority < $best_priority || ($priority === $best_priority && $pax > $best_pax)) {
+        $best_priority = $priority;
+        $best_pax = $pax;
+      }
+    };
+
+    $push_service($package);
+    foreach ($services as $service) {
+      $push_service($service);
+    }
+
+    return $best_pax;
+  };
+
+  $pax_count = $resolve_service_pax($package, $services);
+  if ($pax_count <= 0) $pax_count = (int)($trip['pax'] ?? 0);
   if ($pax_count <= 0 && is_array($payload['passengers'] ?? null)) $pax_count = count($payload['passengers']);
   $pax_label = $pax_count > 0 ? sprintf(__('%d Pax', 'casanova-portal'), $pax_count) : '';
 
