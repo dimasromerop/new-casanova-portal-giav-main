@@ -1038,6 +1038,16 @@ function casanova_render_payment_link_success($link): void {
 
   $billing_email = trim((string)($meta['billing_email'] ?? ''));
   $mode = strtolower(trim((string)($meta['mode'] ?? '')));
+  $scope = strtolower(trim((string)($link->scope ?? '')));
+  $id_expediente = (int)($link->id_expediente ?? 0);
+
+  $is_group_payment = !empty($meta['group_token_id']);
+  if (!$is_group_payment && $id_expediente > 0 && function_exists('casanova_giav_expediente_is_group_by_id')) {
+    $is_group_payment = (bool) casanova_giav_expediente_is_group_by_id($id_expediente);
+  }
+  if (!$is_group_payment) {
+    $is_group_payment = in_array($scope, ['group_base', 'slot_base', 'passenger_share'], true);
+  }
 
   casanova_portal_render_public_document_start(__('Pago registrado correctamente', 'casanova-portal'));
   echo '<section class="casanova-public-page">';
@@ -1056,13 +1066,15 @@ function casanova_render_payment_link_success($link): void {
     echo '</div>';
   }
 
-  $link_account_url = function_exists('site_url') ? site_url('/login/') : home_url('/');
-  echo '<div class="casanova-public-page__success-panel">';
-  echo '<strong>' . esc_html__('Quieres acceder a tus documentos y facturas?', 'casanova-portal') . '</strong><br />';
-  echo '<a class="casanova-public-link" href="' . esc_url($link_account_url) . '">'
-    . esc_html__('Crear o vincular mi cuenta', 'casanova-portal')
-    . '</a>';
-  echo '</div>';
+  if (!$is_group_payment) {
+    $link_account_url = function_exists('site_url') ? site_url('/login/') : home_url('/');
+    echo '<div class="casanova-public-page__success-panel">';
+    echo '<strong>' . esc_html__('Quieres acceder a tus documentos y facturas?', 'casanova-portal') . '</strong><br />';
+    echo '<a class="casanova-public-link" href="' . esc_url($link_account_url) . '">'
+      . esc_html__('Crear o vincular mi cuenta', 'casanova-portal')
+      . '</a>';
+    echo '</div>';
+  }
 
   echo '</section>';
   casanova_portal_render_public_document_end();
