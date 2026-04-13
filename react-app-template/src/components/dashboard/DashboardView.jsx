@@ -245,6 +245,7 @@ export default function DashboardView({
   const flightTitles = uniqueStrings(flightServices.map((service) => flightSummary(service)));
   const transferTitles = uniqueStrings(transferServices.map((service) => transferSummary(service)));
   const otherTitles = uniqueStrings(otherServices.map((service) => service?.title));
+  const hasHotelServices = hotelServices.length > 0;
   const primaryHotel = hotelTitles[0] || "";
   const hotelCount = hotelTitles.length;
   const golfCount = golfServices.length;
@@ -257,6 +258,7 @@ export default function DashboardView({
   const nightsLabel = nights
     ? (nights === 1 ? ttf("{count} noche", { count: nights }) : ttf("{count} noches", { count: nights }))
     : "";
+  const hotelNightsLabel = hasHotelServices ? nightsLabel : "";
   const golfLabel = golfCount
     ? (golfCount === 1 ? ttf("{count} ronda de golf", { count: golfCount }) : ttf("{count} rondas de golf", { count: golfCount }))
     : "";
@@ -279,7 +281,7 @@ export default function DashboardView({
   const heroLead = hasActiveTrip
     ? tt("Todo lo importante de tu viaje, en un vistazo claro, cuidado y agradable.")
     : tt("Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila.");
-  const heroSummaryLine = [nightsLabel, golfLabel, mobilityLabel, supportLabel].filter(Boolean).slice(0, 4).join(" · ");
+  const heroSummaryLine = [hotelNightsLabel, golfLabel, mobilityLabel, supportLabel].filter(Boolean).slice(0, 4).join(" · ");
   const heroVisualLabel = destinationLine || tripLabel || tt("Tu próximo viaje");
   const heroVisualCopy = compactList(golfTitles, 1) || tripDateRange || heroSummaryLine || heroLead;
   const hotelNamesLabel = hotelTitles.join(" · ");
@@ -287,7 +289,7 @@ export default function DashboardView({
   const hotelCountLabel = hotelCount
     ? (hotelCount === 1 ? ttf("{count} hotel", { count: hotelCount }) : ttf("{count} hoteles", { count: hotelCount }))
     : "";
-  const hotelGlanceValue = nightsLabel || hotelCountLabel || tt("Hotel por confirmar");
+  const hotelGlanceValue = hotelNightsLabel || hotelCountLabel || tt("Hotel por confirmar");
   const hotelGlanceNote = hotelNamesLabel || tt("Estancia por confirmar");
   const golfGlanceValue = golfLabel || tt("Rondas de golf por confirmar");
   const golfGlanceNote = golfNamesLabel || tt("Campos por confirmar");
@@ -309,8 +311,8 @@ export default function DashboardView({
       ? tt("Documentación disponible")
       : (isPaid ? tt("Todo en marcha") : tt("Tu viaje en marcha"))));
   const includeStay = primaryHotel
-    ? `${nightsLabel ? `${nightsLabel} · ` : ""}${primaryHotel}`
-    : (nightsLabel || tt("Estancia por confirmar"));
+    ? `${hotelNightsLabel ? `${hotelNightsLabel} · ` : ""}${primaryHotel}`
+    : (hotelNightsLabel || tt("Estancia por confirmar"));
   const includeGolf = golfCount
     ? `${golfLabel}${golfTitles.length ? ` · ${compactList(golfTitles, 2)}` : ""}`
     : tt("Rondas de golf por confirmar");
@@ -322,7 +324,7 @@ export default function DashboardView({
     ? compactList(otherTitles, 2)
     : tt("Coordinación y asistencia de Casanova Golf durante tu viaje");
 
-  const includeStayValue = nightsLabel || tt("Estancia por confirmar");
+  const includeStayValue = hotelNightsLabel || tt("Estancia por confirmar");
   const includeStayDetail = compactList(hotelTitles, 3) || tt("Hoteles por confirmar");
   const includeGolfValue = golfLabel || tt("Rondas de golf por confirmar");
   const includeGolfDetail = compactList(golfTitles, 3) || tt("Campos por confirmar");
@@ -494,14 +496,16 @@ export default function DashboardView({
           </div>
 
           <div className="cp-trip-glance__grid">
-            <DashboardGlanceItem
-              icon={BedIcon}
-              label={tt("Hotel")}
-              value={hotelGlanceValue}
-              note={hotelGlanceNote}
-              loading={showTripDetailSkeleton}
-              colorClass="is-blue"
-            />
+            {hasHotelServices ? (
+              <DashboardGlanceItem
+                icon={BedIcon}
+                label={tt("Hotel")}
+                value={hotelGlanceValue}
+                note={hotelGlanceNote}
+                loading={showTripDetailSkeleton}
+                colorClass="is-blue"
+              />
+            ) : null}
 
             <DashboardGlanceItem
               icon={GolfFlagIcon}
@@ -598,13 +602,15 @@ export default function DashboardView({
           <div className="cp-trip-module__eyebrow">{tt("Lo que incluye tu viaje")}</div>
           <div className="cp-trip-module__title">{tt("Tu viaje incluye")}</div>
           <div className="cp-trip-includes">
-            <DashboardIncludeItem
-              icon={BedIcon}
-              label={tt("Estancia")}
-              value={includeStayValue}
-              detail={includeStayDetail}
-              emphasis
-            />
+            {hasHotelServices ? (
+              <DashboardIncludeItem
+                icon={BedIcon}
+                label={tt("Estancia")}
+                value={includeStayValue}
+                detail={includeStayDetail}
+                emphasis
+              />
+            ) : null}
             <DashboardIncludeItem
               icon={GolfFlagIcon}
               label={tt("Golf")}
