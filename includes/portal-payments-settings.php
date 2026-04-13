@@ -40,6 +40,24 @@ function casanova_portal_mulligans_enabled(): bool {
   return (bool) get_option('casanova_portal_mulligans_enabled', 1);
 }
 
+function casanova_payments_sanitize_admin_notification_emails($value): string {
+  $value = trim((string) $value);
+  if ($value === '') {
+    return '';
+  }
+
+  $parts = preg_split('/[\r\n,;]+/', $value) ?: [];
+  $emails = [];
+  foreach ($parts as $part) {
+    $email = sanitize_email(trim((string) $part));
+    if ($email !== '' && is_email($email)) {
+      $emails[$email] = $email;
+    }
+  }
+
+  return implode("\n", array_values($emails));
+}
+
 add_action('admin_menu', function () {
   add_menu_page(
     'Casanova Portal',
@@ -219,6 +237,12 @@ add_action('admin_init', function () {
     'type' => 'integer',
     'sanitize_callback' => 'absint',
     'default' => 0,
+  ]);
+
+  register_setting('casanova_payments', 'casanova_payment_admin_notification_emails', [
+    'type' => 'string',
+    'sanitize_callback' => 'casanova_payments_sanitize_admin_notification_emails',
+    'default' => '',
   ]);
 
   // --- Portal (legacy templates por vista)
@@ -565,6 +589,7 @@ function casanova_payments_render_settings_page(): void {
     $aplazame_private_key = (string) get_option('casanova_aplazame_private_key', '');
     $aplazame_sandbox = (bool) get_option('casanova_aplazame_sandbox', 1);
     $idfp_aplazame = (int) get_option('casanova_giav_idformapago_aplazame', 0);
+    $admin_payment_notification_emails = (string) get_option('casanova_payment_admin_notification_emails', '');
     $redsys_tpvs = function_exists('casanova_redsys_get_tpvs') ? casanova_redsys_get_tpvs() : [];
     $redsys_default_tpv = isset($redsys_tpvs['default']) && is_array($redsys_tpvs['default']) ? $redsys_tpvs['default'] : [];
     $redsys_amex_tpv = isset($redsys_tpvs['amex']) && is_array($redsys_tpvs['amex']) ? $redsys_tpvs['amex'] : [];
@@ -634,6 +659,10 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><th scope="row"><label for="casanova_giav_idformapago_aplazame">GIAV: ID forma de pago (Aplazame)</label></th>';
     echo '<td><input name="casanova_giav_idformapago_aplazame" id="casanova_giav_idformapago_aplazame" type="number" min="0" step="1" value="' . esc_attr($idfp_aplazame) . '" />';
     echo '<p class="description">Obligatorio para que la notificacion final de Aplazame registre el cobro en GIAV. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_APLAZAME</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_payment_admin_notification_emails">Notificaciones internas de pago</label></th>';
+    echo '<td><textarea name="casanova_payment_admin_notification_emails" id="casanova_payment_admin_notification_emails" rows="4" cols="60" class="large-text code" placeholder="admin@dominio.com&#10;ventas@dominio.com">' . esc_textarea($admin_payment_notification_emails) . '</textarea>';
+    echo '<p class="description">Opcional. Un email por linea o separados por comas. Se enviara un aviso interno cada vez que se registre un cobro desde el portal.</p></td></tr>';
 
     echo '</table>';
     submit_button();
@@ -1031,6 +1060,8 @@ function casanova_payments_render_settings_page(): void {
       if ($error === 'giav_amount') $msg = 'No se pudo obtener el pendiente desde GIAV. Indica un importe manual o revisa el expediente.';
       if ($error === 'amount_exceeds_pending') $msg = 'El importe indicado supera el pendiente actual del expediente en GIAV.';
       if ($error === 'expediente') $msg = 'Expediente invalido.';
+      if ($error === 'expediente_lookup') $msg = 'No se encontro ningun expediente con ese numero.';
+      if ($error === 'expediente_ambiguous') $msg = 'Ese numero coincide con un ID interno y con un codigo visible de expedientes distintos. Usa el ID interno para evitar errores.';
       if ($error === 'missing') $msg = 'Modulo de payment links no disponible.';
       if ($error === 'create') $msg = 'Error al crear el link.';
       echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
@@ -1046,6 +1077,8 @@ function casanova_payments_render_settings_page(): void {
     } elseif ($group_error) {
       $msg = 'No se pudo crear el token de grupo.';
       if ($group_error === 'expediente') $msg = 'Expediente invalido.';
+      if ($group_error === 'expediente_lookup') $msg = 'No se encontro ningun expediente con ese numero.';
+      if ($group_error === 'expediente_ambiguous') $msg = 'Ese numero coincide con un ID interno y con un codigo visible de expedientes distintos. Usa el ID interno para evitar errores.';
       if ($group_error === 'missing') $msg = 'Modulo de grupos no disponible.';
       if ($group_error === 'create') $msg = 'Error al crear el token de grupo.';
       echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
@@ -1058,8 +1091,9 @@ function casanova_payments_render_settings_page(): void {
     echo '<input type="hidden" name="action" value="casanova_create_payment_link" />';
 
     echo '<table class="form-table" role="presentation">';
-    echo '<tr><th scope="row"><label for="id_expediente">ID Expediente (GIAV)</label></th>';
-    echo '<td><input name="id_expediente" id="id_expediente" type="number" min="1" step="1" required class="regular-text" /></td></tr>';
+    echo '<tr><th scope="row"><label for="id_expediente">Expediente</label></th>';
+    echo '<td><input name="id_expediente" id="id_expediente" type="text" inputmode="numeric" pattern="[0-9]+" required class="regular-text" placeholder="ID interno o codigo visible" />';
+    echo '<p class="description">Puedes introducir el ID interno o el codigo visible del expediente. Si el numero coincide con ambos y apunta a expedientes distintos, te pediremos usar el ID interno.</p></td></tr>';
 
     echo '<tr><th scope="row"><label for="amount_authorized">Importe autorizado (EUR)</label></th>';
     echo '<td><input name="amount_authorized" id="amount_authorized" type="text" class="regular-text" placeholder="Ej: 300.00" />';
@@ -1080,8 +1114,9 @@ function casanova_payments_render_settings_page(): void {
     echo '<input type="hidden" name="action" value="casanova_create_group_token" />';
 
     echo '<table class="form-table" role="presentation">';
-    echo '<tr><th scope="row"><label for="group_id_expediente">ID Expediente (GIAV)</label></th>';
-    echo '<td><input name="group_id_expediente" id="group_id_expediente" type="number" min="1" step="1" required class="regular-text" /></td></tr>';
+    echo '<tr><th scope="row"><label for="group_id_expediente">Expediente</label></th>';
+    echo '<td><input name="group_id_expediente" id="group_id_expediente" type="text" inputmode="numeric" pattern="[0-9]+" required class="regular-text" placeholder="ID interno o codigo visible" />';
+    echo '<p class="description">Puedes introducir el ID interno o el codigo visible del expediente. Si el numero coincide con ambos y apunta a expedientes distintos, te pediremos usar el ID interno.</p></td></tr>';
 
     echo '<tr><th scope="row"><label for="group_id_reserva_pq">ID Reserva PQ (opcional)</label></th>';
     echo '<td><input name="group_id_reserva_pq" id="group_id_reserva_pq" type="number" min="0" step="1" class="regular-text" /></td></tr>';

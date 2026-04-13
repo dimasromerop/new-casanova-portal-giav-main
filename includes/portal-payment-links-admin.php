@@ -63,7 +63,8 @@ add_action('admin_post_casanova_create_payment_link', function () {
 
   check_admin_referer('casanova_create_payment_link');
 
-  $idExpediente = isset($_POST['id_expediente']) ? absint($_POST['id_expediente']) : 0;
+  $expediente_ref = isset($_POST['id_expediente']) ? sanitize_text_field((string) $_POST['id_expediente']) : '';
+  $idExpediente = 0;
   $amount_raw = isset($_POST['amount_authorized']) ? (string)$_POST['amount_authorized'] : '';
   $amount_raw = trim($amount_raw);
   $amount = $amount_raw !== '' ? (float) str_replace(',', '.', $amount_raw) : 0.0;
@@ -82,9 +83,31 @@ add_action('admin_post_casanova_create_payment_link', function () {
     }
   }
 
+  if (!function_exists('casanova_payment_links_resolve_expediente_reference')) {
+    $base = casanova_payment_links_admin_base_url();
+    $url = add_query_arg(['link_error' => 'expediente_lookup'], $base);
+    wp_safe_redirect($url);
+    exit;
+  }
+
+  $resolved_expediente = casanova_payment_links_resolve_expediente_reference($expediente_ref);
+  if (is_wp_error($resolved_expediente)) {
+    $error_code = match ($resolved_expediente->get_error_code()) {
+      'payment_link_ambiguous_expediente' => 'expediente_ambiguous',
+      'payment_link_expediente_not_found',
+      'payment_link_missing_expediente_lookup' => 'expediente_lookup',
+      default => 'expediente',
+    };
+    $base = casanova_payment_links_admin_base_url();
+    $url = add_query_arg(['link_error' => $error_code], $base);
+    wp_safe_redirect($url);
+    exit;
+  }
+
+  $idExpediente = (int) ($resolved_expediente['id'] ?? 0);
   if ($idExpediente <= 0) {
     $base = casanova_payment_links_admin_base_url();
-    $url = add_query_arg(['link_error' => 'expediente'], $base);
+    $url = add_query_arg(['link_error' => 'expediente_lookup'], $base);
     wp_safe_redirect($url);
     exit;
   }
@@ -139,6 +162,11 @@ add_action('admin_post_casanova_create_payment_link', function () {
       'amount_source' => $amount_source,
       'giav_pending_amount' => (!is_wp_error($pending_amount) && $pending_amount !== null) ? (float)$pending_amount : null,
       'created_by_user' => (int) get_current_user_id(),
+      'expediente_lookup' => [
+        'input' => (string) ($resolved_expediente['input'] ?? $expediente_ref),
+        'source' => (string) ($resolved_expediente['source'] ?? ''),
+        'codigo' => (string) ($resolved_expediente['codigo'] ?? ''),
+      ],
     ],
   ]);
 

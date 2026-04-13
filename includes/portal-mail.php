@@ -15,6 +15,24 @@ function casanova_mail_defaults(): array {
   return [$from_email, $from_name];
 }
 
+function casanova_mail_admin_payment_recipients(): array {
+  $raw = (string) get_option('casanova_payment_admin_notification_emails', '');
+  if ($raw === '') {
+    return [];
+  }
+
+  $parts = preg_split('/[\r\n,;]+/', $raw) ?: [];
+  $emails = [];
+  foreach ($parts as $part) {
+    $email = sanitize_email(trim((string) $part));
+    if ($email !== '' && is_email($email)) {
+      $emails[$email] = $email;
+    }
+  }
+
+  return array_values($emails);
+}
+
 function casanova_mail_send($to, string $subject, string $html, array $args = []): bool {
   if (empty($to)) return false;
 
@@ -58,6 +76,18 @@ function casanova_mail_send_expediente_paid(array $ctx): bool {
   $to = $ctx['to'] ?? '';
   $tpl = casanova_tpl_email_expediente_pagado($ctx);
   $subject = $tpl['subject'] ?? 'Pago completado';
+  $html = $tpl['html'] ?? '';
+  return casanova_mail_send($to, $subject, $html);
+}
+
+function casanova_mail_send_admin_payment_notice(array $ctx): bool {
+  $to = $ctx['to'] ?? [];
+  if (empty($to)) {
+    return false;
+  }
+
+  $tpl = casanova_tpl_email_admin_payment_notice($ctx);
+  $subject = $tpl['subject'] ?? 'Nuevo pago registrado';
   $html = $tpl['html'] ?? '';
   return casanova_mail_send($to, $subject, $html);
 }

@@ -8,7 +8,8 @@ add_action('admin_post_casanova_create_group_token', function () {
 
   check_admin_referer('casanova_create_group_token');
 
-  $idExpediente = isset($_POST['group_id_expediente']) ? absint($_POST['group_id_expediente']) : 0;
+  $expediente_ref = isset($_POST['group_id_expediente']) ? sanitize_text_field((string) $_POST['group_id_expediente']) : '';
+  $idExpediente = 0;
   $idReservaPQ = isset($_POST['group_id_reserva_pq']) ? absint($_POST['group_id_reserva_pq']) : 0;
   $unit_total_raw = isset($_POST['group_unit_total']) ? (string)$_POST['group_unit_total'] : '';
   $unit_total = (float) str_replace(',', '.', preg_replace('/[^0-9\,\.]/', '', $unit_total_raw));
@@ -26,8 +27,26 @@ add_action('admin_post_casanova_create_group_token', function () {
   $base = function_exists('casanova_payment_links_admin_base_url')
     ? casanova_payment_links_admin_base_url()
     : admin_url('admin.php?page=casanova-payments-links');
-  if ($idExpediente <= 0) {
+  if (!function_exists('casanova_payment_links_resolve_expediente_reference')) {
     wp_safe_redirect(add_query_arg(['group_error' => 'expediente'], $base));
+    exit;
+  }
+
+  $resolved_expediente = casanova_payment_links_resolve_expediente_reference($expediente_ref);
+  if (is_wp_error($resolved_expediente)) {
+    $error_code = match ($resolved_expediente->get_error_code()) {
+      'payment_link_ambiguous_expediente' => 'expediente_ambiguous',
+      'payment_link_expediente_not_found',
+      'payment_link_missing_expediente_lookup' => 'expediente_lookup',
+      default => 'expediente',
+    };
+    wp_safe_redirect(add_query_arg(['group_error' => $error_code], $base));
+    exit;
+  }
+
+  $idExpediente = (int) ($resolved_expediente['id'] ?? 0);
+  if ($idExpediente <= 0) {
+    wp_safe_redirect(add_query_arg(['group_error' => 'expediente_lookup'], $base));
     exit;
   }
 

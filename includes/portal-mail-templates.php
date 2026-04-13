@@ -203,3 +203,63 @@ function casanova_tpl_email_resto_pago_magic_link(array $ctx): array {
   $html = casanova_mail_wrap_html($subject, $body);
   return ['subject' => $subject, 'html' => $html, 'to' => $to];
 }
+
+function casanova_tpl_email_admin_payment_notice(array $ctx): array {
+  $idExp = (int)($ctx['idExpediente'] ?? 0);
+  $codExp = (string)($ctx['codigoExpediente'] ?? '');
+  $expLabel = $codExp !== '' ? esc_html($codExp) : ('#' . $idExp);
+
+  $payer = trim((string)($ctx['payer_name'] ?? ''));
+  $payerEmail = trim((string)($ctx['payer_email'] ?? ''));
+  $importe = (string)($ctx['importe'] ?? '');
+  $fecha = (string)($ctx['fecha'] ?? '');
+  $modalidad = (string)($ctx['modalidad'] ?? '');
+  $provider = (string)($ctx['provider'] ?? '');
+  $method = (string)($ctx['method'] ?? '');
+  $scope = (string)($ctx['scope'] ?? '');
+  $reference = (string)($ctx['reference'] ?? '');
+  $tripTitle = (string)($ctx['trip_title'] ?? '');
+
+  $subject = sprintf(__('Nuevo pago registrado – Expediente %s', 'casanova-portal'), $expLabel);
+
+  $body = '<p>' . sprintf(wp_kses_post(__('Se ha registrado un nuevo pago en el expediente <strong>%s</strong>.', 'casanova-portal')), $expLabel) . '</p>';
+
+  $body .= '<table class="casanova-mail__summary">';
+  if ($tripTitle !== '') {
+    $body .= casanova_mail_summary_row_html(__('Expediente', 'casanova-portal'), esc_html($tripTitle . ' (' . $expLabel . ')'));
+  } else {
+    $body .= casanova_mail_summary_row_html(__('Expediente', 'casanova-portal'), esc_html($expLabel));
+  }
+  if ($payer !== '') {
+    $body .= casanova_mail_summary_row_html(__('Pagador', 'casanova-portal'), esc_html($payer));
+  }
+  if ($payerEmail !== '') {
+    $body .= casanova_mail_summary_row_html(__('Email', 'casanova-portal'), esc_html($payerEmail));
+  }
+  if ($importe !== '') {
+    $body .= casanova_mail_summary_row_html(__('Importe', 'casanova-portal'), '<strong>' . esc_html($importe) . '</strong>');
+  }
+  if ($modalidad !== '') {
+    $body .= casanova_mail_summary_row_html(__('Modalidad', 'casanova-portal'), esc_html($modalidad));
+  }
+  if ($fecha !== '') {
+    $body .= casanova_mail_summary_row_html(__('Fecha', 'casanova-portal'), esc_html($fecha));
+  }
+  if ($provider !== '') {
+    $body .= casanova_mail_summary_row_html(__('Proveedor', 'casanova-portal'), esc_html($provider));
+  }
+  if ($method !== '') {
+    $body .= casanova_mail_summary_row_html(__('Metodo', 'casanova-portal'), esc_html($method));
+  }
+  if ($scope !== '') {
+    $body .= casanova_mail_summary_row_html(__('Origen', 'casanova-portal'), esc_html($scope));
+  }
+  if ($reference !== '') {
+    $body .= casanova_mail_summary_row_html(__('Referencia', 'casanova-portal'), esc_html($reference));
+  }
+  $body .= '</table>';
+
+  $html = casanova_mail_wrap_html(__('Aviso interno de pago', 'casanova-portal'), $body);
+
+  return ['subject' => $subject, 'html' => $html];
+}

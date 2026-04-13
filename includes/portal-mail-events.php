@@ -172,6 +172,7 @@ function casanova_portal_payments_tick(int $idExpediente, int $idCliente, array 
 
 add_action('casanova_payment_reconciled', 'casanova_on_payment_reconciled_send_emails', 10, 1);
 add_action('casanova_payment_cobro_recorded', 'casanova_on_payment_cobro_recorded_send_email', 10, 1);
+add_action('casanova_payment_cobro_recorded', 'casanova_on_payment_cobro_recorded_notify_admins', 15, 1);
 
 // Mulligans: registrar movimientos por pago (en vez de solo totales).
 add_action('casanova_payment_cobro_recorded', 'casanova_on_payment_cobro_recorded_mulligans', 20, 1);
@@ -259,6 +260,108 @@ function casanova_on_payment_cobro_recorded_send_email(int $intent_id): void {
     ]);
     error_log('[CASANOVA][MAIL] UPDATED: mail_cobro_sent_at (cobro_recorded)');
   }
+}
+
+function casanova_on_payment_cobro_recorded_notify_admins(int $intent_id): void {
+  $intent_id = (int) $intent_id;
+  if ($intent_id <= 0) return;
+  if (!function_exists('casanova_payment_intent_get') || !function_exists('casanova_payment_intent_update')) return;
+  if (!function_exists('casanova_mail_admin_payment_recipients') || !function_exists('casanova_mail_send_admin_payment_notice')) return;
+
+  $recipients = casanova_mail_admin_payment_recipients();
+  if (empty($recipients)) {
+    return;
+  }
+
+  $intent = casanova_payment_intent_get($intent_id);
+  if (!$intent || !is_object($intent)) return;
+
+  $payload = casanova_payment_intent_payload_array($intent);
+  if (!empty($payload['admin_payment_notice_sent_at'])) {
+    return;
+  }
+
+  $mail_ctx = casanova_payment_intent_email_context($intent);
+  $exp_id = (int)($intent->id_expediente ?? 0);
+
+  $exp = null;
+  $codExp = '';
+  $trip_title = '';
+  if ($exp_id > 0 && function_exists('casanova_giav_expediente_get')) {
+    try {
+      $exp = casanova_giav_expediente_get($exp_id);
+      if (is_object($exp)) {
+        $codExp = (string)($exp->CodigoExpediente ?? ($exp->Codigo ?? ''));
+        $trip_title = trim((string)($exp->Titulo ?? ''));
+      }
+    } catch (Throwable $e) {
+      error_log('[CASANOVA][MAIL] WARN: expediente_get failed for admin notice: ' . $e->getMessage());
+    }
+  }
+
+  $provider = strtolower(trim((string)($intent->provider ?? '')));
+  $provider_label = match ($provider) {
+    'redsys' => 'Redsys',
+    'inespay' => 'Inespay',
+    'aplazame' => 'Aplazame',
+    default => ($provider !== '' ? $provider : 'portal'),
+  };
+
+  $method = strtolower(trim((string)($intent->method ?? '')));
+  $method_label = match ($method) {
+    'card' => __('Tarjeta', 'casanova-portal'),
+    'bank_transfer' => __('Transferencia bancaria', 'casanova-portal'),
+    'aplazame' => 'Aplazame',
+    default => ($method !== '' ? $method : __('Pago', 'casanova-portal')),
+  };
+
+  $payment_link_scope = (string)($mail_ctx['payment_link_scope'] ?? '');
+  $scope_label = match ($payment_link_scope) {
+    'group_base' => __('Pago de grupo', 'casanova-portal'),
+    'individual_link' => __('Link individual', 'casanova-portal'),
+    'slot_base' => __('Plaza de grupo', 'casanova-portal'),
+    'passenger_share' => __('Pago por pasajero', 'casanova-portal'),
+    default => ($payment_link_scope !== '' ? $payment_link_scope : __('Portal', 'casanova-portal')),
+  };
+
+  $mode = strtolower(trim((string)($mail_ctx['mode'] ?? '')));
+  $mode_label = match ($mode) {
+    'deposit' => __('Depósito', 'casanova-portal'),
+    'rest' => __('Pago restante', 'casanova-portal'),
+    'full' => __('Pago total', 'casanova-portal'),
+    default => __('Pago', 'casanova-portal'),
+  };
+
+  $reference = trim((string)($intent->provider_payment_id ?? $intent->provider_reference ?? $intent->order_redsys ?? ''));
+  $payer_name = trim((string)($mail_ctx['billing_fullname'] ?? $mail_ctx['cliente_nombre'] ?? ''));
+  $payer_email = trim((string)($mail_ctx['billing_email'] ?? ''));
+
+  $ctx = [
+    'to' => $recipients,
+    'idExpediente' => $exp_id,
+    'codigoExpediente' => $codExp,
+    'trip_title' => $trip_title,
+    'payer_name' => $payer_name,
+    'payer_email' => $payer_email,
+    'importe' => number_format((float)($intent->amount ?? 0), 2, ',', '.') . ' €',
+    'fecha' => date_i18n('d/m/Y H:i', current_time('timestamp')),
+    'modalidad' => $mode_label,
+    'provider' => $provider_label,
+    'method' => $method_label,
+    'scope' => $scope_label,
+    'reference' => $reference,
+  ];
+
+  $ok = (bool) casanova_mail_send_admin_payment_notice($ctx);
+  if (!$ok) {
+    return;
+  }
+
+  $payload['admin_payment_notice_sent_at'] = current_time('mysql');
+  $payload['admin_payment_notice_recipients'] = $recipients;
+  casanova_payment_intent_update($intent_id, [
+    'payload' => $payload,
+  ]);
 }
 
 /**
