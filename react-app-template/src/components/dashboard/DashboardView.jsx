@@ -251,6 +251,7 @@ export default function DashboardView({
   const golfCount = golfServices.length;
   const hasFlightSummary = flightTitles.length > 0;
   const hasTransferSummary = transferTitles.length > 0;
+  const hasMobilityServices = hasFlightSummary || hasTransferSummary;
   const flightCount = hasFlightSummary ? flightServices.length : 0;
   const transferCount = hasTransferSummary ? transferServices.length : 0;
   const extrasCount = otherServices.length;
@@ -618,11 +619,13 @@ export default function DashboardView({
               detail={includeGolfDetail}
               emphasis
             />
-            <DashboardIncludeItem
-              icon={CarIcon}
-              label={tt("Vuelos y traslados")}
-              value={includeMobility}
-            />
+            {hasMobilityServices ? (
+              <DashboardIncludeItem
+                icon={CarIcon}
+                label={tt("Vuelos y traslados")}
+                value={includeMobility}
+              />
+            ) : null}
             <DashboardIncludeItem
               icon={ChatBubbleIcon}
               label={tt("Extras y asistencia")}
