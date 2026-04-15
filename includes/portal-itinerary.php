@@ -16,8 +16,12 @@ function casanova_render_itinerary_html(array $payload): string {
   }
 
   $services = [];
-  $package = is_array($payload['package'] ?? null) ? $payload['package'] : null;
-  if (is_array($package)) {
+  $packages = is_array($payload['packages'] ?? null) ? array_values($payload['packages']) : [];
+  if (empty($packages) && is_array($payload['package'] ?? null)) {
+    $packages[] = $payload['package'];
+  }
+  foreach ($packages as $package) {
+    if (!is_array($package)) continue;
     $pkg_services = is_array($package['services'] ?? null) ? $package['services'] : [];
     foreach ($pkg_services as $s) {
       if (is_array($s)) $services[] = $s;
@@ -236,7 +240,7 @@ function casanova_render_itinerary_html(array $payload): string {
     $display_dates = casanova_fmt_date_range($trip['date_start'], $trip['date_end']);
   }
 
-  $resolve_service_pax = function($package, array $services): int {
+  $resolve_service_pax = function(array $packages, array $services): int {
     $best_priority = PHP_INT_MAX;
     $best_pax = 0;
 
@@ -259,7 +263,9 @@ function casanova_render_itinerary_html(array $payload): string {
       }
     };
 
-    $push_service($package);
+    foreach ($packages as $package) {
+      $push_service($package);
+    }
     foreach ($services as $service) {
       $push_service($service);
     }
@@ -267,7 +273,7 @@ function casanova_render_itinerary_html(array $payload): string {
     return $best_pax;
   };
 
-  $pax_count = $resolve_service_pax($package, $services);
+  $pax_count = $resolve_service_pax($packages, $services);
   if ($pax_count <= 0) $pax_count = (int)($trip['pax'] ?? 0);
   if ($pax_count <= 0 && is_array($payload['passengers'] ?? null)) $pax_count = count($payload['passengers']);
   $pax_label = $pax_count > 0 ? sprintf(__('%d Pax', 'casanova-portal'), $pax_count) : '';

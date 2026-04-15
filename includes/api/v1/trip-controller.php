@@ -13,6 +13,7 @@ class Casanova_Trip_Controller {
       'giav'   => ['ok' => false, 'source' => 'live', 'error' => $message],
       'trip'   => null,
       'package' => null,
+      'packages' => [],
       'extras' => [],
       'passengers' => [],
       'payments' => null,
@@ -101,6 +102,7 @@ class Casanova_Trip_Controller {
 
       $perf_context['has_trip'] = !empty($data['trip']) ? 1 : 0;
       $perf_context['has_package'] = !empty($data['package']) ? 1 : 0;
+      $perf_context['packages_count'] = count((array) ($data['packages'] ?? []));
       $perf_context['extras_count'] = count((array) ($data['extras'] ?? []));
       $perf_context['invoice_count'] = count((array) ($data['invoices'] ?? []));
       $perf_context['voucher_count'] = count((array) ($data['vouchers'] ?? []));

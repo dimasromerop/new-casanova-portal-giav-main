@@ -21,6 +21,7 @@ import { api } from "./lib/api.js";
 import { readParams, setParam } from "./lib/params.js";
 import { getBonusesVariant, getPaymentVariant, getStatusVariant } from "./lib/statusBadges.js";
 import { LS_KEYS, lsGet, lsSet, resolveInitialTheme } from "./lib/storage.js";
+import { pickTripHeroImage } from "./lib/tripServices.js";
 
 /* ===== Local state =====
    El portal ya escribe mensajes propios; GIAV sigue entrando como fuente adicional.
@@ -601,17 +602,7 @@ function MulligansView({ data }) {
 
 
 function pickHeroImageFromTripDetail(detail) {
-  if (!detail || typeof detail !== "object") return "";
-  const pkgServices = Array.isArray(detail?.package?.services) ? detail.package.services : [];
-  const extras = Array.isArray(detail?.extras) ? detail.extras : [];
-  const pool = [...pkgServices, ...extras];
-  for (const s of pool) {
-    const url = s?.media?.image_url;
-    if (typeof url === "string" && url.trim() !== "") return url.trim();
-  }
-  // fallback: sometimes trip may include a hero image directly
-  const tripImg = detail?.trip?.media?.image_url || detail?.trip?.hero_image_url || "";
-  return typeof tripImg === "string" ? tripImg.trim() : "";
+  return pickTripHeroImage(detail);
 }
 
 function dashboardSnapshotStorageKey(mock = false) {

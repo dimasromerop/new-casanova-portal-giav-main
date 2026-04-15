@@ -6,6 +6,7 @@ import { tt, ttf } from "../i18n/t.js";
 import { api } from "../lib/api.js";
 import { euro, formatDateES, normalizeTripDates } from "../lib/formatters.js";
 import { getPaymentVariant, getStatusVariant } from "../lib/statusBadges.js";
+import { pickTripHeroImage } from "../lib/tripServices.js";
 
 const EMPTY_VALUE = "—";
 const VIEW_STORAGE_KEY = "casanova-trips-list-view";
@@ -65,20 +66,7 @@ function formatTripAmount(value, currency = "EUR") {
 }
 
 function pickHeroImageFromSummary(summary) {
-  if (!summary || typeof summary !== "object") return "";
-  const pkgServices = Array.isArray(summary?.package?.services) ? summary.package.services : [];
-  const extras = Array.isArray(summary?.extras) ? summary.extras : [];
-  const pool = [...pkgServices, ...extras];
-
-  for (const service of pool) {
-    const url = service?.media?.image_url;
-    if (typeof url === "string" && url.trim() !== "") {
-      return url.trim();
-    }
-  }
-
-  const packageImage = summary?.package?.media?.image_url || "";
-  return typeof packageImage === "string" ? packageImage.trim() : "";
+  return pickTripHeroImage(summary);
 }
 
 function getTripHeroImage(trip) {

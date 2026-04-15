@@ -167,6 +167,7 @@ class Casanova_Trip_Service {
         'map'     => $map,
         'weather' => $weather,
         'package' => $structure['package'],
+        'packages' => $structure['packages'],
         'extras' => $structure['extras'],
         'passengers' => $passengers,
         'payments' => $payments,
@@ -188,6 +189,7 @@ class Casanova_Trip_Service {
         'map'    => null,
         'weather' => null,
         'package' => null,
+        'packages' => [],
         'extras' => [],
         'passengers' => [],
         'payments' => null,
@@ -235,6 +237,7 @@ class Casanova_Trip_Service {
       'map'    => null,
       'weather' => null,
       'package' => null,
+      'packages' => [],
       'extras' => [],
       'passengers' => [],
       'payments' => null,
@@ -314,11 +317,12 @@ class Casanova_Trip_Service {
   }
 
   /**
-   * @return array{package: array<string,mixed>|null, extras: array<int,array<string,mixed>>, map: array<string,mixed>|null}
+   * @return array{package: array<string,mixed>|null, packages: array<int,array<string,mixed>>, extras: array<int,array<string,mixed>>, map: array<string,mixed>|null}
    */
   private static function empty_dashboard_summary(): array {
     return [
       'package' => null,
+      'packages' => [],
       'extras' => [],
       'map' => null,
     ];
@@ -338,11 +342,11 @@ class Casanova_Trip_Service {
 
   /**
    * @param array<int,mixed> $reservas
-   * @return array{package: array<string,mixed>|null, extras: array<int,array<string,mixed>>}
+   * @return array{package: array<string,mixed>|null, packages: array<int,array<string,mixed>>, extras: array<int,array<string,mixed>>}
    */
   private static function build_package_structure(int $expediente_id, array $reservas, bool $lightweight = false): array {
     if (empty($reservas)) {
-      return ['package' => null, 'extras' => []];
+      return ['package' => null, 'packages' => [], 'extras' => []];
     }
 
     $byId = [];
@@ -384,7 +388,7 @@ class Casanova_Trip_Service {
         if (!is_object($r)) continue;
         $extras[] = self::normalize_service($r, $expediente_id, false, $expediente_pagado, !$lightweight, $lightweight);
       }
-      return ['package' => null, 'extras' => $extras];
+      return ['package' => null, 'packages' => [], 'extras' => $extras];
     }
 
     foreach ($reservas as $r) {
@@ -395,25 +399,50 @@ class Casanova_Trip_Service {
       $extras[] = self::normalize_service($r, $expediente_id, false, $expediente_pagado, !$lightweight, $lightweight);
     }
 
-    $root = reset($pqs);
-    $root_id = (int) ($root->Id ?? 0);
-    $kids = $children[$root_id] ?? [];
-    $allow_voucher_root = empty($kids) && $expediente_pagado;
-    $pkg = self::normalize_service($root, $expediente_id, true, $allow_voucher_root, !$lightweight, $lightweight);
-    $pkg['type'] = 'PQ';
-    $pkg['services'] = [];
-    foreach ($kids as $kid) {
-      $pkg['services'][] = self::normalize_service($kid, $expediente_id, true, $expediente_pagado, false, $lightweight);
+    $packages = [];
+    foreach ($pqs as $root) {
+      if (!is_object($root)) continue;
+      $root_id = (int) ($root->Id ?? 0);
+      $kids = $children[$root_id] ?? [];
+      $allow_voucher_root = empty($kids) && $expediente_pagado;
+      $pkg = self::normalize_service($root, $expediente_id, true, $allow_voucher_root, !$lightweight, $lightweight);
+      $pkg['type'] = 'PQ';
+      $pkg['services'] = [];
+      foreach ($kids as $kid) {
+        $pkg['services'][] = self::normalize_service($kid, $expediente_id, true, $expediente_pagado, false, $lightweight);
+      }
+      $packages[] = $pkg;
     }
 
+    usort($packages, static function(array $a, array $b): int {
+      $a_from = !empty($a['date_from']) ? strtotime((string) $a['date_from']) : false;
+      $b_from = !empty($b['date_from']) ? strtotime((string) $b['date_from']) : false;
+      $a_key = $a_from !== false ? (int) $a_from : PHP_INT_MAX;
+      $b_key = $b_from !== false ? (int) $b_from : PHP_INT_MAX;
+      if ($a_key !== $b_key) {
+        return $a_key <=> $b_key;
+      }
+
+      $a_to = !empty($a['date_to']) ? strtotime((string) $a['date_to']) : false;
+      $b_to = !empty($b['date_to']) ? strtotime((string) $b['date_to']) : false;
+      $a_end = $a_to !== false ? (int) $a_to : PHP_INT_MAX;
+      $b_end = $b_to !== false ? (int) $b_to : PHP_INT_MAX;
+      if ($a_end !== $b_end) {
+        return $a_end <=> $b_end;
+      }
+
+      return strcmp((string) ($a['title'] ?? ''), (string) ($b['title'] ?? ''));
+    });
+
     return [
-      'package' => $pkg,
+      'package' => $packages[0] ?? null,
+      'packages' => $packages,
       'extras' => $extras,
     ];
   }
 
   /**
-   * @return array{package: array<string,mixed>|null, extras: array<int,array<string,mixed>>, map: array<string,mixed>|null}
+   * @return array{package: array<string,mixed>|null, packages: array<int,array<string,mixed>>, extras: array<int,array<string,mixed>>, map: array<string,mixed>|null}
    */
   private static function build_dashboard_summary(int $idCliente, int $expediente_id): array {
     $reservas = self::build_reservas($idCliente, $expediente_id);
@@ -421,9 +450,35 @@ class Casanova_Trip_Service {
 
     return [
       'package' => is_array($structure['package'] ?? null) ? $structure['package'] : null,
+      'packages' => isset($structure['packages']) && is_array($structure['packages']) ? array_values($structure['packages']) : [],
       'extras' => isset($structure['extras']) && is_array($structure['extras']) ? array_values($structure['extras']) : [],
       'map' => self::build_map_from_structure($structure, null),
     ];
+  }
+
+  /**
+   * @param array<string,mixed> $structure
+   * @return array<int,array<string,mixed>>
+   */
+  private static function normalized_packages_from_structure(array $structure): array {
+    $packages = $structure['packages'] ?? null;
+    if (!is_array($packages)) {
+      $packages = [];
+    }
+
+    $out = [];
+    foreach ($packages as $pkg) {
+      if (is_array($pkg)) {
+        $out[] = $pkg;
+      }
+    }
+
+    if (!empty($out)) {
+      return $out;
+    }
+
+    $legacy_package = $structure['package'] ?? null;
+    return is_array($legacy_package) ? [$legacy_package] : [];
   }
 
 
@@ -523,8 +578,7 @@ class Casanova_Trip_Service {
       $titles[] = $t;
     };
 
-    $pkg = $structure['package'] ?? null;
-    if (is_array($pkg)) {
+    foreach (self::normalized_packages_from_structure($structure) as $pkg) {
       $services = $pkg['services'] ?? [];
       if (is_array($services)) {
         foreach ($services as $s) $push($s);
@@ -623,8 +677,7 @@ class Casanova_Trip_Service {
    * @return array<string,mixed>|null
    */
   private static function find_primary_hotel_service(array $structure): ?array {
-    $pkg = $structure['package'] ?? null;
-    if (is_array($pkg)) {
+    foreach (self::normalized_packages_from_structure($structure) as $pkg) {
       $services = $pkg['services'] ?? [];
       if (is_array($services)) {
         foreach ($services as $s) {
@@ -2343,6 +2396,7 @@ class Casanova_Trip_Service {
         'giav'   => ['ok' => true, 'source' => 'mock', 'error' => null],
         'trip'   => null,
         'package' => null,
+        'packages' => [],
         'extras' => [],
         'passengers' => [],
         'payments' => null,
@@ -2356,6 +2410,9 @@ class Casanova_Trip_Service {
     if (!isset($data['status'])) $data['status'] = 'mock';
     if (!isset($data['giav'])) $data['giav'] = ['ok' => true, 'source' => 'mock', 'error' => null];
     if (!array_key_exists('package', $data)) $data['package'] = null;
+    if (!isset($data['packages']) || !is_array($data['packages'])) {
+      $data['packages'] = is_array($data['package'] ?? null) ? [$data['package']] : [];
+    }
     if (!isset($data['extras']) || !is_array($data['extras'])) $data['extras'] = [];
     if (!isset($data['passengers']) || !is_array($data['passengers'])) $data['passengers'] = [];
     if (!isset($data['invoices']) || !is_array($data['invoices'])) $data['invoices'] = [];

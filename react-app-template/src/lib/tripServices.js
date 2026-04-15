@@ -12,6 +12,80 @@ export function uniqueStrings(values) {
   return out;
 }
 
+export function tripPackages(payload) {
+  const packages = Array.isArray(payload?.packages) ? payload.packages : [];
+  const normalized = packages.filter((item) => item && typeof item === "object");
+  if (normalized.length) {
+    return [...normalized].sort((left, right) => {
+      const leftStart = dateToUtcMidnight(left?.date_from || left?.date_start || "");
+      const rightStart = dateToUtcMidnight(right?.date_from || right?.date_start || "");
+      const leftStartKey = Number.isFinite(leftStart) ? leftStart : Number.MAX_SAFE_INTEGER;
+      const rightStartKey = Number.isFinite(rightStart) ? rightStart : Number.MAX_SAFE_INTEGER;
+      if (leftStartKey !== rightStartKey) return leftStartKey - rightStartKey;
+
+      const leftEnd = dateToUtcMidnight(left?.date_to || left?.date_end || "");
+      const rightEnd = dateToUtcMidnight(right?.date_to || right?.date_end || "");
+      const leftEndKey = Number.isFinite(leftEnd) ? leftEnd : Number.MAX_SAFE_INTEGER;
+      const rightEndKey = Number.isFinite(rightEnd) ? rightEnd : Number.MAX_SAFE_INTEGER;
+      if (leftEndKey !== rightEndKey) return leftEndKey - rightEndKey;
+
+      return String(left?.title || "").localeCompare(String(right?.title || ""), undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+    });
+  }
+
+  const legacyPackage = payload?.package;
+  return legacyPackage && typeof legacyPackage === "object" ? [legacyPackage] : [];
+}
+
+export function primaryTripPackage(payload) {
+  return tripPackages(payload)[0] || null;
+}
+
+export function tripPackageServices(payload) {
+  const services = [];
+  for (const pkg of tripPackages(payload)) {
+    const packageServices = Array.isArray(pkg?.services) ? pkg.services : [];
+    for (const service of packageServices) {
+      if (service && typeof service === "object") {
+        services.push(service);
+      }
+    }
+  }
+  return services;
+}
+
+export function tripAllServices(payload) {
+  const extras = Array.isArray(payload?.extras) ? payload.extras.filter((item) => item && typeof item === "object") : [];
+  return [...tripPackageServices(payload), ...extras];
+}
+
+export function pickTripHeroImage(payload) {
+  for (const service of tripAllServices(payload)) {
+    const url = service?.media?.image_url;
+    if (typeof url === "string" && url.trim() !== "") {
+      return url.trim();
+    }
+  }
+
+  for (const pkg of tripPackages(payload)) {
+    const url = pkg?.media?.image_url;
+    if (typeof url === "string" && url.trim() !== "") {
+      return url.trim();
+    }
+  }
+
+  const directImage = payload?.trip?.media?.image_url
+    || payload?.trip?.hero_image_url
+    || payload?.media?.image_url
+    || payload?.hero_image_url
+    || "";
+
+  return typeof directImage === "string" ? directImage.trim() : "";
+}
+
 export function serviceDetailPayload(service) {
   if (service?.details && typeof service.details === "object") return service.details;
   if (service?.detail?.details && typeof service.detail.details === "object") return service.detail.details;

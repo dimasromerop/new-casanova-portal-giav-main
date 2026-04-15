@@ -4,7 +4,7 @@ import { t, tt, ttf } from "../../i18n/t.js";
 import { EmptyState, ProgressBar } from "../ui.jsx";
 import { euro, formatDateES, formatNumberUi, formatTierLabel, formatTimestamp, normalizeTripDates } from "../../lib/formatters.js";
 import { setParam } from "../../lib/params.js";
-import { compactList, countNightsBetween, flightSummary, serviceSemanticType, transferSummary, uniqueStrings } from "../../lib/tripServices.js";
+import { compactList, countNightsBetween, flightSummary, serviceSemanticType, transferSummary, tripAllServices, uniqueStrings } from "../../lib/tripServices.js";
 
 function firstNameFromProfile(profile) {
   const giavName = String(profile?.giav?.nombre || "").trim();
@@ -126,9 +126,7 @@ export default function DashboardView({
   const detail = tripDetail && typeof tripDetail === "object" ? tripDetail : null;
   const showTripDetailSkeleton = Boolean(tripDetailLoading && hasActiveTrip);
   const detailTrip = detail?.trip && typeof detail.trip === "object" ? detail.trip : null;
-  const packageServices = Array.isArray(detail?.package?.services) ? detail.package.services : [];
-  const extraServices = Array.isArray(detail?.extras) ? detail.extras : [];
-  const allServices = [...packageServices, ...extraServices];
+  const allServices = tripAllServices(detail);
   const hotelServices = allServices.filter((service) => serviceSemanticType(service) === "hotel");
   const golfServices = allServices.filter((service) => serviceSemanticType(service) === "golf");
   const flightServices = allServices.filter((service) => serviceSemanticType(service) === "flight");

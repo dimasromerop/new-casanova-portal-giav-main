@@ -263,6 +263,7 @@ return [
   'Pagos desactivados' => __('Pagos desactivados', 'casanova-portal'),
   'País' => __('País', 'casanova-portal'),
   'Paquete' => __('Paquete', 'casanova-portal'),
+  'Paquetes' => __('Paquetes', 'casanova-portal'),
   'Pasajeros' => __('Pasajeros', 'casanova-portal'),
   'PCI DSS certificado' => __('PCI DSS certificado', 'casanova-portal'),
   'PDF' => __('PDF', 'casanova-portal'),
