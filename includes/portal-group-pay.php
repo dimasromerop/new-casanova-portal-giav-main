@@ -371,7 +371,7 @@ function casanova_handle_group_pay_request(string $token): void {
   echo '<div class="casanova-public-page__summary">';
   echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Importe por persona: %s EUR', 'casanova-portal'), number_format_i18n($unit_total, 2))) . '</div>';
   if ($deadline_txt !== '') {
-    echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Fecha limite: %s', 'casanova-portal'), $deadline_txt)) . '</div>';
+    echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Fecha limite deposito: %s', 'casanova-portal'), $deadline_txt)) . '</div>';
   }
   echo '</div>';
 

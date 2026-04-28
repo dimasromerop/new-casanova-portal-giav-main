@@ -633,7 +633,7 @@ if ($deadline_txt) {
   echo '<div class="casanova-public-page__summary-line">' . esc_html(
     sprintf(
       /* translators: %s is a date text like "23/12/2025" */
-      __('Fecha límite: %s', 'casanova-portal'),
+      __('Fecha limite deposito: %s', 'casanova-portal'),
       $deadline_txt
     )
   ) . '</div>';
