@@ -234,7 +234,14 @@ function casanova_payment_link_sync_after_cobro(object $intent, int $payment_lin
   if ($payment_link_id <= 0) return false;
 
   if ($payment_link_scope !== 'individual_link') {
-    return casanova_payment_link_mark_paid($payment_link_id, $giav_payment_id, $billing_dni);
+    $ok = casanova_payment_link_mark_paid($payment_link_id, $giav_payment_id, $billing_dni);
+    if ($ok && in_array($payment_link_scope, ['slot_base', 'group_base'], true) && function_exists('casanova_payment_links_send_or_create_rest_magic')) {
+      $link = function_exists('casanova_payment_link_get') ? casanova_payment_link_get($payment_link_id) : null;
+      if ($link) {
+        casanova_payment_links_send_or_create_rest_magic($link, $intent);
+      }
+    }
+    return $ok;
   }
 
   $remaining = casanova_payment_link_resolve_pending_amount((int)($intent->id_expediente ?? 0), (int)($intent->id_cliente ?? 0));
@@ -1117,6 +1124,11 @@ function casanova_maybe_send_magic_resto_link(int $intent_id): void {
   $link = casanova_payment_link_get($payment_link_id);
   if (!$link) return;
 
+  if (function_exists('casanova_payment_links_send_or_create_rest_magic')) {
+    casanova_payment_links_send_or_create_rest_magic($link, $intent);
+    return;
+  }
+
   $meta = [];
   $rawMeta = (string)($link->metadata ?? '');
   if ($rawMeta !== '') {
@@ -1246,12 +1258,273 @@ function casanova_maybe_send_magic_resto_link(int $intent_id): void {
   }
 }
 
+function casanova_payment_links_read_metadata($row): array {
+  if ($row && is_object($row) && isset($row->_meta) && is_array($row->_meta)) {
+    return $row->_meta;
+  }
+
+  $raw = '';
+  if ($row && is_object($row)) {
+    $raw = (string)($row->metadata ?? '');
+  } elseif (is_array($row)) {
+    $raw = (string)($row['metadata'] ?? '');
+  }
+
+  if ($raw === '') return [];
+
+  $decoded = json_decode($raw, true);
+  return is_array($decoded) ? $decoded : [];
+}
+
+function casanova_payment_links_deposit_amounts($link, array $meta, $intent = null): array {
+  $scope = strtolower(trim((string)($link->scope ?? '')));
+
+  if ($scope === 'individual_link') {
+    if (is_object($intent)) {
+      $remaining = casanova_payment_link_email_remaining_after_deposit(
+        $intent,
+        (int)($link->id_expediente ?? 0),
+        (int)($intent->id_cliente ?? 0)
+      );
+    } else {
+      $remaining = round((float)($meta['remaining'] ?? 0), 2);
+    }
+
+    $deposit_total = is_object($intent)
+      ? round((float)($intent->amount ?? 0), 2)
+      : round((float)($link->amount_authorized ?? 0), 2);
+
+    return [
+      'total_due' => round($deposit_total + max(0.0, $remaining), 2),
+      'deposit_total' => $deposit_total,
+      'remaining' => round(max(0.0, $remaining), 2),
+    ];
+  }
+
+  $total_due = (float)($meta['total_due'] ?? 0);
+  $deposit_total = (float)($meta['deposit_total'] ?? 0);
+
+  if ($scope === 'group_base') {
+    $units = (int)($meta['units'] ?? 0);
+    $unit_total = (float)($meta['unit_total'] ?? 0);
+    $unit_deposit = (float)($meta['unit_deposit'] ?? 0);
+    if ($units > 0 && $unit_total > 0) {
+      $total_due = round($unit_total * (float)$units, 2);
+      $deposit_total = round($unit_deposit * (float)$units, 2);
+    }
+  }
+
+  return [
+    'total_due' => round($total_due, 2),
+    'deposit_total' => round($deposit_total, 2),
+    'remaining' => round(max(0.0, $total_due - $deposit_total), 2),
+  ];
+}
+
+function casanova_payment_links_rest_magic_url(string $token, array $meta, bool $reuse_current_link = false): string {
+  $url = casanova_payment_link_url($token);
+  if ($reuse_current_link) {
+    $url = add_query_arg([
+      'autostart' => '1',
+      'mode' => 'full',
+    ], $url);
+  }
+  if (function_exists('casanova_portal_add_public_locale_arg')) {
+    $url = casanova_portal_add_public_locale_arg($url, (string)($meta['locale'] ?? ''));
+  }
+  return $url;
+}
+
+function casanova_payment_links_expediente_code(int $exp_id): string {
+  if ($exp_id <= 0 || !function_exists('casanova_giav_expediente_get')) return '';
+
+  try {
+    $exp = casanova_giav_expediente_get($exp_id);
+    if (is_object($exp)) {
+      return (string)($exp->CodigoExpediente ?? ($exp->Codigo ?? ($exp->Titulo ?? '')));
+    }
+  } catch (Throwable $e) {}
+
+  return '';
+}
+
+function casanova_payment_links_ensure_rest_magic_for_deposit($deposit_link, $intent = null) {
+  if (!$deposit_link || !is_object($deposit_link)) return null;
+
+  $scope = strtolower(trim((string)($deposit_link->scope ?? '')));
+  if (!in_array($scope, ['slot_base', 'group_base', 'individual_link'], true)) return null;
+
+  $meta = casanova_payment_links_read_metadata($deposit_link);
+  $mode = strtolower(trim((string)($meta['mode'] ?? '')));
+  if ($mode !== 'deposit') return null;
+
+  $email = trim((string)($meta['billing_email'] ?? ''));
+  if ($email === '' || !is_email($email)) return null;
+
+  $amounts = casanova_payment_links_deposit_amounts($deposit_link, $meta, $intent);
+  $remaining = round((float)($amounts['remaining'] ?? 0), 2);
+  $rest_token = trim((string)($meta['rest_magic_token'] ?? ''));
+
+  if ($rest_token !== '') {
+    $needs_update = false;
+    if ($remaining > 0.01 && (!isset($meta['remaining']) || abs((float)$meta['remaining'] - $remaining) > 0.009)) {
+      $meta['remaining'] = $remaining;
+      $needs_update = true;
+    }
+    if ($needs_update && function_exists('casanova_payment_link_update')) {
+      casanova_payment_link_update((int)$deposit_link->id, ['metadata' => wp_json_encode($meta)]);
+    }
+
+    return [
+      'meta' => $meta,
+      'email' => $email,
+      'remaining' => $remaining,
+      'url_pago' => casanova_payment_links_rest_magic_url($rest_token, $meta, $scope === 'individual_link' && $rest_token === (string)($deposit_link->token ?? '')),
+    ];
+  }
+
+  if ($remaining <= 0.01 || !function_exists('casanova_payment_link_update')) return null;
+
+  if ($scope === 'individual_link') {
+    $token = trim((string)($deposit_link->token ?? ''));
+    if ($token === '') return null;
+
+    $meta['rest_magic_link_id'] = (int)$deposit_link->id;
+    $meta['rest_magic_token'] = $token;
+    $meta['remaining'] = $remaining;
+    $meta['auto_start'] = true;
+
+    casanova_payment_link_update((int)$deposit_link->id, [
+      'status' => 'active',
+      'expires_at' => null,
+      'metadata' => wp_json_encode($meta),
+    ]);
+
+    return [
+      'meta' => $meta,
+      'email' => $email,
+      'remaining' => $remaining,
+      'url_pago' => casanova_payment_links_rest_magic_url($token, $meta, true),
+    ];
+  }
+
+  if (!function_exists('casanova_payment_link_create')) return null;
+
+  $day_seconds = defined('DAY_IN_SECONDS') ? (int)DAY_IN_SECONDS : 86400;
+  $expires_at = date('Y-m-d H:i:s', time() + (14 * $day_seconds));
+
+  $new = casanova_payment_link_create([
+    'id_expediente' => (int)($deposit_link->id_expediente ?? 0),
+    'id_reserva_pq' => !empty($deposit_link->id_reserva_pq) ? (int)$deposit_link->id_reserva_pq : null,
+    'scope' => $scope,
+    'amount_authorized' => $remaining,
+    'currency' => (string)($deposit_link->currency ?? 'EUR'),
+    'status' => 'active',
+    'expires_at' => $expires_at,
+    'created_by' => 'magic_resto',
+    'billing_dni' => (string)($meta['billing_dni'] ?? ($deposit_link->billing_dni ?? '')),
+    'metadata' => array_merge($meta, [
+      'mode' => 'rest',
+      'parent_payment_link_id' => (int)$deposit_link->id,
+      'deposit_paid' => round((float)($amounts['deposit_total'] ?? 0), 2),
+      'remaining' => $remaining,
+      'auto_start' => true,
+      'origin' => 'magic_resto',
+    ]),
+  ]);
+
+  if (is_wp_error($new) || !$new) return null;
+
+  $meta['rest_magic_link_id'] = (int)$new->id;
+  $meta['rest_magic_token'] = (string)($new->token ?? '');
+  $meta['remaining'] = $remaining;
+
+  casanova_payment_link_update((int)$deposit_link->id, [
+    'metadata' => wp_json_encode($meta),
+  ]);
+
+  return [
+    'meta' => $meta,
+    'email' => $email,
+    'remaining' => $remaining,
+    'url_pago' => casanova_payment_links_rest_magic_url((string)($new->token ?? ''), $meta, false),
+  ];
+}
+
+function casanova_payment_links_send_rest_magic_email($deposit_link, array $magic, string $email = '', bool $is_resend = false): bool {
+  if (!$deposit_link || !is_object($deposit_link)) return false;
+  if (!function_exists('casanova_mail_send') || !function_exists('casanova_tpl_email_resto_pago_magic_link')) return false;
+
+  $meta = (isset($magic['meta']) && is_array($magic['meta']))
+    ? $magic['meta']
+    : casanova_payment_links_read_metadata($deposit_link);
+
+  $to = trim($email);
+  if ($to === '' || !is_email($to)) {
+    $to = trim((string)($magic['email'] ?? ($meta['billing_email'] ?? '')));
+  }
+  if ($to === '' || !is_email($to)) return false;
+
+  $url_pago = trim((string)($magic['url_pago'] ?? ''));
+  if ($url_pago === '') return false;
+
+  $exp_id = (int)($deposit_link->id_expediente ?? 0);
+  $remaining_value = round((float)($magic['remaining'] ?? ($meta['remaining'] ?? 0)), 2);
+  $remaining = $remaining_value > 0.01
+    ? number_format($remaining_value, 2, ',', '.') . ' €'
+    : '';
+
+  $tpl = casanova_tpl_email_resto_pago_magic_link([
+    'to_email' => $to,
+    'cliente_nombre' => (string)($meta['billing_name'] ?? ($meta['billing_fullname'] ?? '')),
+    'idExpediente' => $exp_id,
+    'codigoExpediente' => casanova_payment_links_expediente_code($exp_id),
+    'importe' => $remaining,
+    'url_pago' => $url_pago,
+  ]);
+
+  if (empty($tpl['to']) || empty($tpl['subject']) || empty($tpl['html'])) return false;
+
+  $ok = casanova_mail_send($tpl['to'], (string)$tpl['subject'], (string)$tpl['html']);
+  if ($ok && function_exists('casanova_payment_link_update')) {
+    $now = current_time('mysql');
+    if (empty($meta['rest_magic_sent_at'])) {
+      $meta['rest_magic_sent_at'] = $now;
+    }
+    if ($is_resend) {
+      $meta['rest_magic_resent_at'] = $now;
+    }
+    casanova_payment_link_update((int)$deposit_link->id, ['metadata' => wp_json_encode($meta)]);
+  }
+
+  return (bool)$ok;
+}
+
+function casanova_payment_links_send_or_create_rest_magic($deposit_link, $intent = null, string $email = '', bool $force_send = false): bool {
+  if (!$deposit_link || !is_object($deposit_link)) return false;
+
+  $meta = casanova_payment_links_read_metadata($deposit_link);
+  if (!$force_send && !empty($meta['rest_magic_sent_at'])) {
+    return true;
+  }
+
+  $magic = casanova_payment_links_ensure_rest_magic_for_deposit($deposit_link, $intent);
+  if (!$magic) return false;
+
+  $magic_meta = (isset($magic['meta']) && is_array($magic['meta'])) ? $magic['meta'] : [];
+  if (!$force_send && !empty($magic_meta['rest_magic_sent_at'])) {
+    return true;
+  }
+
+  return casanova_payment_links_send_rest_magic_email($deposit_link, $magic, $email, $force_send);
+}
+
 add_action('casanova_payment_cobro_recorded', function ($intent_id) {
   casanova_maybe_send_magic_resto_link((int)$intent_id);
 }, 20, 1);
 
 /**
- * Busca el último payment link pagado (modo depósito) con magic link de resto generado.
+ * Busca el ultimo enlace pagado en modo deposito.
  * Seguridad: exige match por expediente + dni + email.
  */
 function casanova_payment_links_find_deposit_with_rest(int $idExpediente, string $dni, string $email) {
@@ -1261,28 +1534,22 @@ function casanova_payment_links_find_deposit_with_rest(int $idExpediente, string
 
   // Filtro simple sobre JSON (metadata) compatible con MySQL sin JSON_EXTRACT.
   $like_mode = '%"mode"%"deposit"%';
-  $like_rest = '%"rest_magic_token"%';
 
   $rows = $wpdb->get_results(
     $wpdb->prepare(
-      "SELECT * FROM {$table} WHERE status='paid' AND id_expediente=%d AND billing_dni=%s AND metadata LIKE %s AND metadata LIKE %s ORDER BY paid_at DESC, id DESC LIMIT 5",
+      "SELECT * FROM {$table} WHERE status='paid' AND id_expediente=%d AND billing_dni=%s AND metadata LIKE %s ORDER BY paid_at DESC, id DESC LIMIT 20",
       $idExpediente,
       $dni,
-      $like_mode,
-      $like_rest
+      $like_mode
     )
   );
   if (empty($rows)) return null;
 
   foreach ($rows as $r) {
-    $meta = [];
-    $raw = (string)($r->metadata ?? '');
-    if ($raw !== '') {
-      $decoded = json_decode($raw, true);
-      if (is_array($decoded)) $meta = $decoded;
-    }
+    $meta = casanova_payment_links_read_metadata($r);
     $m_email = trim((string)($meta['billing_email'] ?? ''));
-    if ($m_email !== '' && strcasecmp($m_email, $email) === 0 && !empty($meta['rest_magic_token'])) {
+    $mode = strtolower(trim((string)($meta['mode'] ?? '')));
+    if ($mode === 'deposit' && $m_email !== '' && strcasecmp($m_email, $email) === 0) {
       $r->_meta = $meta;
       return $r;
     }
@@ -1292,54 +1559,7 @@ function casanova_payment_links_find_deposit_with_rest(int $idExpediente, string
 
 function casanova_payment_links_resend_rest_magic($deposit_row, string $email): bool {
   if (!$deposit_row || !is_object($deposit_row) || $email === '' || !is_email($email)) return false;
-  if (!function_exists('casanova_mail_send') || !function_exists('casanova_tpl_email_resto_pago_magic_link')) return false;
+  if (!function_exists('casanova_payment_links_send_or_create_rest_magic')) return false;
 
-  $meta = [];
-  if (isset($deposit_row->_meta) && is_array($deposit_row->_meta)) {
-    $meta = $deposit_row->_meta;
-  } else {
-    $raw = (string)($deposit_row->metadata ?? '');
-    if ($raw !== '') {
-      $decoded = json_decode($raw, true);
-      if (is_array($decoded)) $meta = $decoded;
-    }
-  }
-  $rest_token = trim((string)($meta['rest_magic_token'] ?? ''));
-  if ($rest_token === '') return false;
-
-  $url_pago = casanova_payment_link_url($rest_token);
-  if (function_exists('casanova_portal_add_public_locale_arg')) {
-    $url_pago = casanova_portal_add_public_locale_arg($url_pago, (string)($meta['locale'] ?? ''));
-  }
-
-  $codExp = '';
-  $exp_id = (int)($deposit_row->id_expediente ?? 0);
-  if ($exp_id > 0 && function_exists('casanova_giav_expediente_get')) {
-    try {
-      $exp = casanova_giav_expediente_get($exp_id);
-      if (is_object($exp)) {
-        $codExp = (string)($exp->CodigoExpediente ?? ($exp->Codigo ?? ($exp->Titulo ?? '')));
-      }
-    } catch (Throwable $e) {}
-  }
-
-  $remaining = '';
-  if (isset($meta['remaining'])) {
-    $remaining = number_format((float)$meta['remaining'], 2, ',', '.') . ' €';
-  }
-
-  $tpl = casanova_tpl_email_resto_pago_magic_link([
-    'to_email' => $email,
-    'cliente_nombre' => (string)($meta['billing_name'] ?? ($meta['billing_fullname'] ?? '')),
-    'idExpediente' => $exp_id,
-    'codigoExpediente' => $codExp,
-    'importe' => $remaining,
-    'url_pago' => $url_pago,
-  ]);
-
-  if (!empty($tpl['to']) && !empty($tpl['subject']) && !empty($tpl['html'])) {
-    casanova_mail_send($tpl['to'], (string)$tpl['subject'], (string)$tpl['html']);
-    return true;
-  }
-  return false;
+  return casanova_payment_links_send_or_create_rest_magic($deposit_row, null, $email, true);
 }

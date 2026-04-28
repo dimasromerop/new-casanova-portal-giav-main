@@ -10,7 +10,7 @@ import { readParams, setParam } from "../../lib/params.js";
 import { getHistoryBadge, getInvoiceVariant } from "../../lib/statusBadges.js";
 import { tripPackages } from "../../lib/tripServices.js";
 import PaymentActions from "./PaymentActions.jsx";
-import ServiceList, { ServiceItem } from "./ServiceList.jsx";
+import ServiceList from "./ServiceList.jsx";
 import Tabs from "./TripTabs.jsx";
 import TripHeader from "./TripHeader.jsx";
 
@@ -88,9 +88,7 @@ export default function TripDetailView({
   const trip = detail?.trip || fallbackTrip;
   const payments = detail?.payments || null;
   const packages = tripPackages(detail);
-  const pkg = packages[0] || null;
   const extras = Array.isArray(detail?.extras) ? detail.extras : [];
-  const packageServices = Array.isArray(pkg?.services) ? pkg.services : [];
   const hasServices = packages.length > 0 || extras.length > 0;
   const invoices = Array.isArray(detail?.invoices) ? detail.invoices : [];
   const bonuses = detail?.bonuses ?? { available: false, items: [] };
@@ -298,44 +296,6 @@ export default function TripDetailView({
                   </div>
                 ) : null}
                 {packages.map((packageItem, index) => renderPackageSummary(packageItem, index))}
-                {false ? (
-                  <>
-                    <div className="cp-pkg-card">
-                      <div className="cp-pkg-card__info">
-                        <h3 className="cp-pkg-card__title">{pkg.title || tt("Paquete")}</h3>
-                        <p className="cp-pkg-card__meta">{pkg.date_range || ""}{pkg.detail?.type ? ` · ${pkg.detail.type}` : ""}</p>
-                      </div>
-                      <div className="cp-pkg-card__right">
-                        {typeof pkg.price === "number" ? (
-                          <span className="cp-pkg-card__price">{euro(pkg.price)}</span>
-                        ) : null}
-                        <span className="cp-chip">{(pkg.type || "PQ").toUpperCase()}</span>
-                        <div className="cp-pkg-card__actions">
-                          <button type="button" className="cp-btn cp-btn--ghost" onClick={() => {}} disabled={!pkg.actions?.detail}>{tt("Detalle")}</button>
-                          {pkg.voucher_urls?.view ? (
-                            <a className="cp-btn cp-btn--ghost" href={pkg.voucher_urls.view} target="_blank" rel="noreferrer">{tt("Bono")}</a>
-                          ) : (
-                            <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("Bono")}</span>
-                          )}
-                          {pkg.voucher_urls?.pdf ? (
-                            <a className="cp-btn cp-btn--ghost" href={pkg.voucher_urls.pdf} target="_blank" rel="noreferrer">{tt("PDF")}</a>
-                          ) : (
-                            <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("PDF")}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    {packageServices.length > 0 ? (
-                      <div className="cp-service-section">
-                        <div className="cp-service-section__heading">
-                          {tt("Servicios incluidos")}
-                          <span className="cp-service-section__count">{packageServices.length}</span>
-                        </div>
-                        <ServiceList services={packageServices} indent sortMode="chronological" />
-                      </div>
-                    ) : null}
-                  </>
-                ) : null}
                 {extras.length > 0 ? (
                   <div className="cp-service-section cp-service-section--extras">
                     <div className="cp-service-section__heading">{tt("Extras")}</div>
