@@ -462,16 +462,31 @@ function casanova_handle_payment_link_request(string $token): void {
     $authorized = $pending;
   }
 
-  // Deposito para links individuales con importe autorizado.
+  // Deposito para links individuales y depositos de grupo ya calculados.
   $deposit_allowed = false;
   $deposit_amount = 0.0;
   $deposit_base = in_array($scope, ['passenger_share', 'individual_link'], true) ? $authorized : $pending;
-  if ($scope === 'passenger_share' && $paid_now <= 0.01 && function_exists('casanova_payments_is_deposit_allowed')) {
+  if ($scope === 'group_base') {
+    $group_total_due = (float)($meta_prefill['total_due'] ?? 0);
+    $group_deposit_total = (float)($meta_prefill['deposit_total'] ?? 0);
+    $group_units = (int)($meta_prefill['units'] ?? 0);
+    $group_unit_total = (float)($meta_prefill['unit_total'] ?? 0);
+    $group_unit_deposit = (float)($meta_prefill['unit_deposit'] ?? 0);
+    if ($group_units > 0 && $group_unit_total > 0) {
+      $group_total_due = round($group_unit_total * (float)$group_units, 2);
+      $group_deposit_total = round($group_unit_deposit * (float)$group_units, 2);
+    }
+    if ($prefill_mode === 'deposit' && $group_deposit_total > 0.01 && $group_deposit_total + 0.01 < $group_total_due) {
+      $deposit_allowed = true;
+      $deposit_base = $group_total_due;
+      $deposit_amount = round(min($group_deposit_total, $authorized, $pending), 2);
+    }
+  } elseif ($scope === 'passenger_share' && $paid_now <= 0.01 && function_exists('casanova_payments_is_deposit_allowed')) {
     $deposit_allowed = casanova_payments_is_deposit_allowed($reservas);
   } elseif ($scope === 'individual_link' && $paid_now <= 0.01 && function_exists('casanova_payments_is_deposit_allowed')) {
     $deposit_allowed = casanova_payments_is_deposit_allowed($reservas);
   }
-  if ($deposit_allowed && function_exists('casanova_payments_calc_deposit_amount')) {
+  if ($deposit_allowed && $scope !== 'group_base' && function_exists('casanova_payments_calc_deposit_amount')) {
     $deposit_amount = casanova_payments_calc_deposit_amount($deposit_base, $idExpediente);
   }
   $deposit_effective = ($deposit_allowed && ($deposit_amount + 0.01 < $deposit_base));
@@ -1321,6 +1336,26 @@ function casanova_payment_links_deposit_amounts($link, array $meta, $intent = nu
   ];
 }
 
+function casanova_payment_links_is_effective_deposit($link, array $meta): bool {
+  if (!$link || !is_object($link)) return false;
+
+  $mode = strtolower(trim((string)($meta['mode'] ?? '')));
+  if ($mode === 'deposit') return true;
+
+  $scope = strtolower(trim((string)($link->scope ?? '')));
+  if ($scope !== 'group_base') return false;
+
+  $created_by = strtolower(trim((string)($link->created_by ?? '')));
+  if ($created_by !== '' && $created_by !== 'group') return false;
+
+  $amounts = casanova_payment_links_deposit_amounts($link, $meta, null);
+  $deposit_total = round((float)($amounts['deposit_total'] ?? 0), 2);
+  $remaining = round((float)($amounts['remaining'] ?? 0), 2);
+  $authorized = round((float)($link->amount_authorized ?? 0), 2);
+
+  return $deposit_total > 0.01 && $remaining > 0.01 && $authorized <= $deposit_total + 0.01;
+}
+
 function casanova_payment_links_rest_magic_url(string $token, array $meta, bool $reuse_current_link = false): string {
   $url = casanova_payment_link_url($token);
   if ($reuse_current_link) {
@@ -1356,7 +1391,11 @@ function casanova_payment_links_ensure_rest_magic_for_deposit($deposit_link, $in
 
   $meta = casanova_payment_links_read_metadata($deposit_link);
   $mode = strtolower(trim((string)($meta['mode'] ?? '')));
-  if ($mode !== 'deposit') return null;
+  if (!casanova_payment_links_is_effective_deposit($deposit_link, $meta)) return null;
+
+  if ($mode !== 'deposit') {
+    $meta['mode'] = 'deposit';
+  }
 
   $email = trim((string)($meta['billing_email'] ?? ''));
   if ($email === '' || !is_email($email)) return null;
@@ -1366,7 +1405,7 @@ function casanova_payment_links_ensure_rest_magic_for_deposit($deposit_link, $in
   $rest_token = trim((string)($meta['rest_magic_token'] ?? ''));
 
   if ($rest_token !== '') {
-    $needs_update = false;
+    $needs_update = ($mode !== 'deposit');
     if ($remaining > 0.01 && (!isset($meta['remaining']) || abs((float)$meta['remaining'] - $remaining) > 0.009)) {
       $meta['remaining'] = $remaining;
       $needs_update = true;
@@ -1531,25 +1570,25 @@ function casanova_payment_links_find_deposit_with_rest(int $idExpediente, string
   global $wpdb;
   if ($idExpediente <= 0 || $dni === '' || $email === '') return null;
   $table = casanova_payment_links_table();
-
-  // Filtro simple sobre JSON (metadata) compatible con MySQL sin JSON_EXTRACT.
-  $like_mode = '%"mode"%"deposit"%';
+  $needle_dni = strtoupper(preg_replace('/\s+/', '', $dni));
 
   $rows = $wpdb->get_results(
     $wpdb->prepare(
-      "SELECT * FROM {$table} WHERE status='paid' AND id_expediente=%d AND billing_dni=%s AND metadata LIKE %s ORDER BY paid_at DESC, id DESC LIMIT 20",
-      $idExpediente,
-      $dni,
-      $like_mode
+      "SELECT * FROM {$table} WHERE status='paid' AND id_expediente=%d AND scope IN ('slot_base','group_base','individual_link') ORDER BY paid_at DESC, id DESC LIMIT 100",
+      $idExpediente
     )
   );
   if (empty($rows)) return null;
 
   foreach ($rows as $r) {
     $meta = casanova_payment_links_read_metadata($r);
+    $row_dni = strtoupper(preg_replace('/\s+/', '', (string)($r->billing_dni ?? '')));
+    $meta_dni = strtoupper(preg_replace('/\s+/', '', (string)($meta['billing_dni'] ?? '')));
+    if ($row_dni !== $needle_dni && $meta_dni !== $needle_dni) {
+      continue;
+    }
     $m_email = trim((string)($meta['billing_email'] ?? ''));
-    $mode = strtolower(trim((string)($meta['mode'] ?? '')));
-    if ($mode === 'deposit' && $m_email !== '' && strcasecmp($m_email, $email) === 0) {
+    if ($m_email !== '' && strcasecmp($m_email, $email) === 0 && casanova_payment_links_is_effective_deposit($r, $meta)) {
       $r->_meta = $meta;
       return $r;
     }
