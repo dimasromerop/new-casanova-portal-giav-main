@@ -740,6 +740,13 @@ function casanova_handle_group_pay_request(string $token): void {
     echo '</details>';
   }
 
+  $wrap_main_payment_form = $rest_stage_open && $rest_available_units > 0;
+  if ($wrap_main_payment_form) {
+    echo '<details class="casanova-public-page__disclosure">';
+    echo '<summary class="casanova-public-page__disclosure-summary">' . esc_html__('Necesito hacer otro pago: deposito o total', 'casanova-portal') . '</summary>';
+    echo '<div class="casanova-public-page__disclosure-text">' . esc_html__('Usa esta opcion solo si todavia no has pagado el deposito o si quieres pagar el viaje completo.', 'casanova-portal') . '</div>';
+  }
+
   echo '<form id="casanova-group-pay-form" class="casanova-public-form" method="post" action="' . esc_url($group_page_url) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
   echo '<input type="hidden" name="action" value="pay" />';
@@ -831,6 +838,9 @@ function casanova_handle_group_pay_request(string $token): void {
   echo '</div>';
 
   echo '</form>';
+  if ($wrap_main_payment_form) {
+    echo '</details>';
+  }
   echo '<p class="casanova-public-page__footer">' . esc_html__('Si tienes dudas, contacta con la agencia antes de pagar.', 'casanova-portal') . '</p>';
   echo '<script>
     (function(){
