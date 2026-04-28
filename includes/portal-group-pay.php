@@ -630,9 +630,11 @@ function casanova_handle_group_pay_request(string $token): void {
     echo '<div class="' . esc_attr($notice_class) . '">' . esc_html($flash_msg) . '</div>';
   }
 
+  $show_resend_magic_fallback = $unit_rest_preview <= 0.01 || $rest_available_units <= 0;
+  if ($show_resend_magic_fallback) {
   echo '<details class="casanova-public-page__disclosure">';
-  echo '<summary class="casanova-public-page__disclosure-summary">' . esc_html__('¿Ya pagaste el depósito? Reenviar enlace para pagar el resto', 'casanova-portal') . '</summary>';
-  echo '<div class="casanova-public-page__disclosure-text">' . esc_html__('Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos el enlace del pago restante.', 'casanova-portal') . '</div>';
+  echo '<summary class="casanova-public-page__disclosure-summary">' . esc_html__('Ya pague el deposito y no veo el pago restante', 'casanova-portal') . '</summary>';
+  echo '<div class="casanova-public-page__disclosure-text">' . esc_html__('Usa el mismo email y DNI/NIF con el que pagaste el deposito. Si encontramos el deposito, te reenviaremos el enlace para continuar.', 'casanova-portal') . '</div>';
   echo '<form class="casanova-public-form" method="post" action="' . esc_url($group_page_url) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
   echo '<input type="hidden" name="action" value="resend_magic" />';
@@ -645,15 +647,16 @@ function casanova_handle_group_pay_request(string $token): void {
     . '</label>';
   echo '</div>';
   echo '<div class="casanova-public-page__actions">';
-  echo '<button class="casanova-public-button casanova-public-button--ghost" type="submit">' . esc_html__('Enviar enlace del resto', 'casanova-portal') . '</button>';
+  echo '<button class="casanova-public-button casanova-public-button--ghost" type="submit">' . esc_html__('Reenviar enlace', 'casanova-portal') . '</button>';
   echo '</div>';
   echo '</form>';
   echo '</details>';
+  }
 
   if ($unit_rest_preview > 0.01) {
     $rest_details_attr = $rest_stage_open ? ' open' : '';
     echo '<details id="casanova-group-rest" class="casanova-public-page__disclosure"' . $rest_details_attr . '>';
-    echo '<summary class="casanova-public-page__disclosure-summary">' . esc_html__('Pagar el resto individualmente', 'casanova-portal') . '</summary>';
+    echo '<summary class="casanova-public-page__disclosure-summary">' . esc_html__('Quiero pagar el resto del viaje', 'casanova-portal') . '</summary>';
     echo '<div class="casanova-public-page__disclosure-text">' . esc_html__('Si ya hay depositos pagados, cada persona puede pagar su parte restante desde aqui.', 'casanova-portal') . '</div>';
 
     if ($rest_available_units > 0) {
