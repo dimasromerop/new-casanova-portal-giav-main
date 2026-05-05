@@ -80,15 +80,6 @@ add_action('admin_menu', function () {
 
   add_submenu_page(
     'casanova-payments',
-    'Pagos',
-    'Pagos',
-    'manage_options',
-    'casanova-payments-payments',
-    'casanova_payments_render_settings_page'
-  );
-
-  add_submenu_page(
-    'casanova-payments',
     'Cobros y enlaces',
     'Cobros y enlaces',
     'manage_options',
@@ -111,6 +102,15 @@ add_action('admin_menu', function () {
     'Diagnostico',
     'manage_options',
     'casanova-payments-diagnostics',
+    'casanova_payments_render_settings_page'
+  );
+
+  add_submenu_page(
+    'casanova-payments',
+    'Configuración',
+    'Configuración',
+    'manage_options',
+    'casanova-payments-payments',
     'casanova_payments_render_settings_page'
   );
 
@@ -240,6 +240,88 @@ add_action('admin_init', function () {
   ]);
 
   register_setting('casanova_payments', 'casanova_payment_admin_notification_emails', [
+    'type' => 'string',
+    'sanitize_callback' => 'casanova_payments_sanitize_admin_notification_emails',
+    'default' => '',
+  ]);
+
+  register_setting('casanova_payments_deposits', 'casanova_deposit_percent', [
+    'type' => 'number',
+    'sanitize_callback' => function($v){
+      $v = (float) str_replace(',', '.', (string)$v);
+      if ($v <= 0) $v = 10;
+      if ($v > 100) $v = 100;
+      return $v;
+    },
+    'default' => 10,
+  ]);
+  register_setting('casanova_payments_deposits', 'casanova_deposit_min_amount', [
+    'type' => 'number',
+    'sanitize_callback' => function($v){
+      $v = (float) str_replace(',', '.', (string)$v);
+      if ($v < 0) $v = 0;
+      return $v;
+    },
+    'default' => 50,
+  ]);
+  register_setting('casanova_payments_deposits', 'casanova_deposit_overrides', [
+    'type' => 'string',
+    'sanitize_callback' => function($v){
+      $v = trim((string)$v);
+      if (strlen($v) > 20000) $v = substr($v, 0, 20000);
+      return $v;
+    },
+    'default' => '',
+  ]);
+
+  register_setting('casanova_payments_methods', 'casanova_giav_idformapago_redsys', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 1027,
+  ]);
+  register_setting('casanova_payments_methods', 'casanova_giav_idformapago_redsys_amex', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 0,
+  ]);
+  register_setting('casanova_payments_methods', 'casanova_redsys_tpvs', [
+    'type' => 'array',
+    'sanitize_callback' => 'casanova_redsys_sanitize_tpvs_option',
+    'default' => [],
+  ]);
+  register_setting('casanova_payments_methods', 'casanova_giav_idformapago_inespay', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 0,
+  ]);
+  register_setting('casanova_payments_methods', 'casanova_aplazame_public_key', [
+    'type' => 'string',
+    'sanitize_callback' => function($value) {
+      return substr(trim((string) $value), 0, 255);
+    },
+    'default' => '',
+  ]);
+  register_setting('casanova_payments_methods', 'casanova_aplazame_private_key', [
+    'type' => 'string',
+    'sanitize_callback' => function($value) {
+      return substr(trim((string) $value), 0, 255);
+    },
+    'default' => '',
+  ]);
+  register_setting('casanova_payments_methods', 'casanova_aplazame_sandbox', [
+    'type' => 'boolean',
+    'sanitize_callback' => function($value) {
+      return !empty($value) ? 1 : 0;
+    },
+    'default' => 1,
+  ]);
+  register_setting('casanova_payments_methods', 'casanova_giav_idformapago_aplazame', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 0,
+  ]);
+
+  register_setting('casanova_payments_notifications', 'casanova_payment_admin_notification_emails', [
     'type' => 'string',
     'sanitize_callback' => 'casanova_payments_sanitize_admin_notification_emails',
     'default' => '',
@@ -434,8 +516,8 @@ function casanova_portal_admin_sections(): array {
     ],
     'payments' => [
       'slug' => 'casanova-payments-payments',
-      'title' => 'Pagos',
-      'description' => 'Configuracion de depositos, TPV Redsys, overrides y herramientas de soporte ligadas a GIAV.',
+      'title' => 'Configuración',
+      'description' => 'Configuracion de depositos, metodos de pago, notificaciones y herramientas de soporte.',
     ],
     'links' => [
       'slug' => 'casanova-payments-links',
@@ -535,12 +617,12 @@ function casanova_payments_render_settings_page(): void {
   $t_giav = add_query_arg(['tab' => 'giav'], $base);
 
   echo '<nav class="nav-tab-wrapper casanova-admin-legacy-tabs" aria-label="Secciones">';
-  echo '<a href="' . esc_url($t_pay) . '" class="nav-tab ' . ($tab==='payments'?'nav-tab-active':'') . '">Pagos</a>';
   echo '<a href="' . esc_url($t_por) . '" class="nav-tab ' . ($tab==='portal'?'nav-tab-active':'') . '">Portal</a>';
   echo '<a href="' . esc_url($t_men) . '" class="nav-tab ' . ($tab==='menu'?'nav-tab-active':'') . '">Menú</a>';
-  echo '<a href="' . esc_url($t_lnk) . '" class="nav-tab ' . ($tab==='links'?'nav-tab-active':'') . '">Payment Links</a>';
-  echo '<a href="' . esc_url($t_slots) . '" class="nav-tab ' . ($tab==='slots'?'nav-tab-active':'') . '">Group Slots</a>';
+  echo '<a href="' . esc_url($t_lnk) . '" class="nav-tab ' . ($tab==='links'?'nav-tab-active':'') . '">Cobros y enlaces</a>';
+  echo '<a href="' . esc_url($t_slots) . '" class="nav-tab ' . ($tab==='slots'?'nav-tab-active':'') . '">Diagnóstico</a>';
   echo '<a href="' . esc_url($t_giav) . '" class="nav-tab ' . ($tab==='giav'?'nav-tab-active':'') . '">GIAV</a>';
+  echo '<a href="' . esc_url($t_pay) . '" class="nav-tab ' . ($tab==='payments'?'nav-tab-active':'') . '">Configuración</a>';
   echo '<a href="' . esc_url($t_hlp) . '" class="nav-tab ' . ($tab==='help'?'nav-tab-active':'') . '">Ayuda</a>';
   echo '</nav>';
 
@@ -551,10 +633,10 @@ function casanova_payments_render_settings_page(): void {
 
     echo '<div class="notice notice-info inline casanova-admin-note"><p>Las vistas del portal, el menu dinamico y la ayuda legacy se han retirado de esta administracion. Aqui quedan solo las utilidades que siguen activas.</p></div>';
     echo '<div class="casanova-admin-grid">';
-    echo '<section class="casanova-admin-card"><h2>Pagos</h2><p>Configura depositos, TPV Redsys, overrides por expediente y usa las busquedas rapidas de expediente y cliente.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('payments')) . '">Abrir pagos</a></p></section>';
     echo '<section class="casanova-admin-card"><h2>Cobros y enlaces</h2><p>Crea payment links individuales, tokens de grupo y consulta los ultimos enlaces generados.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('links')) . '">Abrir cobros y enlaces</a></p></section>';
     echo '<section class="casanova-admin-card"><h2>GIAV</h2><p>Consulta formas de pago y custom fields sin salir del admin ni depender del REST publico.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('giav')) . '">Abrir GIAV</a></p></section>';
     echo '<section class="casanova-admin-card"><h2>Diagnostico</h2><p>Deja a mano la parte legacy de slots y charges para soporte puntual, fuera del flujo principal.</p><p><a class="button button-secondary" href="' . esc_url(casanova_portal_admin_url('diagnostics')) . '">Abrir diagnostico</a></p></section>';
+    echo '<section class="casanova-admin-card"><h2>Configuración</h2><p>Configura depositos, metodos de pago, notificaciones internas y herramientas de soporte.</p><p><a class="button button-primary" href="' . esc_url(casanova_portal_admin_url('payments')) . '">Abrir configuracion</a></p></section>';
     echo '</div>';
     echo '<div class="casanova-admin-card casanova-admin-card--narrow">';
     echo '<h2>Modulo de fidelizacion</h2>';
@@ -595,12 +677,35 @@ function casanova_payments_render_settings_page(): void {
     $redsys_amex_tpv = isset($redsys_tpvs['amex']) && is_array($redsys_tpvs['amex']) ? $redsys_tpvs['amex'] : [];
     if (!is_string($ov)) $ov = '';
 
-    echo '<h2>Ajustes de pagos</h2>';
+    $config_tab = isset($_GET['config_tab']) ? sanitize_key((string) $_GET['config_tab']) : 'deposits';
+    $config_tabs = [
+      'deposits' => 'Depósitos',
+      'methods' => 'Métodos de pago',
+      'notifications' => 'Notificaciones',
+      'support' => 'Soporte',
+    ];
+    if (!isset($config_tabs[$config_tab])) $config_tab = 'deposits';
+    $config_settings_group = [
+      'deposits' => 'casanova_payments_deposits',
+      'methods' => 'casanova_payments_methods',
+      'notifications' => 'casanova_payments_notifications',
+    ][$config_tab] ?? 'casanova_payments_deposits';
 
-    echo '<form method="post" action="options.php">';
-    settings_fields('casanova_payments');
+    echo '<h2>Configuración</h2>';
+    echo '<nav class="nav-tab-wrapper" aria-label="Configuracion">';
+    foreach ($config_tabs as $key => $label) {
+      $url = add_query_arg(['config_tab' => $key], casanova_portal_admin_url('payments'));
+      echo '<a href="' . esc_url($url) . '" class="nav-tab ' . ($config_tab === $key ? 'nav-tab-active' : '') . '">' . esc_html($label) . '</a>';
+    }
+    echo '</nav>';
 
-    echo '<table class="form-table" role="presentation">';
+    if ($config_tab !== 'support') {
+      echo '<form method="post" action="options.php">';
+      settings_fields($config_settings_group);
+      echo '<table class="form-table" role="presentation">';
+    }
+
+    if ($config_tab === 'deposits') {
     echo '<tr><th scope="row"><label for="casanova_deposit_percent">Depósito (%)</label></th>';
     echo '<td><input name="casanova_deposit_percent" id="casanova_deposit_percent" type="number" step="0.01" min="0" max="100" value="' . esc_attr($p) . '" /> <p class="description">Por defecto 10%.</p></td></tr>';
 
@@ -611,6 +716,9 @@ function casanova_payments_render_settings_page(): void {
     echo '<td><textarea name="casanova_deposit_overrides" id="casanova_deposit_overrides" rows="8" cols="60" class="large-text code">' . esc_textarea($ov) . '</textarea>';
     echo '<p class="description">Opcional. Una línea por expediente: <code>2553848=15</code> (porcentaje).</p></td></tr>';
 
+    }
+
+    if ($config_tab === 'methods') {
     echo '<tr><th scope="row"><label for="casanova_giav_idformapago_redsys">GIAV: ID forma de pago (Redsys)</label></th>';
     echo '<td><input name="casanova_giav_idformapago_redsys" id="casanova_giav_idformapago_redsys" type="number" min="0" step="1" value="' . esc_attr($idfp_redsys) . '" />';
     echo '<p class="description">Se usa cuando la notificación de Redsys registra el cobro en GIAV. Si no lo cambias, se mantiene el valor legacy <code>1027</code>. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_REDSYS</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
@@ -660,18 +768,26 @@ function casanova_payments_render_settings_page(): void {
     echo '<td><input name="casanova_giav_idformapago_aplazame" id="casanova_giav_idformapago_aplazame" type="number" min="0" step="1" value="' . esc_attr($idfp_aplazame) . '" />';
     echo '<p class="description">Obligatorio para que la notificacion final de Aplazame registre el cobro en GIAV. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_APLAZAME</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
 
+    }
+
+    if ($config_tab === 'notifications') {
     echo '<tr><th scope="row"><label for="casanova_payment_admin_notification_emails">Notificaciones internas de pago</label></th>';
     echo '<td><textarea name="casanova_payment_admin_notification_emails" id="casanova_payment_admin_notification_emails" rows="4" cols="60" class="large-text code" placeholder="admin@dominio.com&#10;ventas@dominio.com">' . esc_textarea($admin_payment_notification_emails) . '</textarea>';
     echo '<p class="description">Opcional. Un email por linea o separados por comas. Se enviara un aviso interno cada vez que se registre un cobro desde el portal.</p></td></tr>';
 
-    echo '</table>';
-    submit_button();
-    echo '</form>';
+    }
+
+    if ($config_tab !== 'support') {
+      echo '</table>';
+      submit_button();
+      echo '</form>';
+    }
 
     // Helper: find GIAV Expediente IDs for deposit overrides (GIAV uses Id, not Codigo).
     $qexp = isset($_GET['giav_expediente_q']) ? sanitize_text_field((string) $_GET['giav_expediente_q']) : '';
     $qclient = isset($_GET['giav_cliente_q']) ? sanitize_text_field((string) $_GET['giav_cliente_q']) : '';
 
+    if ($config_tab === 'support') {
     echo '<hr />';
     echo '<h2>Buscar Expediente en GIAV (para overrides)</h2>';
     echo '<p class="description">GIAV distingue <strong>ID</strong> (numérico interno) y <strong>Código</strong>. El override de depósito usa el <strong>ID</strong> (ej.: <code>2553848=15</code>). Aquí puedes buscar por código (solo números) o por texto del título.</p>';
@@ -679,6 +795,7 @@ function casanova_payments_render_settings_page(): void {
     // Search form (GET) to avoid mixing with settings POST.
     echo '<form method="get" action="">';
     echo '<input type="hidden" name="page" value="' . esc_attr(casanova_portal_admin_page_slug_for_section('payments')) . '" />';
+    echo '<input type="hidden" name="config_tab" value="support" />';
     echo '<p>';
     echo '<label for="giav_expediente_q" class="screen-reader-text">Buscar expediente</label>';
     echo '<input name="giav_expediente_q" id="giav_expediente_q" type="text" class="regular-text" placeholder="ID o código (números) o texto del título" value="' . esc_attr($qexp) . '" /> ';
@@ -733,6 +850,7 @@ function casanova_payments_render_settings_page(): void {
 
     echo '<form method="get" action="">';
     echo '<input type="hidden" name="page" value="' . esc_attr(casanova_portal_admin_page_slug_for_section('payments')) . '" />';
+    echo '<input type="hidden" name="config_tab" value="support" />';
     echo '<p>';
     echo '<label for="giav_cliente_q" class="screen-reader-text">Buscar cliente</label>';
     echo '<input name="giav_cliente_q" id="giav_cliente_q" type="text" class="regular-text" placeholder="ID, DNI, email o nombre" value="' . esc_attr($qclient) . '" /> ';
@@ -804,6 +922,7 @@ function casanova_payments_render_settings_page(): void {
           echo '<p class="description">Puedes copiar el <strong>ID (GIAV)</strong> o entrar directamente al portal/previsualizacion desde aqui.</p>';
         }
       }
+    }
     }
 
   } elseif ($tab === 'portal') {
