@@ -161,6 +161,10 @@ if (!function_exists('casanova_payments_record_cobro')) {
     $billing_email = trim((string) ($provider_data['billing_email'] ?? ''));
     $billing_name = trim((string) ($provider_data['billing_name'] ?? ''));
     $billing_lastname = trim((string) ($provider_data['billing_lastname'] ?? ''));
+    $billing_fullname = trim((string) ($provider_data['billing_fullname'] ?? ''));
+    if ($billing_fullname === '') {
+      $billing_fullname = trim($billing_name . ' ' . $billing_lastname);
+    }
     $payment_link_id = (int) ($provider_data['payment_link_id'] ?? 0);
     $payment_link_scope = (string) ($provider_data['payment_link_scope'] ?? '');
     $id_forma_pago = (int) ($provider_data['id_forma_pago'] ?? 0);
@@ -168,13 +172,14 @@ if (!function_exists('casanova_payments_record_cobro')) {
     $concepto = (string) ($provider_data['concepto'] ?? '');
     $documento = (string) ($provider_data['documento'] ?? '');
     $payer_name = trim((string) ($provider_data['payer_name'] ?? ''));
-    if ($payer_name === '') {
-      $payer_name = 'Portal';
+    if ($billing_fullname !== '' && ($payer_name === '' || $payer_name === $billing_name)) {
+      $payer_name = $billing_fullname;
     }
+    if ($payer_name === '') $payer_name = 'Portal';
     $notas_internas = (string) ($provider_data['notas_internas'] ?? '');
 
     $expediente_cliente_id = (int) ($intent->id_cliente ?? 0);
-    $payer_id_cliente = $expediente_cliente_id;
+    $payer_id_cliente = 0;
     $payer_lookup_resolved = false;
     if ($billing_dni !== '' && function_exists('casanova_giav_cliente_search_por_dni') && function_exists('casanova_giav_extraer_idcliente')) {
       try {
@@ -192,7 +197,7 @@ if (!function_exists('casanova_payments_record_cobro')) {
       }
     }
 
-    if ($payer_id_cliente <= 0 && $billing_dni !== '' && function_exists('casanova_giav_cliente_create_from_billing')) {
+    if (!$payer_lookup_resolved && $billing_dni !== '' && function_exists('casanova_giav_cliente_create_from_billing')) {
       $bid = casanova_giav_cliente_create_from_billing([
         'dni' => $billing_dni,
         'email' => $billing_email,
@@ -208,8 +213,11 @@ if (!function_exists('casanova_payments_record_cobro')) {
       }
     }
 
-    if ($billing_dni !== '' && !$payer_lookup_resolved) {
-      error_log('[CASANOVA][' . $label . '][GIAV] payer fallback using expediente client idCliente=' . $expediente_cliente_id . ' dni=' . $billing_dni);
+    if ($payer_id_cliente <= 0) {
+      $payer_id_cliente = $expediente_cliente_id;
+      if ($billing_dni !== '' && !$payer_lookup_resolved) {
+        error_log('[CASANOVA][' . $label . '][GIAV] payer fallback using expediente client idCliente=' . $expediente_cliente_id . ' dni=' . $billing_dni);
+      }
     }
 
     $giav_params = [

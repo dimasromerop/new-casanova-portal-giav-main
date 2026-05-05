@@ -125,6 +125,13 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
     if ($billing_name === '' && !empty($plink_meta['billing_name'])) {
       $billing_name = trim((string)$plink_meta['billing_name']);
     }
+    $billing_fullname = trim((string)($plink_meta['billing_fullname'] ?? ($payload['billing_fullname'] ?? '')));
+    if ($billing_fullname === '') {
+      $billing_fullname = trim($billing_name . ' ' . $billing_lastname);
+    }
+    if ($billing_fullname !== '') {
+      $payer_name = $billing_fullname;
+    }
     if ($billing_dni === '' && !empty($plink_meta['billing_dni'])) {
       $billing_dni = (string)$plink_meta['billing_dni'];
     }
@@ -182,6 +189,7 @@ if (!function_exists('casanova_payments_try_giav_cobro_inespay')) {
         'billing_email' => $billing_email,
         'billing_name' => $billing_name,
         'billing_lastname' => $billing_lastname,
+        'billing_fullname' => $billing_fullname,
         'payment_link_id' => $payment_link_id,
         'payment_link_scope' => $payment_link_scope,
         'concepto' => $concepto,
