@@ -389,6 +389,7 @@ function casanova_group_tokens_create(array $data) {
     'unit_total' => (string) number_format((float)($data['unit_total'] ?? 0), 2, '.', ''),
     'status' => (string)($data['status'] ?? 'active'),
     'expires_at' => !empty($data['expires_at']) ? (string)$data['expires_at'] : null,
+    'metadata' => !empty($data['metadata']) ? (is_string($data['metadata']) ? $data['metadata'] : wp_json_encode($data['metadata'])) : null,
     'created_at' => $now,
     'updated_at' => $now,
   ];
@@ -396,7 +397,7 @@ function casanova_group_tokens_create(array $data) {
   $ok = $wpdb->insert(
     $table,
     $row,
-    ['%s','%d','%d','%s','%s','%s','%s','%s']
+    ['%s','%d','%d','%s','%s','%s','%s','%s','%s']
   );
   if (!$ok) return new WP_Error('group_token_insert_failed', $wpdb->last_error);
 
@@ -418,12 +419,16 @@ function casanova_group_token_update(int $id, array $fields): bool {
   $id = (int)$id;
   if ($id <= 0) return false;
 
-  $allowed = ['status','expires_at','unit_total','updated_at'];
+  $allowed = ['status','expires_at','unit_total','metadata','updated_at'];
   $clean = [];
   foreach ($fields as $k => $v) {
     if (!in_array($k, $allowed, true)) continue;
     if ($k === 'unit_total') {
       $clean[$k] = (string) number_format((float)$v, 2, '.', '');
+      continue;
+    }
+    if ($k === 'metadata') {
+      $clean[$k] = is_string($v) ? $v : wp_json_encode($v);
       continue;
     }
     $clean[$k] = $v;
@@ -450,4 +455,3 @@ function casanova_group_pay_url(string $token): string {
   if ($token === '') return home_url('/');
   return home_url('/pay/group/' . rawurlencode($token) . '/');
 }
-

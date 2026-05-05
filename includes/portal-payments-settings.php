@@ -1121,8 +1121,29 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><th scope="row"><label for="group_id_reserva_pq">ID Reserva PQ (opcional)</label></th>';
     echo '<td><input name="group_id_reserva_pq" id="group_id_reserva_pq" type="number" min="0" step="1" class="regular-text" /></td></tr>';
 
-    echo '<tr><th scope="row"><label for="group_unit_total">Importe total por persona (EUR)</label></th>';
-    echo '<td><input name="group_unit_total" id="group_unit_total" type="text" required class="regular-text" placeholder="Ej: 250.00" /></td></tr>';
+    echo '<tr><th scope="row"><label for="group_units">Personas del grupo (opcional)</label></th>';
+    echo '<td><input name="group_units" id="group_units" type="number" min="1" step="1" class="regular-text" />';
+    echo '<p class="description">Si lo dejas vacio, se usara el numero de pasajeros detectado en el expediente. Usalo cuando este enlace cubra solo una parte del grupo.</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="group_unit_total">Importe unico por persona (EUR)</label></th>';
+    echo '<td><input name="group_unit_total" id="group_unit_total" type="text" class="regular-text" placeholder="Ej: 250.00" />';
+    echo '<p class="description">Usalo si todos pagan lo mismo. Si defines conceptos abajo, este campo puede quedar vacio.</p></td></tr>';
+
+    echo '<tr><th scope="row">Conceptos con precio distinto</th><td>';
+    echo '<p class="description">Opcional. Ejemplos: Habitacion doble, Habitacion individual, Junior, No jugador.</p>';
+    echo '<table class="widefat striped" id="casanova-group-concepts-table" style="max-width:760px">';
+    echo '<thead><tr><th>Concepto</th><th>Importe por persona (EUR)</th><th></th></tr></thead><tbody>';
+    for ($i = 0; $i < 2; $i++) {
+      echo '<tr>';
+      echo '<td><input type="text" name="group_concept_label[]" class="regular-text" placeholder="' . esc_attr($i === 0 ? 'Habitacion doble' : 'Habitacion individual') . '" /></td>';
+      echo '<td><input type="text" name="group_concept_amount[]" class="regular-text" placeholder="' . esc_attr($i === 0 ? '1200.00' : '1450.00') . '" /></td>';
+      echo '<td><button type="button" class="button casanova-group-concept-remove">Quitar</button></td>';
+      echo '</tr>';
+    }
+    echo '</tbody></table>';
+    echo '<p><button type="button" class="button" id="casanova-group-concept-add">Anadir concepto</button></p>';
+    echo '<script>(function(){var table=document.getElementById("casanova-group-concepts-table");var add=document.getElementById("casanova-group-concept-add");if(!table||!add)return;function bind(row){var btn=row.querySelector(".casanova-group-concept-remove");if(btn){btn.addEventListener("click",function(){var rows=table.querySelectorAll("tbody tr");if(rows.length>1){row.parentNode.removeChild(row);}else{row.querySelectorAll("input").forEach(function(i){i.value="";});}});}}table.querySelectorAll("tbody tr").forEach(bind);add.addEventListener("click",function(){var tr=document.createElement("tr");tr.innerHTML="<td><input type=\"text\" name=\"group_concept_label[]\" class=\"regular-text\" placeholder=\"Concepto\" /></td><td><input type=\"text\" name=\"group_concept_amount[]\" class=\"regular-text\" placeholder=\"0.00\" /></td><td><button type=\"button\" class=\"button casanova-group-concept-remove\">Quitar</button></td>";table.querySelector("tbody").appendChild(tr);bind(tr);});})();</script>';
+    echo '</td></tr>';
 
     echo '<tr><th scope="row"><label for="group_expires_at">Caduca el (opcional)</label></th>';
     echo '<td><input name="group_expires_at" id="group_expires_at" type="date" class="regular-text" /></td></tr>';
@@ -1170,6 +1191,16 @@ function casanova_payments_render_settings_page(): void {
                 if (is_array($decoded)) $meta = $decoded;
               }
               $detail = isset($meta['slots_count']) ? ('slots: ' . (string)$meta['slots_count']) : '';
+            } elseif ((string)($r->scope ?? '') === 'group_base') {
+              $meta = [];
+              $raw = (string)($r->metadata ?? '');
+              if ($raw !== '') {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) $meta = $decoded;
+              }
+              $concept_label = trim((string)($meta['concept_label'] ?? ''));
+              $mode = trim((string)($meta['mode'] ?? ''));
+              $detail = trim(($concept_label !== '' ? $concept_label : 'grupo') . ($mode !== '' ? ' / ' . $mode : ''));
             } elseif ((string)($r->scope ?? '') === 'individual_link') {
               $detail = 'individual';
             }
@@ -1212,14 +1243,37 @@ function casanova_payments_render_settings_page(): void {
         $rows = $wpdb->get_results("SELECT * FROM {$gt} ORDER BY id DESC LIMIT 20");
         if (!empty($rows)) {
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th>ID</th><th>Expediente</th><th>PQ</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
+          echo '<thead><tr><th>ID</th><th>Expediente</th><th>PQ</th><th>Personas</th><th>Conceptos</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
           foreach ($rows as $r) {
             $token = (string)($r->token ?? '');
             $url = ($token && function_exists('casanova_group_pay_url')) ? casanova_group_pay_url($token) : '';
+            $concepts_txt = '';
+            $group_units_txt = 'Auto';
+            $raw_meta = (string)($r->metadata ?? '');
+            if ($raw_meta !== '') {
+              $decoded_meta = json_decode($raw_meta, true);
+              if (is_array($decoded_meta) && (int)($decoded_meta['group_units'] ?? 0) > 0) {
+                $group_units_txt = (string)((int)$decoded_meta['group_units']);
+              }
+              $concepts = is_array($decoded_meta) && is_array($decoded_meta['concepts'] ?? null) ? $decoded_meta['concepts'] : [];
+              if (!empty($concepts)) {
+                $labels = [];
+                foreach ($concepts as $concept) {
+                  if (!is_array($concept)) continue;
+                  $labels[] = trim((string)($concept['label'] ?? '')) . ' (' . number_format((float)($concept['unit_total'] ?? 0), 2, ',', '.') . ' EUR)';
+                }
+                $concepts_txt = implode(', ', array_filter($labels));
+              }
+            }
+            if ($concepts_txt === '') {
+              $concepts_txt = number_format((float)($r->unit_total ?? 0), 2, ',', '.') . ' EUR';
+            }
             echo '<tr>';
             echo '<td>' . esc_html((string)$r->id) . '</td>';
             echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
             echo '<td>' . esc_html((string)($r->id_reserva_pq ?? '')) . '</td>';
+            echo '<td>' . esc_html($group_units_txt) . '</td>';
+            echo '<td>' . esc_html($concepts_txt) . '</td>';
             echo '<td>' . esc_html((string)$r->status) . '</td>';
             echo '<td><code>' . esc_html($token) . '</code></td>';
             echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir</a>' : '') . '</td>';
