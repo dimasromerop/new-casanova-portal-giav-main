@@ -149,13 +149,30 @@ function casanova_group_pay_token_units_limit($group, int $fallback_num_pax): in
   return $fallback_num_pax > 0 ? $fallback_num_pax : 1;
 }
 
-function casanova_group_pay_link_matches_token(array $meta, int $group_id, int $idReservaPQ): bool {
+function casanova_group_pay_link_matches_token(array $meta, int $group_id, int $idReservaPQ, $row = null, bool $allow_related = false): bool {
   $meta_group_id = (int)($meta['group_token_id'] ?? 0);
+  if ($meta_group_id > 0 && $meta_group_id === $group_id) {
+    return true;
+  }
+  if ($meta_group_id > 0 && !$allow_related) {
+    return false;
+  }
+
+  $row_reserva_pq = is_object($row) ? (int)($row->id_reserva_pq ?? 0) : 0;
+  $meta_reserva_pq = (int)($meta['id_reserva_pq'] ?? 0);
+
+  if ($allow_related) {
+    if ($idReservaPQ > 0) {
+      return $row_reserva_pq === $idReservaPQ || $meta_reserva_pq === $idReservaPQ;
+    }
+
+    return true;
+  }
+
   if ($meta_group_id > 0) {
     return $meta_group_id === $group_id;
   }
 
-  $meta_reserva_pq = (int)($meta['id_reserva_pq'] ?? 0);
   if ($idReservaPQ > 0 && $meta_reserva_pq > 0) {
     return $meta_reserva_pq === $idReservaPQ;
   }
@@ -170,6 +187,14 @@ function casanova_group_pay_link_is_confirmed($row): bool {
   if ($status === 'paid') return true;
   if ($status !== 'active') return false;
 
+  $has_payment_marker = (int)($row->giav_payment_id ?? 0) > 0 || trim((string)($row->paid_at ?? '')) !== '';
+  if ($has_payment_marker) {
+    if (function_exists('casanova_payment_link_update')) {
+      casanova_payment_link_update((int)$row->id, ['status' => 'paid']);
+    }
+    return true;
+  }
+
   if (!function_exists('casanova_payment_links_confirmed_intent_for_link')) return false;
   $intent = casanova_payment_links_confirmed_intent_for_link($row);
   if (!$intent) return false;
@@ -181,13 +206,14 @@ function casanova_group_pay_link_is_confirmed($row): bool {
   return true;
 }
 
-function casanova_group_pay_base_units_status(int $idExpediente, int $group_id, int $idReservaPQ): array {
+function casanova_group_pay_base_units_status(int $idExpediente, int $group_id, int $idReservaPQ, bool $allow_related = false): array {
   global $wpdb;
 
   $out = [
     'base_units' => 0,
     'deposit_units' => 0,
     'full_units' => 0,
+    'rest_units' => 0,
   ];
 
   if ($idExpediente <= 0 || !function_exists('casanova_payment_links_table')) return $out;
@@ -203,7 +229,7 @@ function casanova_group_pay_base_units_status(int $idExpediente, int $group_id, 
 
   foreach ($rows as $row) {
     $meta = casanova_group_pay_link_metadata($row);
-    if (!casanova_group_pay_link_matches_token($meta, $group_id, $idReservaPQ)) {
+    if (!casanova_group_pay_link_matches_token($meta, $group_id, $idReservaPQ, $row, $allow_related)) {
       continue;
     }
     if (!casanova_group_pay_link_is_confirmed($row)) {
@@ -214,7 +240,10 @@ function casanova_group_pay_base_units_status(int $idExpediente, int $group_id, 
     if ($units <= 0) continue;
 
     $mode = strtolower(trim((string)($meta['mode'] ?? '')));
-    if ($mode === 'rest') continue;
+    if ($mode === 'rest') {
+      $out['rest_units'] += $units;
+      continue;
+    }
 
     $out['base_units'] += $units;
     if (function_exists('casanova_payment_links_is_effective_deposit') && casanova_payment_links_is_effective_deposit($row, $meta)) {
@@ -227,7 +256,7 @@ function casanova_group_pay_base_units_status(int $idExpediente, int $group_id, 
   return $out;
 }
 
-function casanova_group_pay_rest_status(int $idExpediente, int $group_id, int $idReservaPQ, string $concept_id = ''): array {
+function casanova_group_pay_rest_status(int $idExpediente, int $group_id, int $idReservaPQ, string $concept_id = '', bool $allow_related = false): array {
   global $wpdb;
 
   $out = [
@@ -251,7 +280,7 @@ function casanova_group_pay_rest_status(int $idExpediente, int $group_id, int $i
 
   foreach ($rows as $row) {
     $meta = casanova_group_pay_link_metadata($row);
-    if (!casanova_group_pay_link_matches_token($meta, $group_id, $idReservaPQ)) {
+    if (!casanova_group_pay_link_matches_token($meta, $group_id, $idReservaPQ, $row, $allow_related)) {
       continue;
     }
     if (!casanova_group_pay_link_matches_concept($meta, $concept_id)) {
@@ -385,8 +414,14 @@ function casanova_handle_group_pay_request(string $token): void {
   $default_concept_id = (string)($default_concept['id'] ?? 'default');
   $has_group_concepts = count($group_concepts) > 1;
   $group_units_limit = casanova_group_pay_token_units_limit($group, $numPax);
-  $base_units_status = casanova_group_pay_base_units_status($idExpediente, (int)$group->id, $idReservaPQ);
-  $base_units_used = max(0, (int)($base_units_status['base_units'] ?? 0));
+  $configured_units = casanova_group_pay_token_configured_units($group);
+  $allow_related_group_links = ($configured_units <= 0 || $numPax <= 0 || $group_units_limit >= $numPax);
+  $base_units_status = casanova_group_pay_base_units_status($idExpediente, (int)$group->id, $idReservaPQ, $allow_related_group_links);
+  $base_units_used = max(
+    0,
+    (int)($base_units_status['base_units'] ?? 0),
+    (int)($base_units_status['rest_units'] ?? 0)
+  );
   $main_available_units = max(0, $group_units_limit - $base_units_used);
 
   $deposit_allowed = function_exists('casanova_payments_is_deposit_allowed') ? casanova_payments_is_deposit_allowed($reservas) : false;
@@ -448,7 +483,7 @@ function casanova_handle_group_pay_request(string $token): void {
       $rest_concept_id = (string)($rest_concept['id'] ?? $default_concept_id);
       $rest_concept_label = (string)($rest_concept['label'] ?? '');
       $rest_unit_total = round((float)($rest_concept['unit_total'] ?? $unit_total), 2);
-      $rest_status = casanova_group_pay_rest_status($idExpediente, (int)$group->id, $idReservaPQ, $rest_concept_id);
+      $rest_status = casanova_group_pay_rest_status($idExpediente, (int)$group->id, $idReservaPQ, $rest_concept_id, $allow_related_group_links);
       $rest_unit_deposit = round((float)($rest_status['unit_deposit'] ?? 0), 2);
       if ($rest_unit_deposit <= 0.0) {
         $rest_unit_deposit = casanova_group_pay_concept_deposit($rest_unit_total, $idExpediente);
@@ -754,7 +789,7 @@ function casanova_handle_group_pay_request(string $token): void {
     if ($c_unit_total <= 0.0) continue;
 
     $c_deposit_configured = casanova_group_pay_concept_deposit($c_unit_total, $idExpediente);
-    $c_status = casanova_group_pay_rest_status($idExpediente, (int)$group->id, $idReservaPQ, $cid);
+    $c_status = casanova_group_pay_rest_status($idExpediente, (int)$group->id, $idReservaPQ, $cid, $allow_related_group_links);
     $c_rest_unit_deposit = round((float)($c_status['unit_deposit'] ?? 0), 2);
     if ($c_rest_unit_deposit <= 0.0) $c_rest_unit_deposit = $c_deposit_configured;
     $c_unit_rest = round(max(0.0, $c_unit_total - $c_rest_unit_deposit), 2);
