@@ -942,6 +942,10 @@ function casanova_payments_render_settings_page(): void {
     echo '<p><strong>Notify URL activa:</strong> <code>' . esc_html($redsys_notify_url) . '</code></p>';
     echo '<p><strong>Ping publico:</strong> <code>' . esc_html($redsys_ping_url) . '</code></p>';
     echo '<p class="description">Para depurar, abre el ping desde fuera del servidor y revisa <code>wp-content/uploads/casanova-portal/log-YYYYMMDD.log</code>. Si el ping no devuelve JSON, hay bloqueo de red, HTTPS, firewall, WAF o rewrite antes de WordPress.</p>';
+    echo '<form method="post" action="' . esc_url($redsys_notify_url) . '" target="_blank" style="margin:8px 0 16px">';
+    submit_button('Probar notify vacio', 'secondary', 'submit', false);
+    echo ' <span class="description">Debe abrir una pestaña con <code>Missing params</code> y escribir trazas <code>rest_callback</code>/<code>missing_params</code> en el log.</span>';
+    echo '</form>';
 
     if ($redsys_recovery === 'ok') {
       $msg = 'Pago Redsys recuperado y registrado en GIAV.';
