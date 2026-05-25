@@ -1408,6 +1408,10 @@ function casanova_payments_render_settings_page(): void {
     echo '<script>(function(){var table=document.getElementById("casanova-group-concepts-table");var add=document.getElementById("casanova-group-concept-add");if(!table||!add)return;function bind(row){var btn=row.querySelector(".casanova-group-concept-remove");if(btn){btn.addEventListener("click",function(){var rows=table.querySelectorAll("tbody tr");if(rows.length>1){row.parentNode.removeChild(row);}else{row.querySelectorAll("input").forEach(function(i){i.value="";});}});}}table.querySelectorAll("tbody tr").forEach(bind);add.addEventListener("click",function(){var tr=document.createElement("tr");tr.innerHTML="<td><input type=\"text\" name=\"group_concept_label[]\" class=\"regular-text\" placeholder=\"Concepto\" /></td><td><input type=\"text\" name=\"group_concept_amount[]\" class=\"regular-text\" placeholder=\"0.00\" /></td><td><button type=\"button\" class=\"button casanova-group-concept-remove\">Quitar</button></td>";table.querySelector("tbody").appendChild(tr);bind(tr);});})();</script>';
     echo '</td></tr>';
 
+    echo '<tr><th scope="row">Pago en USD</th>';
+    echo '<td><label for="group_offer_usd_payment"><input name="group_offer_usd_payment" id="group_offer_usd_payment" type="checkbox" value="1" /> Ofrecer pago en dolares con Stripe</label>';
+    echo '<p class="description">El importe del grupo se introduce siempre en EUR. Si el cliente elige USD, solo vera tarjeta y se cobrara por Stripe.</p></td></tr>';
+
     echo '<tr><th scope="row"><label for="group_expires_at">Caduca el (opcional)</label></th>';
     echo '<td><input name="group_expires_at" id="group_expires_at" type="date" class="regular-text" /></td></tr>';
     echo '</table>';
@@ -1464,6 +1468,9 @@ function casanova_payments_render_settings_page(): void {
               $concept_label = trim((string)($meta['concept_label'] ?? ''));
               $mode = trim((string)($meta['mode'] ?? ''));
               $detail = trim(($concept_label !== '' ? $concept_label : 'grupo') . ($mode !== '' ? ' / ' . $mode : ''));
+              if (!empty($meta['preferred_currency']) && strtoupper((string)$meta['preferred_currency']) === 'USD') {
+                $detail .= ' / USD';
+              }
             } elseif ((string)($r->scope ?? '') === 'individual_link') {
               $detail = 'individual';
               $meta = [];
@@ -1521,13 +1528,15 @@ function casanova_payments_render_settings_page(): void {
             $url = ($token && function_exists('casanova_group_pay_url')) ? casanova_group_pay_url($token) : '';
             $concepts_txt = '';
             $group_units_txt = 'Auto';
+            $decoded_meta = [];
             $raw_meta = (string)($r->metadata ?? '');
             if ($raw_meta !== '') {
-              $decoded_meta = json_decode($raw_meta, true);
-              if (is_array($decoded_meta) && (int)($decoded_meta['group_units'] ?? 0) > 0) {
+              $decoded = json_decode($raw_meta, true);
+              if (is_array($decoded)) $decoded_meta = $decoded;
+              if ((int)($decoded_meta['group_units'] ?? 0) > 0) {
                 $group_units_txt = (string)((int)$decoded_meta['group_units']);
               }
-              $concepts = is_array($decoded_meta) && is_array($decoded_meta['concepts'] ?? null) ? $decoded_meta['concepts'] : [];
+              $concepts = is_array($decoded_meta['concepts'] ?? null) ? $decoded_meta['concepts'] : [];
               if (!empty($concepts)) {
                 $labels = [];
                 foreach ($concepts as $concept) {
@@ -1539,6 +1548,9 @@ function casanova_payments_render_settings_page(): void {
             }
             if ($concepts_txt === '') {
               $concepts_txt = number_format((float)($r->unit_total ?? 0), 2, ',', '.') . ' EUR';
+            }
+            if (!empty($decoded_meta['offer_usd_payment'])) {
+              $concepts_txt .= ' / USD';
             }
             echo '<tr>';
             echo '<td>' . esc_html((string)$r->id) . '</td>';

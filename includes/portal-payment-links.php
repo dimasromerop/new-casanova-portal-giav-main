@@ -402,7 +402,7 @@ function casanova_handle_payment_link_request(string $token): void {
   if ($prefill_currency !== 'USD' || !$usd_payment_enabled) {
     $prefill_currency = 'EUR';
   }
-  if ($prefill_currency === 'USD') {
+  if ($prefill_currency === 'USD' || $offer_usd_payment) {
     $prefill_method = 'card';
   }
   $public_locale = function_exists('casanova_portal_get_public_requested_locale')
@@ -513,6 +513,9 @@ function casanova_handle_payment_link_request(string $token): void {
     $cfg = Casanova_Inespay_Service::config();
     $inespay_enabled = !is_wp_error($cfg);
   }
+  if ($offer_usd_payment) {
+    $inespay_enabled = false;
+  }
 
   $autostart_mode = isset($_GET['mode']) ? strtolower(trim((string)$_GET['mode'])) : '';
   if ($autostart_mode !== 'deposit' && $autostart_mode !== 'full') {
@@ -521,7 +524,7 @@ function casanova_handle_payment_link_request(string $token): void {
 
   if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && !empty($_GET['autostart']) && $auto_start && $prefill_name !== '' && $prefill_lastname !== '' && $prefill_dni !== '') {
     $currency = ($prefill_currency === 'USD' && $usd_payment_enabled) ? 'USD' : 'EUR';
-    $method = ($currency === 'USD') ? 'card' : (($prefill_method === 'bank_transfer' && $inespay_enabled) ? 'bank_transfer' : 'card');
+    $method = ($currency === 'USD' || $offer_usd_payment) ? 'card' : (($prefill_method === 'bank_transfer' && $inespay_enabled) ? 'bank_transfer' : 'card');
     $card_brand = $method === 'card' ? $prefill_card_brand : 'other';
     if ($currency === 'USD') {
       $card_brand = 'other';
@@ -561,7 +564,7 @@ function casanova_handle_payment_link_request(string $token): void {
     $dni_raw = isset($_POST['billing_dni']) ? (string)$_POST['billing_dni'] : '';
     $dni = strtoupper(preg_replace('/\s+/', '', sanitize_text_field($dni_raw)));
     if ($dni === '') {
-      casanova_render_payment_link_error(__('Debes indicar el DNI/NIF.', 'casanova-portal'));
+      casanova_render_payment_link_error(__('Debes indicar un documento de identidad o pasaporte.', 'casanova-portal'));
       exit;
     }
 
@@ -623,7 +626,7 @@ function casanova_handle_payment_link_request(string $token): void {
 
     $selected_method = isset($_POST['method']) ? strtolower(trim((string)$_POST['method'])) : 'card';
     if ($selected_method !== 'card' && $selected_method !== 'bank_transfer') $selected_method = 'card';
-    if ($selected_currency === 'USD') {
+    if ($selected_currency === 'USD' || $offer_usd_payment) {
       $selected_method = 'card';
     }
 
@@ -1074,8 +1077,9 @@ function casanova_handle_payment_link_request(string $token): void {
   echo '<input class="casanova-public-field__control" type="email" name="billing_email" autocomplete="email" required value="' . esc_attr($prefill_email) . '" />';
   echo '</label>';
 
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('DNI / NIF (obligatorio)', 'casanova-portal') . '</span>';
+  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Documento de identidad / pasaporte (obligatorio)', 'casanova-portal') . '</span>';
   echo '<input class="casanova-public-field__control" type="text" name="billing_dni" required value="' . esc_attr($prefill_dni) . '" />';
+  echo '<span class="casanova-public-field__hint">' . esc_html__('DNI/NIE, pasaporte o documento nacional.', 'casanova-portal') . '</span>';
   echo '</label>';
 
   if ($usd_payment_enabled) {

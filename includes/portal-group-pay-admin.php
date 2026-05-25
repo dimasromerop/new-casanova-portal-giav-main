@@ -79,6 +79,7 @@ add_action('admin_post_casanova_create_group_token', function () {
   $unit_total_raw = isset($_POST['group_unit_total']) ? (string)$_POST['group_unit_total'] : '';
   $unit_total = casanova_group_pay_admin_amount($unit_total_raw);
   $concepts = casanova_group_pay_admin_collect_concepts();
+  $offer_usd_payment = !empty($_POST['group_offer_usd_payment']);
   $expires_at = null;
   $exp_raw = isset($_POST['group_expires_at']) ? sanitize_text_field((string)$_POST['group_expires_at']) : '';
   if ($exp_raw !== '') {
@@ -138,6 +139,9 @@ add_action('admin_post_casanova_create_group_token', function () {
   if ($group_units > 0) {
     $metadata['group_units'] = $group_units;
     $metadata['group_units_source'] = 'manual';
+  }
+  if ($offer_usd_payment) {
+    $metadata['offer_usd_payment'] = true;
   }
 
   $token = casanova_group_tokens_create([
