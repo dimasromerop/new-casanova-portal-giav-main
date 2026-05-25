@@ -492,8 +492,20 @@ if (!function_exists('casanova_stripe_try_giav_cobro')) {
       $billing_fullname = trim($billing_name . ' ' . $billing_lastname);
     }
     $billing_email = trim((string) ($payload['billing_email'] ?? ($plink_meta['billing_email'] ?? '')));
+    $note_others = $plink_meta['others_names'] ?? [];
+    if (is_string($note_others) && $note_others !== '') {
+      $note_others = preg_split('/\r\n|\r|\n/', $note_others);
+    }
+    if (!is_array($note_others)) $note_others = [];
+    $note_others = array_values(array_filter(array_map('sanitize_text_field', $note_others), static function ($value) {
+      return $value !== '';
+    }));
 
     $mode = strtolower(trim((string) ($payload['mode'] ?? ($plink_meta['mode'] ?? ''))));
+    $mode_label = '';
+    if ($mode === 'deposit') $mode_label = 'deposito';
+    elseif ($mode === 'full') $mode_label = 'total';
+    elseif ($mode === 'rest') $mode_label = 'resto';
     $session_id = (string) ($session['id'] ?? '');
     $payment_intent = (string) ($session['payment_intent'] ?? '');
     $usd_amount = ((float) ((int) ($session['amount_total'] ?? 0))) / 100;
@@ -504,11 +516,30 @@ if (!function_exists('casanova_stripe_try_giav_cobro')) {
       ? ('Deposito Stripe ' . $session_id)
       : ('Pago Stripe ' . $session_id);
 
-    $notas_internas = 'Stripe USD ' . number_format($usd_amount, 2, '.', '')
+    $is_group_payment = $payment_link_scope === 'group_base' || !empty($plink_meta['group_token_id']);
+    $stripe_note = 'Stripe USD ' . number_format($usd_amount, 2, '.', '')
       . ' | EUR base ' . number_format((float) ($intent->amount ?? 0), 2, '.', '')
       . ($rate !== '' ? (' | EUR/USD ' . $rate) : '')
       . ' | session=' . $session_id
       . ($payment_intent !== '' ? (' | payment_intent=' . $payment_intent) : '');
+    $notas_internas = $stripe_note;
+
+    if ($is_group_payment) {
+      $units = (int) ($plink_meta['units'] ?? 0);
+      $parts = [
+        'Pagador: ' . trim(($billing_fullname !== '' ? $billing_fullname : 'Portal') . ' ' . $billing_dni) . ' (' . $billing_email . ').',
+      ];
+      if ($units > 0) {
+        $parts[] = 'Personas: ' . $units . '.';
+      }
+      if ($mode_label !== '') {
+        $parts[] = 'Modalidad: ' . $mode_label . '.';
+      }
+      if (!empty($note_others)) {
+        $parts[] = 'Referencia viajeros: ' . implode(', ', array_slice($note_others, 0, 20)) . '.';
+      }
+      $notas_internas = implode(' ', $parts) . ' | ' . $stripe_note;
+    }
 
     if (function_exists('casanova_payments_record_cobro')) {
       return casanova_payments_record_cobro($intent, [
