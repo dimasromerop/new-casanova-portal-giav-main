@@ -937,6 +937,12 @@ function casanova_payments_render_settings_page(): void {
     echo '<h2>Recuperar pago Redsys autorizado</h2>';
     echo '<p class="description">Usa esta herramienta solo cuando Redsys muestra una operacion autorizada, pero el intent local sigue en <code>return_pending_notify</code> porque no llego la notificacion servidor-a-servidor.</p>';
 
+    $redsys_notify_url = function_exists('casanova_tpv_notify_url') ? casanova_tpv_notify_url() : rest_url('casanova/v1/redsys/notify');
+    $redsys_ping_url = rest_url('casanova/v1/redsys/ping');
+    echo '<p><strong>Notify URL activa:</strong> <code>' . esc_html($redsys_notify_url) . '</code></p>';
+    echo '<p><strong>Ping publico:</strong> <code>' . esc_html($redsys_ping_url) . '</code></p>';
+    echo '<p class="description">Para depurar, abre el ping desde fuera del servidor y revisa <code>wp-content/uploads/casanova-portal/log-YYYYMMDD.log</code>. Si el ping no devuelve JSON, hay bloqueo de red, HTTPS, firewall, WAF o rewrite antes de WordPress.</p>';
+
     if ($redsys_recovery === 'ok') {
       $msg = 'Pago Redsys recuperado y registrado en GIAV.';
       if ($redsys_cobro > 0) {

@@ -358,7 +358,7 @@ if (!function_exists('casanova_redsys_build_tpv_payload')) {
 }
 
 if (!function_exists('casanova_redsys_attach_intent_tpv')) {
-  function casanova_redsys_attach_intent_tpv(int $intent_id, $old_payload, string $tpv_key): bool {
+  function casanova_redsys_attach_intent_tpv(int $intent_id, $old_payload, string $tpv_key, array $urls = []): bool {
     if ($intent_id <= 0 || !function_exists('casanova_payment_intent_update')) {
       return false;
     }
@@ -374,6 +374,15 @@ if (!function_exists('casanova_redsys_attach_intent_tpv')) {
     }
 
     $payload['redsys_tpv'] = casanova_redsys_build_tpv_payload($tpv_key);
+    if (!empty($urls['notify_url'])) {
+      $payload['redsys_notify_url'] = esc_url_raw((string)$urls['notify_url']);
+    }
+    if (!empty($urls['url_ok'])) {
+      $payload['redsys_url_ok'] = esc_url_raw((string)$urls['url_ok']);
+    }
+    if (!empty($urls['url_ko'])) {
+      $payload['redsys_url_ko'] = esc_url_raw((string)$urls['url_ko']);
+    }
 
     return casanova_payment_intent_update($intent_id, [
       'payload' => $payload,
@@ -433,6 +442,20 @@ if (!function_exists('casanova_redsys_prepare_redirect_data')) {
       'DS_MERCHANT_URLKO' => $url_ko,
       'DS_MERCHANT_MERCHANTDATA' => $token,
     ];
+
+    if (function_exists('casanova_portal_log')) {
+      casanova_portal_log('redsys_redirect', [
+        'intent_id' => (int)$intent->id,
+        'order' => (string)$intent->order_redsys,
+        'amount_cents' => $amount_cents,
+        'tpv_key' => $tpv_key,
+        'sandbox' => !empty($cfg['sandbox']),
+        'endpoint' => (string)$cfg['endpoint'],
+        'notify_url' => $url_notify,
+        'url_ok' => $url_ok,
+        'url_ko' => $url_ko,
+      ]);
+    }
 
     $mpB64 = casanova_redsys_encode_params($merchant_params);
     $signature = casanova_redsys_signature($mpB64, (string)$intent->order_redsys, (string)$cfg['secret_key']);

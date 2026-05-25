@@ -159,6 +159,63 @@ if (!function_exists('casanova_redsys_intent_from_response_params')) {
   }
 }
 
+if (!function_exists('casanova_redsys_request_snapshot')) {
+  function casanova_redsys_request_snapshot(array $extra = []): array {
+    $raw = '';
+    try {
+      $raw = (string)file_get_contents('php://input');
+    } catch (Throwable $e) {
+      $raw = '';
+    }
+
+    return array_merge([
+      'time' => function_exists('current_time') ? current_time('mysql') : gmdate('c'),
+      'method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
+      'uri' => (string)($_SERVER['REQUEST_URI'] ?? ''),
+      'remote_addr' => (string)($_SERVER['REMOTE_ADDR'] ?? ''),
+      'user_agent' => substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 180),
+      'content_type' => (string)($_SERVER['CONTENT_TYPE'] ?? ($_SERVER['HTTP_CONTENT_TYPE'] ?? '')),
+      'content_length' => (string)($_SERVER['CONTENT_LENGTH'] ?? ''),
+      'get_keys' => array_keys($_GET),
+      'post_keys' => array_keys($_POST),
+      'request_keys' => array_keys($_REQUEST),
+      'raw_len' => strlen($raw),
+      'raw_sha1' => $raw !== '' ? sha1($raw) : '',
+    ], $extra);
+  }
+}
+
+if (!function_exists('casanova_redsys_debug_log')) {
+  function casanova_redsys_debug_log(string $event, array $extra = []): void {
+    $payload = casanova_redsys_request_snapshot(array_merge(['event' => $event], $extra));
+    if (function_exists('casanova_portal_log')) {
+      casanova_portal_log('redsys_notify', $payload);
+    }
+    error_log('[CASANOVA][TPV][NOTIFY_DEBUG] ' . $event . ' ' . wp_json_encode($payload));
+  }
+}
+
+if (!function_exists('casanova_redsys_hydrate_superglobals_from_rest_request')) {
+  function casanova_redsys_hydrate_superglobals_from_rest_request($request): void {
+    if (!is_object($request) || !method_exists($request, 'get_params')) {
+      return;
+    }
+
+    $params = $request->get_params();
+    if (!is_array($params) || empty($params)) {
+      return;
+    }
+
+    foreach ($params as $key => $value) {
+      if (!is_scalar($value)) continue;
+      if (!isset($_REQUEST[$key])) $_REQUEST[$key] = $value;
+      if (!isset($_POST[$key]) && strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? '')) === 'POST') {
+        $_POST[$key] = $value;
+      }
+    }
+  }
+}
+
 if (!function_exists('casanova_tpv_redirect_url_for_intent')) {
   function casanova_tpv_redirect_url_for_intent($intent, bool $ok): string {
     $payload = [];
@@ -679,14 +736,25 @@ function casanova_handle_tpv_return(): void {
 function casanova_handle_tpv_notify(): void {
 
   error_log('[CASANOVA][TPV][NOTIFY] reached method=' . ($_SERVER['REQUEST_METHOD'] ?? '?'));
+  casanova_redsys_debug_log('reached');
 
   $mpB64 = isset($_REQUEST['Ds_MerchantParameters']) ? (string)wp_unslash($_REQUEST['Ds_MerchantParameters']) : '';
   $sig   = isset($_REQUEST['Ds_Signature']) ? (string)wp_unslash($_REQUEST['Ds_Signature']) : '';
   $ver   = isset($_REQUEST['Ds_SignatureVersion']) ? (string)wp_unslash($_REQUEST['Ds_SignatureVersion']) : '';
 
   error_log('[CASANOVA][TPV][NOTIFY] mp_len=' . strlen($mpB64) . ' sig_len=' . strlen($sig) . ' ver=' . $ver);
+  casanova_redsys_debug_log('params_seen', [
+    'mp_len' => strlen($mpB64),
+    'sig_len' => strlen($sig),
+    'version' => $ver,
+  ]);
 
   if ($mpB64 === '' || $sig === '') {
+    casanova_redsys_debug_log('missing_params', [
+      'mp_len' => strlen($mpB64),
+      'sig_len' => strlen($sig),
+      'version' => $ver,
+    ]);
     status_header(400);
     echo 'Missing params';
     exit;
@@ -698,10 +766,26 @@ function casanova_handle_tpv_notify(): void {
 
   if (empty($params)) {
     error_log('[CASANOVA][TPV][NOTIFY] decoded params empty');
+    casanova_redsys_debug_log('decoded_empty', [
+      'mp_len' => strlen($mpB64),
+      'sig_len' => strlen($sig),
+    ]);
   }
   error_log('[CASANOVA][TPV][NOTIFY] token=' . $token . ' order=' . $order);
+  casanova_redsys_debug_log('decoded', [
+    'token_present' => $token !== '',
+    'order' => $order,
+    'merchant_code' => casanova_redsys_param($params, ['Ds_MerchantCode', 'DS_MERCHANTCODE', 'Ds_Merchant_MerchantCode', 'DS_MERCHANT_MERCHANTCODE']),
+    'terminal' => casanova_redsys_param($params, ['Ds_Terminal', 'DS_TERMINAL', 'Ds_Merchant_Terminal', 'DS_MERCHANT_TERMINAL']),
+    'ds_response' => casanova_redsys_param($params, ['Ds_Response', 'DS_RESPONSE']),
+    'decoded_keys' => array_keys($params),
+  ]);
 
   if (($token === '' && $order === '') || !function_exists('casanova_payment_intent_get_by_token') || !function_exists('casanova_payment_intent_update')) {
+    casanova_redsys_debug_log('intent_lookup_unavailable', [
+      'token_present' => $token !== '',
+      'order' => $order,
+    ]);
     status_header(500);
     echo 'Payments module missing';
     exit;
@@ -709,6 +793,10 @@ function casanova_handle_tpv_notify(): void {
 
   $intent = casanova_redsys_intent_from_response_params($params);
   if (!$intent) {
+    casanova_redsys_debug_log('intent_not_found', [
+      'token_present' => $token !== '',
+      'order' => $order,
+    ]);
     status_header(404);
     echo 'Intent not found';
     exit;
@@ -752,6 +840,13 @@ function casanova_handle_tpv_notify(): void {
   error_log('[CASANOVA][TPV][NOTIFY] intent=' . (int)$intent->id . ' status=' . $curr_status .
     ' valid_sig=' . ($is_valid ? '1' : '0') . ' ds=' . $ds_resp
   );
+  casanova_redsys_debug_log('validated', [
+    'intent_id' => (int)$intent->id,
+    'status' => $curr_status,
+    'valid_sig' => $is_valid,
+    'ds_response' => $ds_resp,
+    'bank_ok' => $bank_ok,
+  ]);
 
   // Estado: separado para entender qué pasó
   $new_status = 'notified_bad_sig';
@@ -833,9 +928,30 @@ add_action('rest_api_init', function () {
   register_rest_route('casanova/v1', '/redsys/notify', [
     'methods'  => 'POST',
     'callback' => function ($request) {
-      // simula el mismo handler
+      casanova_redsys_hydrate_superglobals_from_rest_request($request);
+      casanova_redsys_debug_log('rest_callback', [
+        'rest_param_keys' => is_object($request) && method_exists($request, 'get_params') ? array_keys((array)$request->get_params()) : [],
+      ]);
       casanova_handle_tpv_notify();
       return new WP_REST_Response(['ok' => true], 200);
+    },
+    'permission_callback' => '__return_true',
+  ]);
+
+  register_rest_route('casanova/v1', '/redsys/ping', [
+    'methods'  => ['GET', 'POST'],
+    'callback' => function ($request) {
+      casanova_redsys_hydrate_superglobals_from_rest_request($request);
+      casanova_redsys_debug_log('ping', [
+        'rest_param_keys' => is_object($request) && method_exists($request, 'get_params') ? array_keys((array)$request->get_params()) : [],
+      ]);
+
+      return new WP_REST_Response([
+        'ok' => true,
+        'time' => current_time('mysql'),
+        'method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
+        'notify_url' => function_exists('casanova_tpv_notify_url') ? casanova_tpv_notify_url() : rest_url('casanova/v1/redsys/notify'),
+      ], 200);
     },
     'permission_callback' => '__return_true',
   ]);

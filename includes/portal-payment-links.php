@@ -959,7 +959,12 @@ function casanova_handle_payment_link_request(string $token): void {
       casanova_redsys_attach_intent_tpv(
         (int)$intent->id,
         $intent->payload ?? null,
-        (string)($redsys_redirect['tpv_key'] ?? 'default')
+        (string)($redsys_redirect['tpv_key'] ?? 'default'),
+        [
+          'notify_url' => (string)($redsys_redirect['notify_url'] ?? ''),
+          'url_ok' => (string)($redsys_redirect['url_ok'] ?? ''),
+          'url_ko' => (string)($redsys_redirect['url_ko'] ?? ''),
+        ]
       );
     }
 
