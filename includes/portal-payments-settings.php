@@ -209,6 +209,60 @@ add_action('admin_init', function () {
     'default' => 0,
   ]);
 
+  register_setting('casanova_payments', 'casanova_stripe_secret_key', [
+    'type' => 'string',
+    'sanitize_callback' => function($value) {
+      return substr(trim((string) $value), 0, 255);
+    },
+    'default' => '',
+  ]);
+
+  register_setting('casanova_payments', 'casanova_stripe_webhook_secret', [
+    'type' => 'string',
+    'sanitize_callback' => function($value) {
+      return substr(trim((string) $value), 0, 255);
+    },
+    'default' => '',
+  ]);
+
+  register_setting('casanova_payments', 'casanova_giav_idformapago_stripe', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 0,
+  ]);
+
+  register_setting('casanova_payments', 'casanova_stripe_fee_percent', [
+    'type' => 'number',
+    'sanitize_callback' => function($value) {
+      return function_exists('casanova_stripe_sanitize_percent') ? casanova_stripe_sanitize_percent($value) : max(0, (float)$value);
+    },
+    'default' => 1.5,
+  ]);
+
+  register_setting('casanova_payments', 'casanova_stripe_fx_fee_percent', [
+    'type' => 'number',
+    'sanitize_callback' => function($value) {
+      return function_exists('casanova_stripe_sanitize_percent') ? casanova_stripe_sanitize_percent($value) : max(0, (float)$value);
+    },
+    'default' => 0.4,
+  ]);
+
+  register_setting('casanova_payments', 'casanova_stripe_margin_percent', [
+    'type' => 'number',
+    'sanitize_callback' => function($value) {
+      return function_exists('casanova_stripe_sanitize_percent') ? casanova_stripe_sanitize_percent($value) : max(0, (float)$value);
+    },
+    'default' => 1.0,
+  ]);
+
+  register_setting('casanova_payments', 'casanova_stripe_eur_usd_fallback_rate', [
+    'type' => 'number',
+    'sanitize_callback' => function($value) {
+      return function_exists('casanova_stripe_sanitize_rate') ? casanova_stripe_sanitize_rate($value) : max(0, (float)$value);
+    },
+    'default' => 0,
+  ]);
+
   register_setting('casanova_payments', 'casanova_aplazame_public_key', [
     'type' => 'string',
     'sanitize_callback' => function($value) {
@@ -292,6 +346,60 @@ add_action('admin_init', function () {
   register_setting('casanova_payments_methods', 'casanova_giav_idformapago_inespay', [
     'type' => 'integer',
     'sanitize_callback' => 'absint',
+    'default' => 0,
+  ]);
+
+  register_setting('casanova_payments_methods', 'casanova_stripe_secret_key', [
+    'type' => 'string',
+    'sanitize_callback' => function($value) {
+      return substr(trim((string) $value), 0, 255);
+    },
+    'default' => '',
+  ]);
+
+  register_setting('casanova_payments_methods', 'casanova_stripe_webhook_secret', [
+    'type' => 'string',
+    'sanitize_callback' => function($value) {
+      return substr(trim((string) $value), 0, 255);
+    },
+    'default' => '',
+  ]);
+
+  register_setting('casanova_payments_methods', 'casanova_giav_idformapago_stripe', [
+    'type' => 'integer',
+    'sanitize_callback' => 'absint',
+    'default' => 0,
+  ]);
+
+  register_setting('casanova_payments_methods', 'casanova_stripe_fee_percent', [
+    'type' => 'number',
+    'sanitize_callback' => function($value) {
+      return function_exists('casanova_stripe_sanitize_percent') ? casanova_stripe_sanitize_percent($value) : max(0, (float)$value);
+    },
+    'default' => 1.5,
+  ]);
+
+  register_setting('casanova_payments_methods', 'casanova_stripe_fx_fee_percent', [
+    'type' => 'number',
+    'sanitize_callback' => function($value) {
+      return function_exists('casanova_stripe_sanitize_percent') ? casanova_stripe_sanitize_percent($value) : max(0, (float)$value);
+    },
+    'default' => 0.4,
+  ]);
+
+  register_setting('casanova_payments_methods', 'casanova_stripe_margin_percent', [
+    'type' => 'number',
+    'sanitize_callback' => function($value) {
+      return function_exists('casanova_stripe_sanitize_percent') ? casanova_stripe_sanitize_percent($value) : max(0, (float)$value);
+    },
+    'default' => 1.0,
+  ]);
+
+  register_setting('casanova_payments_methods', 'casanova_stripe_eur_usd_fallback_rate', [
+    'type' => 'number',
+    'sanitize_callback' => function($value) {
+      return function_exists('casanova_stripe_sanitize_rate') ? casanova_stripe_sanitize_rate($value) : max(0, (float)$value);
+    },
     'default' => 0,
   ]);
   register_setting('casanova_payments_methods', 'casanova_aplazame_public_key', [
@@ -667,6 +775,14 @@ function casanova_payments_render_settings_page(): void {
     $idfp_redsys = (int) get_option('casanova_giav_idformapago_redsys', 1027);
     $idfp_redsys_amex = (int) get_option('casanova_giav_idformapago_redsys_amex', 0);
     $idfp_inespay = (int) get_option('casanova_giav_idformapago_inespay', 0);
+    $stripe_secret_key = (string) get_option('casanova_stripe_secret_key', '');
+    $stripe_webhook_secret = (string) get_option('casanova_stripe_webhook_secret', '');
+    $idfp_stripe = (int) get_option('casanova_giav_idformapago_stripe', 0);
+    $stripe_fee_percent = (float) get_option('casanova_stripe_fee_percent', 1.5);
+    $stripe_fx_fee_percent = (float) get_option('casanova_stripe_fx_fee_percent', 0.4);
+    $stripe_margin_percent = (float) get_option('casanova_stripe_margin_percent', 1.0);
+    $stripe_fallback_rate = (float) get_option('casanova_stripe_eur_usd_fallback_rate', 0);
+    $stripe_webhook_url = function_exists('casanova_stripe_public_webhook_url') ? casanova_stripe_public_webhook_url() : home_url('/wp-json/casanova/v1/stripe/notify');
     $aplazame_public_key = (string) get_option('casanova_aplazame_public_key', '');
     $aplazame_private_key = (string) get_option('casanova_aplazame_private_key', '');
     $aplazame_sandbox = (bool) get_option('casanova_aplazame_sandbox', 1);
@@ -751,6 +867,30 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><th scope="row"><label for="casanova_giav_idformapago_inespay">GIAV: ID forma de pago (Inespay)</label></th>';
     echo '<td><input name="casanova_giav_idformapago_inespay" id="casanova_giav_idformapago_inespay" type="number" min="0" step="1" value="' . esc_attr($idfp_inespay) . '" />';
     echo '<p class="description">Obligatorio para que el webhook de Inespay registre el cobro en GIAV. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_INESPAY</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_stripe_secret_key">Stripe: Secret key</label></th>';
+    echo '<td><input name="casanova_stripe_secret_key" id="casanova_stripe_secret_key" type="password" class="regular-text code" value="' . esc_attr($stripe_secret_key) . '" autocomplete="off" />';
+    echo '<p class="description">Clave secreta <code>sk_...</code> para crear Checkout Sessions. Alternativa: define <code>CASANOVA_STRIPE_SECRET_KEY</code> en <code>wp-config.php</code> (tiene prioridad).</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_stripe_webhook_secret">Stripe: Webhook secret</label></th>';
+    echo '<td><input name="casanova_stripe_webhook_secret" id="casanova_stripe_webhook_secret" type="password" class="regular-text code" value="' . esc_attr($stripe_webhook_secret) . '" autocomplete="off" />';
+    echo '<p class="description">Secreto <code>whsec_...</code> para validar firmas de Stripe. Endpoint: <code>' . esc_html($stripe_webhook_url) . '</code>. Alternativa: define <code>CASANOVA_STRIPE_WEBHOOK_SECRET</code>.</p></td></tr>';
+
+    echo '<tr><th scope="row"><label for="casanova_giav_idformapago_stripe">GIAV: ID forma de pago (Stripe)</label></th>';
+    echo '<td><input name="casanova_giav_idformapago_stripe" id="casanova_giav_idformapago_stripe" type="number" min="0" step="1" value="' . esc_attr($idfp_stripe) . '" />';
+    echo '<p class="description">Obligatorio para registrar en GIAV los cobros realizados en USD por Stripe. Alternativa: define <code>CASANOVA_GIAV_IDFORMAPAGO_STRIPE</code>.</p></td></tr>';
+
+    echo '<tr><th scope="row">Stripe USD: calculo</th><td>';
+    echo '<p><label for="casanova_stripe_fee_percent">Comision Stripe (%)</label><br />';
+    echo '<input name="casanova_stripe_fee_percent" id="casanova_stripe_fee_percent" type="number" min="0" max="50" step="0.01" value="' . esc_attr($stripe_fee_percent) . '" /></p>';
+    echo '<p><label for="casanova_stripe_fx_fee_percent">Conversion (%)</label><br />';
+    echo '<input name="casanova_stripe_fx_fee_percent" id="casanova_stripe_fx_fee_percent" type="number" min="0" max="50" step="0.01" value="' . esc_attr($stripe_fx_fee_percent) . '" /></p>';
+    echo '<p><label for="casanova_stripe_margin_percent">Diferencial margen (%)</label><br />';
+    echo '<input name="casanova_stripe_margin_percent" id="casanova_stripe_margin_percent" type="number" min="0" max="50" step="0.01" value="' . esc_attr($stripe_margin_percent) . '" /></p>';
+    echo '<p><label for="casanova_stripe_eur_usd_fallback_rate">EUR/USD fallback</label><br />';
+    echo '<input name="casanova_stripe_eur_usd_fallback_rate" id="casanova_stripe_eur_usd_fallback_rate" type="number" min="0" max="5" step="0.0001" value="' . esc_attr($stripe_fallback_rate) . '" /></p>';
+    echo '<p class="description">El USD se calcula con cotizacion EUR/USD del BCE, y se incrementa dividiendo por <code>1 - (comision + conversion + margen)</code>. Si el BCE falla se usa la ultima cotizacion guardada; solo usa este fallback si lo configuras por encima de 0.</p>';
+    echo '</td></tr>';
 
     echo '<tr><th scope="row"><label for="casanova_aplazame_public_key">Aplazame: Public key</label></th>';
     echo '<td><input name="casanova_aplazame_public_key" id="casanova_aplazame_public_key" type="text" class="regular-text code" value="' . esc_attr($aplazame_public_key) . '" />';
@@ -1218,6 +1358,10 @@ function casanova_payments_render_settings_page(): void {
     echo '<td><input name="amount_authorized" id="amount_authorized" type="text" class="regular-text" placeholder="Ej: 300.00" />';
     echo '<p class="description">Opcional. Si lo dejas vacío, se usará el pendiente real actual del expediente en GIAV.</p></td></tr>';
 
+    echo '<tr><th scope="row">Pago en USD</th>';
+    echo '<td><label for="offer_usd_payment"><input name="offer_usd_payment" id="offer_usd_payment" type="checkbox" value="1" /> Ofrecer pago en dolares con Stripe</label>';
+    echo '<p class="description">El importe se introduce siempre en EUR. Si el cliente elige USD, se calcula EUR/USD con comisiones y margen configurados, y se cobra tarjeta por Stripe.</p></td></tr>';
+
     echo '<tr><th scope="row"><label for="expires_at">Caduca el (opcional)</label></th>';
     echo '<td><input name="expires_at" id="expires_at" type="date" class="regular-text" />';
     echo '<p class="description">Se aplica a fin de dia (23:59:59).</p></td></tr>';
@@ -1322,6 +1466,15 @@ function casanova_payments_render_settings_page(): void {
               $detail = trim(($concept_label !== '' ? $concept_label : 'grupo') . ($mode !== '' ? ' / ' . $mode : ''));
             } elseif ((string)($r->scope ?? '') === 'individual_link') {
               $detail = 'individual';
+              $meta = [];
+              $raw = (string)($r->metadata ?? '');
+              if ($raw !== '') {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) $meta = $decoded;
+              }
+              if (!empty($meta['offer_usd_payment'])) {
+                $detail .= ' / USD';
+              }
             }
             echo '<tr>';
             echo '<td><input type="checkbox" name="link_ids[]" value="' . esc_attr((string)$r->id) . '" /></td>';

@@ -335,6 +335,7 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/inbox-controller.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-db.php'; 
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-intents.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-redsys.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payments-stripe.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-payment-links.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-group-slots.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-group-pay.php';
