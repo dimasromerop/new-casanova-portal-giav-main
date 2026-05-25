@@ -929,6 +929,55 @@ function casanova_payments_render_settings_page(): void {
 
     if ($config_tab === 'support') {
     echo '<hr />';
+    $redsys_recovery = isset($_GET['redsys_recovery']) ? sanitize_key((string)$_GET['redsys_recovery']) : '';
+    $redsys_recovery_error = isset($_GET['redsys_recovery_error']) ? sanitize_key((string)$_GET['redsys_recovery_error']) : '';
+    $redsys_intent_prefill = isset($_GET['redsys_intent']) ? absint($_GET['redsys_intent']) : 0;
+    $redsys_cobro = isset($_GET['redsys_cobro']) ? absint($_GET['redsys_cobro']) : 0;
+
+    echo '<h2>Recuperar pago Redsys autorizado</h2>';
+    echo '<p class="description">Usa esta herramienta solo cuando Redsys muestra una operacion autorizada, pero el intent local sigue en <code>return_pending_notify</code> porque no llego la notificacion servidor-a-servidor.</p>';
+
+    if ($redsys_recovery === 'ok') {
+      $msg = 'Pago Redsys recuperado y registrado en GIAV.';
+      if ($redsys_cobro > 0) {
+        $msg .= ' Cobro GIAV #' . $redsys_cobro . '.';
+      }
+      echo '<div class="notice notice-success"><p>' . esc_html($msg) . '</p></div>';
+    } elseif ($redsys_recovery === 'already') {
+      echo '<div class="notice notice-info"><p>' . esc_html('Este intent ya tenia un cobro GIAV asociado; no se ha duplicado.') . '</p></div>';
+    } elseif ($redsys_recovery === 'error') {
+      $msg = 'No se pudo recuperar el pago Redsys.';
+      if ($redsys_recovery_error === 'missing') $msg = 'Falta intent ID o codigo de autorizacion.';
+      if ($redsys_recovery_error === 'payments_missing') $msg = 'Modulo de pagos no disponible.';
+      if ($redsys_recovery_error === 'intent_not_found') $msg = 'Intent no encontrado.';
+      if ($redsys_recovery_error === 'provider') $msg = 'El intent no pertenece a Redsys.';
+      if ($redsys_recovery_error === 'order_missing') $msg = 'El intent no tiene order_redsys.';
+      if ($redsys_recovery_error === 'order_mismatch') $msg = 'El order introducido no coincide con el intent.';
+      if ($redsys_recovery_error === 'giav_failed') $msg = 'Redsys estaba autorizado, pero GIAV rechazo o no confirmo el Cobro_POST. Revisa debug.log para el detalle.';
+      echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
+    }
+
+    echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="max-width:760px">';
+    wp_nonce_field('casanova_redsys_recover_authorized');
+    echo '<input type="hidden" name="action" value="casanova_redsys_recover_authorized" />';
+    echo '<table class="form-table" role="presentation">';
+    echo '<tr><th scope="row"><label for="redsys_recover_intent_id">Intent ID</label></th>';
+    echo '<td><input name="intent_id" id="redsys_recover_intent_id" type="number" min="1" step="1" required class="regular-text" value="' . esc_attr($redsys_intent_prefill ?: '') . '" />';
+    echo '<p class="description">Ejemplo: <code>152</code>.</p></td></tr>';
+    echo '<tr><th scope="row"><label for="redsys_recover_order">Order Redsys</label></th>';
+    echo '<td><input name="order_redsys" id="redsys_recover_order" type="text" class="regular-text" placeholder="Opcional, para validar" />';
+    echo '<p class="description">Opcional pero recomendable. Ejemplo: <code>260525000152</code>. Si no coincide, no se registra nada.</p></td></tr>';
+    echo '<tr><th scope="row"><label for="redsys_recover_auth">Codigo autorizacion</label></th>';
+    echo '<td><input name="auth_code" id="redsys_recover_auth" type="text" required class="regular-text" />';
+    echo '<p class="description">Copialo del panel de Redsys. Se guardara como documento del cobro en GIAV.</p></td></tr>';
+    echo '<tr><th scope="row"><label for="redsys_recover_ref">Referencia Redsys</label></th>';
+    echo '<td><input name="provider_reference" id="redsys_recover_ref" type="text" class="regular-text" />';
+    echo '<p class="description">Opcional. Usa aqui el identificador de operacion si Redsys muestra uno distinto del codigo de autorizacion.</p></td></tr>';
+    echo '</table>';
+    submit_button('Registrar cobro autorizado', 'primary', 'submit', false);
+    echo '</form>';
+
+    echo '<hr />';
     echo '<h2>Buscar Expediente en GIAV (para overrides)</h2>';
     echo '<p class="description">GIAV distingue <strong>ID</strong> (numérico interno) y <strong>Código</strong>. El override de depósito usa el <strong>ID</strong> (ej.: <code>2553848=15</code>). Aquí puedes buscar por código (solo números) o por texto del título.</p>';
 

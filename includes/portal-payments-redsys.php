@@ -469,7 +469,9 @@ function casanova_redsys_order_from_intent_id(int $intent_id): string {
 
 if (!function_exists('casanova_tpv_notify_url')) {
   function casanova_tpv_notify_url(): string {
-    $url = add_query_arg(['casanova_tpv_notify' => '1'], home_url('/'));
+    $url = function_exists('rest_url')
+      ? rest_url('casanova/v1/redsys/notify')
+      : home_url('/wp-json/casanova/v1/redsys/notify');
     return (string) apply_filters('casanova_tpv_notify_url', $url);
   }
 }
@@ -528,7 +530,16 @@ function casanova_redsys_encode_params(array $params): string {
 }
 
 function casanova_redsys_decode_params(string $b64): array {
-  $json = base64_decode($b64, true);
+  $b64 = trim($b64);
+  if ($b64 === '') return [];
+
+  // Redsys puede enviar Base64 estándar, URL-safe, sin padding o con "+" convertido en espacio.
+  $normalized = str_replace(' ', '+', $b64);
+  $normalized = strtr($normalized, '-_', '+/');
+  $pad = strlen($normalized) % 4;
+  if ($pad) $normalized .= str_repeat('=', 4 - $pad);
+
+  $json = base64_decode($normalized, true);
   if ($json === false) return [];
   $arr = json_decode($json, true);
   return is_array($arr) ? $arr : [];

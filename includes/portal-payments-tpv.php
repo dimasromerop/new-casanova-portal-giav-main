@@ -87,13 +87,37 @@ if (!function_exists('casanova_redsys_verify')) {
     $secret = casanova_redsys_get_secret('', $context);
     if ($secret === '') return false;
 
-    $expected = casanova_redsys_signature($mpB64, $order, $secret);
-    if ($expected === '') return false;
-
     // Comparamos en Base64 estándar y sin padding (Redsys a veces lo omite).
-    $exp = rtrim(casanova_redsys_normalize_sig($expected), '=');
     $got = rtrim(casanova_redsys_normalize_sig($sigProvided), '=');
-    return hash_equals($exp, $got);
+
+    $candidates = [];
+    $raw = trim($mpB64);
+    if ($raw !== '') {
+      $candidates[] = $raw;
+    }
+
+    $plus_fixed = str_replace(' ', '+', $raw);
+    if ($plus_fixed !== '' && !in_array($plus_fixed, $candidates, true)) {
+      $candidates[] = $plus_fixed;
+    }
+
+    $standard_b64 = strtr($plus_fixed, '-_', '+/');
+    $pad = strlen($standard_b64) % 4;
+    if ($pad) $standard_b64 .= str_repeat('=', 4 - $pad);
+    if ($standard_b64 !== '' && !in_array($standard_b64, $candidates, true)) {
+      $candidates[] = $standard_b64;
+    }
+
+    foreach ($candidates as $candidate) {
+      $expected = casanova_redsys_signature($candidate, $order, $secret);
+      if ($expected === '') continue;
+      $exp = rtrim(casanova_redsys_normalize_sig($expected), '=');
+      if (hash_equals($exp, $got)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 
@@ -102,6 +126,36 @@ if (!function_exists('casanova_payload_merge')) {
     $oldArr = is_array($old) ? $old : (json_decode((string)$old, true) ?: []);
     if (!is_array($oldArr)) $oldArr = [];
     return array_replace_recursive($oldArr, $add);
+  }
+}
+
+if (!function_exists('casanova_redsys_param')) {
+  function casanova_redsys_param(array $params, array $keys, string $default = ''): string {
+    foreach ($keys as $key) {
+      if (array_key_exists($key, $params)) {
+        return trim((string)$params[$key]);
+      }
+    }
+    return $default;
+  }
+}
+
+if (!function_exists('casanova_redsys_intent_from_response_params')) {
+  function casanova_redsys_intent_from_response_params(array $params) {
+    $token = casanova_redsys_param($params, ['Ds_MerchantData', 'DS_MERCHANTDATA', 'Ds_Merchant_Data', 'DS_MERCHANT_DATA']);
+    if ($token !== '' && function_exists('casanova_payment_intent_get_by_token')) {
+      $intent = casanova_payment_intent_get_by_token($token);
+      if ($intent) {
+        return $intent;
+      }
+    }
+
+    $order = casanova_redsys_param($params, ['Ds_Order', 'DS_ORDER', 'Ds_Merchant_Order', 'DS_MERCHANT_ORDER']);
+    if ($order !== '' && function_exists('casanova_payment_intent_get_by_order')) {
+      return casanova_payment_intent_get_by_order($order);
+    }
+
+    return null;
   }
 }
 
@@ -187,10 +241,10 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
     $notes = [
       'source' => 'casanova-portal-giav',
       'token' => (string)$intent->token,
-      'order' => (string)($params['Ds_Order'] ?? ''),
-      'auth_code' => (string)($params['Ds_AuthorisationCode'] ?? ''),
-      'merchant_identifier' => (string)($params['Ds_Merchant_Identifier'] ?? ''),
-      'card_country' => (string)($params['Ds_Card_Country'] ?? ''),
+      'order' => casanova_redsys_param($params, ['Ds_Order', 'DS_ORDER', 'Ds_Merchant_Order', 'DS_MERCHANT_ORDER']),
+      'auth_code' => casanova_redsys_param($params, ['Ds_AuthorisationCode', 'DS_AUTHORISATIONCODE', 'Ds_AuthorizationCode', 'DS_AUTHORIZATIONCODE']),
+      'merchant_identifier' => casanova_redsys_param($params, ['Ds_Merchant_Identifier', 'DS_MERCHANT_IDENTIFIER']),
+      'card_country' => casanova_redsys_param($params, ['Ds_Card_Country', 'DS_CARD_COUNTRY']),
       'response' => (string)$ds_resp,
     ];
 
@@ -304,7 +358,7 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
         . 'Nota: ' . ($note_internal !== '' ? $note_internal : '-');
     }
 
-    $notasInternas = $giav_human_note . ' | order=' . (string)($params['Ds_Order'] ?? '') . ' auth=' . (string)($params['Ds_AuthorisationCode'] ?? '');
+    $notasInternas = $giav_human_note . ' | order=' . $notes['order'] . ' auth=' . $notes['auth_code'];
 
     error_log('[CASANOVA][TPV][GIAV] Cobro_POST params idFormaPago=' . (int)$id_forma_pago . ' idOficina=' . (int)$id_oficina);
     if (function_exists('casanova_payments_record_cobro')) {
@@ -319,7 +373,7 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
         'payment_link_id' => $payment_link_id,
         'payment_link_scope' => $payment_link_scope,
         'concepto' => $concepto,
-        'documento' => (string)($params['Ds_AuthorisationCode'] ?? ($params['Ds_Merchant_Identifier'] ?? '')),
+        'documento' => $notes['auth_code'] !== '' ? $notes['auth_code'] : $notes['merchant_identifier'],
         'payer_name' => $payer_name,
         'notas_internas' => $notasInternas,
       ], 'TPV');
@@ -328,6 +382,143 @@ if (!function_exists('casanova_payments_try_giav_cobro')) {
     return $result;
   }
 }
+
+if (!function_exists('casanova_redsys_manual_recovery_admin_url')) {
+  function casanova_redsys_manual_recovery_admin_url(array $args = []): string {
+    $base = function_exists('casanova_portal_admin_url')
+      ? casanova_portal_admin_url('payments')
+      : admin_url('admin.php?page=casanova-payments');
+
+    return add_query_arg(array_merge(['config_tab' => 'support'], $args), $base);
+  }
+}
+
+add_action('admin_post_casanova_redsys_recover_authorized', function () {
+  if (!current_user_can('manage_options')) {
+    wp_die(__('No autorizado.', 'casanova-portal'), 403);
+  }
+
+  check_admin_referer('casanova_redsys_recover_authorized');
+
+  $intent_id = isset($_POST['intent_id']) ? absint($_POST['intent_id']) : 0;
+  $auth_code = isset($_POST['auth_code']) ? sanitize_text_field((string)wp_unslash($_POST['auth_code'])) : '';
+  $order_check = isset($_POST['order_redsys']) ? sanitize_text_field((string)wp_unslash($_POST['order_redsys'])) : '';
+  $provider_ref = isset($_POST['provider_reference']) ? sanitize_text_field((string)wp_unslash($_POST['provider_reference'])) : '';
+
+  $redirect_error = static function (string $code, int $intent_id = 0) {
+    wp_safe_redirect(casanova_redsys_manual_recovery_admin_url([
+      'redsys_recovery' => 'error',
+      'redsys_recovery_error' => $code,
+      'redsys_intent' => $intent_id ?: null,
+    ]));
+    exit;
+  };
+
+  if ($intent_id <= 0 || $auth_code === '') {
+    $redirect_error('missing', $intent_id);
+  }
+  if (!function_exists('casanova_payment_intent_get') || !function_exists('casanova_payment_intent_update')) {
+    $redirect_error('payments_missing', $intent_id);
+  }
+
+  $intent = casanova_payment_intent_get($intent_id);
+  if (!$intent || !is_object($intent)) {
+    $redirect_error('intent_not_found', $intent_id);
+  }
+
+  $provider = strtolower(trim((string)($intent->provider ?? '')));
+  if ($provider !== '' && $provider !== 'redsys') {
+    $redirect_error('provider', $intent_id);
+  }
+
+  $order = trim((string)($intent->order_redsys ?? ''));
+  if ($order === '') {
+    $redirect_error('order_missing', $intent_id);
+  }
+  if ($order_check !== '' && !hash_equals($order, $order_check)) {
+    $redirect_error('order_mismatch', $intent_id);
+  }
+
+  $payload = [];
+  $payload_raw = (string)($intent->payload ?? '');
+  if ($payload_raw !== '') {
+    $decoded = json_decode($payload_raw, true);
+    if (is_array($decoded)) $payload = $decoded;
+  }
+
+  $existing_giav_cobro = is_array($payload['giav_cobro'] ?? null) ? $payload['giav_cobro'] : [];
+  if (!empty($existing_giav_cobro['cobro_id']) || !empty($existing_giav_cobro['inserted_at'])) {
+    wp_safe_redirect(casanova_redsys_manual_recovery_admin_url([
+      'redsys_recovery' => 'already',
+      'redsys_intent' => $intent_id,
+    ]));
+    exit;
+  }
+
+  $tpv = is_array($payload['redsys_tpv'] ?? null) ? $payload['redsys_tpv'] : [];
+  $params = [
+    'Ds_Order' => $order,
+    'Ds_Response' => '0000',
+    'Ds_AuthorisationCode' => $auth_code,
+    'Ds_MerchantData' => (string)($intent->token ?? ''),
+    'Ds_MerchantCode' => (string)($tpv['merchant_code'] ?? ''),
+    'Ds_Terminal' => (string)($tpv['terminal'] ?? ''),
+  ];
+  if ($provider_ref !== '') {
+    $params['Ds_Merchant_Identifier'] = $provider_ref;
+  }
+
+  $giav_result = function_exists('casanova_payments_try_giav_cobro')
+    ? casanova_payments_try_giav_cobro($intent, $params, 0)
+    : [];
+
+  $manual_payload = [
+    'redsys_manual_recovery' => [
+      'authorized_in_redsys_panel' => true,
+      'admin_user_id' => get_current_user_id(),
+      'time' => current_time('mysql'),
+      'order' => $order,
+      'auth_code' => $auth_code,
+      'provider_reference' => $provider_ref,
+      'previous_status' => (string)($intent->status ?? ''),
+    ],
+  ];
+
+  if (!empty($giav_result['giav_cobro'])) {
+    $manual_payload['giav_cobro'] = $giav_result['giav_cobro'];
+  }
+
+  $inserted = !empty($giav_result['inserted']);
+  $already = !empty($giav_result['already']);
+  $new_status = ($inserted || $already) ? 'manual_authorized' : 'manual_failed';
+
+  casanova_payment_intent_update($intent_id, [
+    'status' => $new_status,
+    'payload' => casanova_payload_merge($intent->payload ?? [], $manual_payload),
+    'last_check_at' => current_time('mysql'),
+  ]);
+
+  if (!$inserted && !$already) {
+    $redirect_error('giav_failed', $intent_id);
+  }
+
+  if (!empty($giav_result['should_notify'])) {
+    do_action('casanova_payment_cobro_recorded', $intent_id);
+  }
+  if ($inserted && function_exists('casanova_invalidate_customer_cache')) {
+    casanova_invalidate_customer_cache((int)$intent->user_id, (int)$intent->id_cliente, (int)$intent->id_expediente);
+  }
+  if (!wp_next_scheduled('casanova_job_reconcile_payment', [$intent_id])) {
+    wp_schedule_single_event(time() + 15, 'casanova_job_reconcile_payment', [$intent_id]);
+  }
+
+  wp_safe_redirect(casanova_redsys_manual_recovery_admin_url([
+    'redsys_recovery' => 'ok',
+    'redsys_intent' => $intent_id,
+    'redsys_cobro' => (int)($giav_result['giav_cobro']['cobro_id'] ?? 0),
+  ]));
+  exit;
+});
 
 /**
  * ==========================
@@ -405,16 +596,17 @@ function casanova_handle_tpv_return(): void {
 
 
   $params = casanova_redsys_decode_params($mpB64);
-  $token  = (string)($params['Ds_MerchantData'] ?? '');
+  $token  = casanova_redsys_param($params, ['Ds_MerchantData', 'DS_MERCHANTDATA', 'Ds_Merchant_Data', 'DS_MERCHANT_DATA']);
+  $order  = casanova_redsys_param($params, ['Ds_Order', 'DS_ORDER', 'Ds_Merchant_Order', 'DS_MERCHANT_ORDER']);
 
-  error_log('[CASANOVA][TPV][RETURN] token=' . $token);
+  error_log('[CASANOVA][TPV][RETURN] token=' . $token . ' order=' . $order);
 
-  if ($token === '' || !function_exists('casanova_payment_intent_get_by_token')) {
+  if (($token === '' && $order === '') || !function_exists('casanova_payment_intent_get_by_token')) {
     wp_safe_redirect(add_query_arg(['pay_status' => 'ko', 'payment' => 'failed'], (function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/portal-app/'))));
     exit;
   }
 
-  $intent = casanova_payment_intent_get_by_token($token);
+  $intent = casanova_redsys_intent_from_response_params($params);
   if (!$intent) {
     wp_safe_redirect(add_query_arg(['pay_status' => 'ko', 'payment' => 'failed'], (function_exists('casanova_portal_base_url') ? casanova_portal_base_url() : home_url('/portal-app/'))));
     exit;
@@ -437,7 +629,7 @@ function casanova_handle_tpv_return(): void {
       }
     }
   }
-  $ds_resp  = (int)($params['Ds_Response'] ?? 9999);
+  $ds_resp  = (int)casanova_redsys_param($params, ['Ds_Response', 'DS_RESPONSE'], '9999');
   $ok = $is_valid && $ds_resp >= 0 && $ds_resp <= 99;
 
   error_log('[CASANOVA][TPV][RETURN] intent=' . $intent->id . ' valid_sig=' . ($is_valid ? '1' : '0') . ' ds=' . $ds_resp);
@@ -501,17 +693,21 @@ function casanova_handle_tpv_notify(): void {
   }
 
   $params = casanova_redsys_decode_params($mpB64);
-  $token  = (string)($params['Ds_MerchantData'] ?? '');
+  $token  = casanova_redsys_param($params, ['Ds_MerchantData', 'DS_MERCHANTDATA', 'Ds_Merchant_Data', 'DS_MERCHANT_DATA']);
+  $order  = casanova_redsys_param($params, ['Ds_Order', 'DS_ORDER', 'Ds_Merchant_Order', 'DS_MERCHANT_ORDER']);
 
-  error_log('[CASANOVA][TPV][NOTIFY] token=' . $token);
+  if (empty($params)) {
+    error_log('[CASANOVA][TPV][NOTIFY] decoded params empty');
+  }
+  error_log('[CASANOVA][TPV][NOTIFY] token=' . $token . ' order=' . $order);
 
-  if ($token === '' || !function_exists('casanova_payment_intent_get_by_token') || !function_exists('casanova_payment_intent_update')) {
+  if (($token === '' && $order === '') || !function_exists('casanova_payment_intent_get_by_token') || !function_exists('casanova_payment_intent_update')) {
     status_header(500);
     echo 'Payments module missing';
     exit;
   }
 
-  $intent = casanova_payment_intent_get_by_token($token);
+  $intent = casanova_redsys_intent_from_response_params($params);
   if (!$intent) {
     status_header(404);
     echo 'Intent not found';
@@ -550,7 +746,7 @@ function casanova_handle_tpv_notify(): void {
     }
   }
 
-  $ds_resp = (int)($params['Ds_Response'] ?? 9999);
+  $ds_resp = (int)casanova_redsys_param($params, ['Ds_Response', 'DS_RESPONSE'], '9999');
   $bank_ok = ($ds_resp >= 0 && $ds_resp <= 99);
 
   error_log('[CASANOVA][TPV][NOTIFY] intent=' . (int)$intent->id . ' status=' . $curr_status .
