@@ -1,6 +1,18 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+if (!function_exists('casanova_portal_user_usd_payments_enabled')) {
+  function casanova_portal_user_usd_payments_enabled(int $user_id): bool {
+    $user_id = (int) $user_id;
+    if ($user_id <= 0) {
+      return false;
+    }
+
+    $enabled = (bool) get_user_meta($user_id, 'casanova_portal_usd_payments_enabled', true);
+    return (bool) apply_filters('casanova_portal_user_usd_payments_enabled', $enabled, $user_id);
+  }
+}
+
 if (!function_exists('casanova_portal_impersonation_session_key')) {
   function casanova_portal_impersonation_session_key(?int $admin_id = null): string {
     $admin_id = $admin_id ?: (int) get_current_user_id();
@@ -911,12 +923,15 @@ add_filter('manage_users_custom_column', function (string $output, string $colum
   }
 
   $button = '<a class="button button-secondary button-small" href="' . esc_url(casanova_portal_start_impersonation_url($user_id)) . '">' . esc_html__('Ver portal como cliente', 'casanova-portal') . '</a>';
-  $meta = '<div class="description">GIAV #' . (int) $id_cliente . '</div>';
+  $usd_enabled = function_exists('casanova_portal_user_usd_payments_enabled')
+    ? casanova_portal_user_usd_payments_enabled($user_id)
+    : (bool) get_user_meta($user_id, 'casanova_portal_usd_payments_enabled', true);
+  $meta = '<div class="description">GIAV #' . (int) $id_cliente . ($usd_enabled ? ' / USD' : '') . '</div>';
 
   return $button . $meta;
 }, 10, 3);
 
-add_action('edit_user_profile', function (WP_User $user): void {
+$casanova_portal_usd_render = function (WP_User $user): void {
   if (!current_user_can('manage_options')) {
     return;
   }
@@ -925,6 +940,9 @@ add_action('edit_user_profile', function (WP_User $user): void {
   if ($id_cliente <= 0) {
     return;
   }
+  $usd_enabled = function_exists('casanova_portal_user_usd_payments_enabled')
+    ? casanova_portal_user_usd_payments_enabled((int) $user->ID)
+    : (bool) get_user_meta((int) $user->ID, 'casanova_portal_usd_payments_enabled', true);
 
   echo '<h2>' . esc_html__('Portal cliente', 'casanova-portal') . '</h2>';
   echo '<table class="form-table" role="presentation">';
@@ -936,5 +954,45 @@ add_action('edit_user_profile', function (WP_User $user): void {
   echo '<p class="description">' . esc_html__('Abre el portal usando el contexto real de este cliente, en modo solo lectura.', 'casanova-portal') . '</p>';
   echo '</td>';
   echo '</tr>';
+  echo '<tr>';
+  echo '<th>' . esc_html__('Pagos en USD', 'casanova-portal') . '</th>';
+  echo '<td>';
+  echo '<label for="casanova_portal_usd_payments_enabled">';
+  echo '<input type="checkbox" id="casanova_portal_usd_payments_enabled" name="casanova_portal_usd_payments_enabled" value="1" ' . checked($usd_enabled, true, false) . ' /> ';
+  echo esc_html__('Permitir pago en dolares desde el portal', 'casanova-portal');
+  echo '</label>';
+  echo '<p class="description">' . esc_html__('Si Stripe USD esta configurado, este cliente vera la opcion de pagar pendientes en USD. GIAV seguira recibiendo el importe base original en EUR.', 'casanova-portal') . '</p>';
+  wp_nonce_field('casanova_portal_usd_payments_' . (int) $user->ID, 'casanova_portal_usd_payments_nonce');
+  echo '</td>';
+  echo '</tr>';
   echo '</table>';
-});
+};
+add_action('show_user_profile', $casanova_portal_usd_render);
+add_action('edit_user_profile', $casanova_portal_usd_render);
+
+$casanova_portal_usd_save = function (int $user_id): void {
+  if (!current_user_can('manage_options') || !current_user_can('edit_user', $user_id)) {
+    return;
+  }
+
+  $id_cliente = (int) get_user_meta($user_id, 'casanova_idcliente', true);
+  if ($id_cliente <= 0) {
+    delete_user_meta($user_id, 'casanova_portal_usd_payments_enabled');
+    return;
+  }
+
+  $nonce = isset($_POST['casanova_portal_usd_payments_nonce'])
+    ? sanitize_text_field((string) wp_unslash($_POST['casanova_portal_usd_payments_nonce']))
+    : '';
+  if ($nonce === '' || !wp_verify_nonce($nonce, 'casanova_portal_usd_payments_' . $user_id)) {
+    return;
+  }
+
+  if (!empty($_POST['casanova_portal_usd_payments_enabled'])) {
+    update_user_meta($user_id, 'casanova_portal_usd_payments_enabled', '1');
+  } else {
+    delete_user_meta($user_id, 'casanova_portal_usd_payments_enabled');
+  }
+};
+add_action('personal_options_update', $casanova_portal_usd_save);
+add_action('edit_user_profile_update', $casanova_portal_usd_save);

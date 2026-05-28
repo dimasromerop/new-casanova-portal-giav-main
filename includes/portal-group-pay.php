@@ -1142,7 +1142,7 @@ function casanova_handle_group_pay_request(string $token): void {
   }
 
   if ($main_available_units > 0) {
-  $main_step_order = $deposit_allowed ? 'mode,option,payer,method' : 'option,payer,method';
+  $main_step_order = $deposit_allowed ? 'option,mode,payer,method' : 'option,payer,method';
   echo '<form id="casanova-group-pay-form" class="casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" novalidate data-step-order="' . esc_attr($main_step_order) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
   echo '<input type="hidden" name="action" value="pay" />';
@@ -1262,7 +1262,7 @@ function casanova_handle_group_pay_request(string $token): void {
   echo '</label>';
 
   echo '<div class="casanova-group-step-actions">';
-  echo '<button class="casanova-public-button casanova-public-button--ghost" type="button" data-wizard-prev>' . esc_html__('Atrás', 'casanova-portal') . '</button>';
+  echo '<span></span>';
   echo '<button class="casanova-public-button" type="button" data-wizard-next>' . esc_html__('Continuar', 'casanova-portal') . '</button>';
   echo '</div>';
   echo '</div>';
@@ -1272,14 +1272,14 @@ function casanova_handle_group_pay_request(string $token): void {
     echo '<div class="casanova-group-step-title">' . esc_html__('¿Qué quieres pagar?', 'casanova-portal') . '</div>';
     echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
     echo '<label class="casanova-public-choice">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="deposit" />' . esc_html__('Pagar depósito', 'casanova-portal');
+    echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="deposit" />' . esc_html__('Pagar depósito', 'casanova-portal') . ' <strong class="casanova-group-mode-amount" data-mode="deposit"></strong>';
     echo '</label>';
     echo '<label class="casanova-public-choice">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="full" checked />' . esc_html__('Pagar total', 'casanova-portal');
+    echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="full" checked />' . esc_html__('Pagar total', 'casanova-portal') . ' <strong class="casanova-group-mode-amount" data-mode="full"></strong>';
     echo '</label>';
     echo '</div>';
     echo '<div class="casanova-group-step-actions">';
-    echo '<span></span>';
+    echo '<button class="casanova-public-button casanova-public-button--ghost" type="button" data-wizard-prev>' . esc_html__('Atrás', 'casanova-portal') . '</button>';
     echo '<button class="casanova-public-button" type="button" data-wizard-next>' . esc_html__('Continuar', 'casanova-portal') . '</button>';
     echo '</div>';
     echo '</div>';
@@ -1564,6 +1564,8 @@ function casanova_handle_group_pay_request(string $token): void {
         const summary = document.getElementById("casanova-group-summary");
         const optionSummary = document.getElementById("casanova-group-option-summary");
         const btn = document.getElementById("casanova-group-pay-button");
+        const modeAmountDeposit = form.querySelector(".casanova-group-mode-amount[data-mode=deposit]");
+        const modeAmountFull = form.querySelector(".casanova-group-mode-amount[data-mode=full]");
 
         function getUnits(){
           const raw = parseInt(unitsSelect && unitsSelect.value ? unitsSelect.value : "1", 10);
@@ -1625,6 +1627,10 @@ function casanova_handle_group_pay_request(string $token): void {
           if (summary) summary.innerHTML = renderedSummary;
           if (optionSummary) optionSummary.innerHTML = renderedSummary;
           if (btn) btn.textContent = payLabel + " " + displayAmount(amount, currency);
+          if (modeAmountFull) modeAmountFull.textContent = displayAmount(total, currency);
+          if (modeAmountDeposit) {
+            modeAmountDeposit.textContent = (dep > 0.009 && dep + 0.01 < total) ? displayAmount(dep, currency) : "";
+          }
         }
 
         form.addEventListener("change", update);

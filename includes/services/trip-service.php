@@ -2291,6 +2291,8 @@ class Casanova_Trip_Service {
         'deposit' => $actions['deposit'] ?? ['allowed' => false, 'amount' => 0],
         'balance' => $actions['balance'] ?? ['allowed' => false, 'amount' => 0],
       ],
+      'usd_enabled' => !empty($ctx['usd_enabled']),
+      'usd_quotes' => is_array($ctx['usd_quotes'] ?? null) ? $ctx['usd_quotes'] : [],
     ];
   }
 

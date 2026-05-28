@@ -413,6 +413,14 @@ function casanova_group_token_get(string $token) {
   return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE token=%s LIMIT 1", $token));
 }
 
+function casanova_group_token_get_by_id(int $id) {
+  global $wpdb;
+  $table = casanova_group_pay_tokens_table();
+  $id = (int)$id;
+  if ($id <= 0) return null;
+  return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id=%d LIMIT 1", $id));
+}
+
 function casanova_group_token_update(int $id, array $fields): bool {
   global $wpdb;
   $table = casanova_group_pay_tokens_table();

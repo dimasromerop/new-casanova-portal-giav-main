@@ -63,6 +63,13 @@ const CheckSvg = () => (
 );
 
 function methodIcon(id) {
+  if (id === "card_usd") {
+    return {
+      bg: "var(--gold-light)",
+      stroke: "var(--gold)",
+      svg: <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/><path d="M12 7v10M15 9.5h-4.5a2 2 0 0 0 0 4h3a2 2 0 0 1 0 4H9"/></svg>,
+    };
+  }
   if (id === "bank_transfer") {
     return {
       bg: "var(--accent-light)",
@@ -86,6 +93,7 @@ function methodIcon(id) {
 }
 
 function methodBadges(id) {
+  if (id === "card_usd") return ["USD", "Stripe", "SSL"];
   if (id === "bank_transfer") return ["PSD2", "Sin recargo", "SEPA"];
   if (id === "aplazame") return ["3 cuotas", "6 cuotas", "12 cuotas"];
   return ["Visa", "Mastercard", "AMEX", "SSL"];
@@ -231,16 +239,50 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
   const hasActions = depositAllowed || balanceAllowed;
   const hasMultipleActionChoices = depositAllowed && balanceAllowed;
   const currency = payments?.currency || "EUR";
+  const isUsdMethod = payMethod === "card_usd";
+  const usdQuotes = payments?.usd_quotes && typeof payments.usd_quotes === "object" ? payments.usd_quotes : {};
+  const quoteFor = (type) => {
+    const quote = usdQuotes?.[type];
+    if (!quote || typeof quote !== "object") return null;
+    const amount = Number(quote.usd_amount);
+    return Number.isFinite(amount) && amount > 0 ? { ...quote, usd_amount: amount } : null;
+  };
+  const displayAmountFor = (type, amount) => {
+    const quote = isUsdMethod ? quoteFor(type) : null;
+    if (quote) return { amount: quote.usd_amount, currency: "USD", baseAmount: amount };
+    return { amount, currency, baseAmount: amount };
+  };
+  const formatActionAmount = (type, amount) => {
+    const display = displayAmountFor(type, amount);
+    return euro(display.amount, display.currency);
+  };
+  const formatBaseHint = (amount) => `${tt("Base EUR")}: ${euro(amount, currency)}`;
+  const usdMethodHint = (() => {
+    const parts = [];
+    if (balanceAllowed) {
+      const q = quoteFor("balance");
+      if (q) parts.push(`${tt("Total")}: ${euro(q.usd_amount, "USD")}`);
+    }
+    if (depositAllowed) {
+      const q = quoteFor("deposit");
+      if (q) parts.push(`${tt("Depósito")}: ${euro(q.usd_amount, "USD")}`);
+    }
+    return parts.join(" - ");
+  })();
   const transferNote = tt("El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.");
   const aplazameNote = tt("Aplazame te permite fraccionar el pago del viaje. Al continuar se abrira su checkout seguro para completar la financiacion en cuotas.");
+  const usdNote = tt("Se cobrara con tarjeta en USD mediante Stripe. En GIAV se registrara el importe original en EUR.");
 
   // Resolved amount and label for CTA
   const resolvedType = payType || (balanceAllowed ? "balance" : "deposit");
   const resolvedAmount = resolvedType === "deposit" ? depositAmount : balanceAmount;
+  const resolvedDisplay = displayAmountFor(resolvedType, resolvedAmount);
   const enabledMethods = methods.filter((m) => m && m.enabled);
   const activeMethodObj = enabledMethods.find((m) => m.id === payMethod) || enabledMethods[0];
   const activeMethodLabel = activeMethodObj
-    ? (activeMethodObj.id === "bank_transfer"
+    ? (activeMethodObj.id === "card_usd"
+        ? tt("tarjeta en USD")
+        : activeMethodObj.id === "bank_transfer"
         ? tt("transferencia")
         : activeMethodObj.id === "aplazame"
           ? tt("Aplazame")
@@ -268,12 +310,17 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
           {enabledMethods.map((method) => {
             const isBankTransfer = method.id === "bank_transfer";
             const isAplazame = method.id === "aplazame";
-            const title = isBankTransfer
+            const isUsdCard = method.id === "card_usd";
+            const title = isUsdCard
+              ? tt("Tarjeta en USD")
+              : isBankTransfer
               ? tt("Transferencia")
               : isAplazame
                 ? tt("Aplazame")
                 : (method.label || tt("Tarjeta"));
-            const desc = isBankTransfer
+            const desc = isUsdCard
+              ? tt("Pago con tarjeta en dolares mediante Stripe.") + (usdMethodHint ? ` ${usdMethodHint}` : "")
+              : isBankTransfer
               ? tt("Transferencia bancaria online PSD2. Sin recargo adicional.")
               : isAplazame
                 ? tt("Pago a plazos. Divide el importe en cuotas mensuales cómodas.")
@@ -346,6 +393,12 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
         </div>
       ) : null}
 
+      {payMethod === "card_usd" ? (
+        <div className="cp-pay-method-note">
+          {usdNote}
+        </div>
+      ) : null}
+
       {/* ─── Amount selection ─── */}
       <div className="cp-pay-section">
         <div className="cp-pay-section__label">{tt("Selecciona cuánto pagar ahora")}</div>
@@ -365,8 +418,10 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
             >
               <span className="cp-pay-cta__check"><CheckSvg /></span>
               <span className="cp-pay-cta__label">{tt("Pagar depósito")}</span>
-              <span className="cp-pay-cta__amount">{euro(depositAmount, currency)}</span>
-              {Number.isFinite(totalAmount) && totalAmount > 0 ? (
+              <span className="cp-pay-cta__amount">{formatActionAmount("deposit", depositAmount)}</span>
+              {isUsdMethod ? (
+                <span className="cp-pay-cta__desc">{formatBaseHint(depositAmount)}</span>
+              ) : Number.isFinite(totalAmount) && totalAmount > 0 ? (
                 <span className="cp-pay-cta__desc">
                   {Math.round((depositAmount / totalAmount) * 100)}% {tt("del total como reserva")}
                 </span>
@@ -392,8 +447,10 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
               ) : null}
               <span className="cp-pay-cta__check"><CheckSvg /></span>
               <span className="cp-pay-cta__label">{tt("Pagar pendiente")}</span>
-              <span className="cp-pay-cta__amount">{euro(balanceAmount, currency)}</span>
-              <span className="cp-pay-cta__desc">{tt("Liquida el importe total pendiente")}</span>
+              <span className="cp-pay-cta__amount">{formatActionAmount("balance", balanceAmount)}</span>
+              <span className="cp-pay-cta__desc">
+                {isUsdMethod ? formatBaseHint(balanceAmount) : tt("Liquida el importe total pendiente")}
+              </span>
             </button>
           ) : null}
 
@@ -418,7 +475,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
           ) : (
             <>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
-              {tt("Pagar")} {euro(resolvedAmount, currency)} {tt("con")} {activeMethodLabel}
+              {tt("Pagar")} {euro(resolvedDisplay.amount, resolvedDisplay.currency)} {tt("con")} {activeMethodLabel}
             </>
           )}
         </button>

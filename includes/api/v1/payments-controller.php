@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) exit;
 class Casanova_Payments_Controller {
 
   private static array $ALLOWED_TYPES = ['deposit', 'balance'];
-  private static array $ALLOWED_METHODS = ['card', 'bank_transfer', 'aplazame'];
+  private static array $ALLOWED_METHODS = ['card', 'card_usd', 'bank_transfer', 'aplazame'];
 
   public static function register_routes(): void {
     register_rest_route('casanova/v1', '/payments/intent', [
@@ -34,7 +34,7 @@ class Casanova_Payments_Controller {
         'method' => [
           'type' => 'string',
           'required' => false,
-          'description' => 'card|bank_transfer|aplazame',
+          'description' => 'card|card_usd|bank_transfer|aplazame',
           'validate_callback' => function ($value) {
             $v = strtolower(trim((string)$value));
             return $v === '' || in_array($v, self::$ALLOWED_METHODS, true);
@@ -168,7 +168,160 @@ class Casanova_Payments_Controller {
 
     $mode = $type === 'deposit' ? 'deposit' : 'full';
 
-    // 1) Tarjeta (Redsys): mantenemos lo existente.
+    // 1) Tarjeta en USD (Stripe): GIAV recibe siempre el importe base en EUR.
+    if ($method === 'card_usd') {
+      if (!function_exists('casanova_portal_user_usd_payments_enabled') || !casanova_portal_user_usd_payments_enabled($user_id)) {
+        return self::error_response(
+          esc_html__('Pago en USD no disponible para este cliente.', 'casanova-portal'),
+          'usd_not_allowed',
+          403
+        );
+      }
+
+      if (!function_exists('casanova_stripe_is_available') || !casanova_stripe_is_available() || !function_exists('casanova_stripe_usd_quote') || !function_exists('casanova_stripe_create_checkout_session')) {
+        return self::error_response(
+          esc_html__('Stripe USD no esta configurado.', 'casanova-portal'),
+          'stripe_unavailable',
+          500
+        );
+      }
+
+      if (!function_exists('casanova_payment_intent_create') || !function_exists('casanova_payment_intent_update')) {
+        return self::error_response(
+          esc_html__('No se pudo inicializar el pago (intents).', 'casanova-portal'),
+          'intent_missing',
+          500
+        );
+      }
+
+      $quote = casanova_stripe_usd_quote($amount);
+      if (is_wp_error($quote)) {
+        return self::error_response(
+          $quote->get_error_message(),
+          'stripe_quote_unavailable',
+          500
+        );
+      }
+
+      $billing_email = '';
+      $billing_fullname = '';
+      $u = get_user_by('id', $user_id);
+      if ($u instanceof WP_User) {
+        $billing_email = trim((string) $u->user_email);
+        $first_name = trim((string) get_user_meta($user_id, 'first_name', true));
+        $last_name = trim((string) get_user_meta($user_id, 'last_name', true));
+        $billing_fullname = trim($first_name . ' ' . $last_name);
+        if ($billing_fullname === '') {
+          $billing_fullname = trim((string) $u->display_name);
+        }
+      }
+      if ($billing_fullname === '') {
+        $billing_fullname = __('Cliente', 'casanova-portal');
+      }
+
+      $billing_dni = strtoupper(preg_replace('/\s+/', '', sanitize_text_field((string) get_user_meta($user_id, 'casanova_dni', true))));
+      $reference = 'STR-' . (int)$expediente_id . '-' . substr(casanova_payments_new_token(), 0, 12);
+      $intent = casanova_payment_intent_create([
+        'user_id' => $user_id,
+        'id_cliente' => $idCliente,
+        'id_expediente' => $expediente_id,
+        'amount' => $amount,
+        'currency' => 'EUR',
+        'status' => 'created',
+        'provider' => 'stripe',
+        'method' => 'card',
+        'provider_reference' => $reference,
+        'payload' => [
+          'source' => 'portal',
+          'created_from' => 'portal',
+          'requested_amount' => $amount,
+          'pending_at_create' => round((float)($context['pending'] ?? 0), 2),
+          'mode' => $mode,
+          'method' => 'card_usd',
+          'payment_currency' => 'USD',
+          'card_brand' => 'other',
+          'billing_dni' => $billing_dni,
+          'billing_fullname' => $billing_fullname,
+          'billing_email' => $billing_email,
+          'stripe_quote' => $quote,
+        ],
+      ]);
+      if (is_wp_error($intent)) {
+        return self::error_response(
+          $intent->get_error_message(),
+          'intent_create_failed',
+          500
+        );
+      }
+
+      $portal_base = function_exists('casanova_portal_base_url')
+        ? (string) casanova_portal_base_url()
+        : home_url('/portal-app/');
+      $cancel_url = self::portal_trip_url($portal_base, $expediente_id, (int)$intent->id, [
+        'payment' => 'failed',
+        'method' => 'stripe',
+        'pay_status' => 'ko',
+      ]);
+      $session = casanova_stripe_create_checkout_session($intent, [
+        'quote' => $quote,
+        'mode' => $mode,
+        'billing_email' => $billing_email,
+        'locale' => (string) get_user_meta($user_id, 'casanova_portal_locale', true),
+        'cancel_url' => $cancel_url,
+      ]);
+
+      if (is_wp_error($session)) {
+        casanova_payment_intent_update((int)$intent->id, [
+          'status' => 'failed',
+          'payload' => casanova_intent_payload_merge($intent->payload ?? null, [
+            'stripe_checkout' => [
+              'ok' => false,
+              'error' => $session->get_error_message(),
+              'error_data' => $session->get_error_data(),
+              'time' => current_time('mysql'),
+            ],
+          ]),
+        ]);
+
+        return self::error_response(
+          esc_html__('No se pudo iniciar el pago con Stripe.', 'casanova-portal'),
+          'stripe_init_failed',
+          502
+        );
+      }
+
+      $redirect_url = (string)($session['url'] ?? '');
+      if ($redirect_url === '') {
+        casanova_payment_intent_update((int)$intent->id, [
+          'status' => 'failed',
+          'payload' => casanova_intent_payload_merge($intent->payload ?? null, [
+            'stripe_checkout' => [
+              'ok' => false,
+              'error' => 'missing_checkout_url',
+              'response' => $session,
+              'time' => current_time('mysql'),
+            ],
+          ]),
+        ]);
+
+        return self::error_response(
+          esc_html__('Stripe no devolvio un enlace de pago.', 'casanova-portal'),
+          'stripe_missing_link',
+          502
+        );
+      }
+
+      return rest_ensure_response([
+        'ok' => true,
+        'redirect_url' => esc_url_raw($redirect_url),
+        'method' => 'card_usd',
+        'intent_id' => (int)$intent->id,
+        'amount_eur' => (float)$amount,
+        'amount_usd' => (float)($quote['usd_amount'] ?? 0),
+      ]);
+    }
+
+    // 2) Tarjeta (Redsys): mantenemos lo existente.
     if ($method === 'card') {
       $pay_url = $context['pay_url'] ?? '';
       if (!$pay_url) {
@@ -192,7 +345,7 @@ class Casanova_Payments_Controller {
       ]);
     }
 
-    // 2) Aplazame: creamos checkout server-side y el frontend abre el SDK.
+    // 3) Aplazame: creamos checkout server-side y el frontend abre el SDK.
     if ($method === 'aplazame') {
       if (!class_exists('Casanova_Aplazame_Service')) {
         return self::error_response(
@@ -337,7 +490,7 @@ class Casanova_Payments_Controller {
       ]);
     }
 
-    // 3) Transferencia (Inespay): iniciamos orden y devolvemos su portal URL.
+    // 4) Transferencia (Inespay): iniciamos orden y devolvemos su portal URL.
     if (!class_exists('Casanova_Inespay_Service')) {
       return self::error_response(
         esc_html__('Inespay no está disponible en el servidor.', 'casanova-portal'),

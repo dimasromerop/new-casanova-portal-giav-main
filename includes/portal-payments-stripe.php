@@ -297,10 +297,13 @@ if (!function_exists('casanova_stripe_create_checkout_session')) {
       : home_url('/');
 
     $success_url = casanova_stripe_return_url(true, $intent);
-    $cancel_url = add_query_arg([
-      'payment' => 'failed',
-      'intent_id' => (int) $intent->id,
-    ], $payment_page_url);
+    $context_cancel_url = !empty($context['cancel_url']) ? trim((string) $context['cancel_url']) : '';
+    $cancel_url = $context_cancel_url !== ''
+      ? $context_cancel_url
+      : add_query_arg([
+        'payment' => 'failed',
+        'intent_id' => (int) $intent->id,
+      ], $payment_page_url);
 
     $locale = strtolower(substr((string) ($context['locale'] ?? ''), 0, 2));
     if (!in_array($locale, ['es', 'en', 'fr', 'de', 'it', 'pt'], true)) {

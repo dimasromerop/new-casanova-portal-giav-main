@@ -32,6 +32,37 @@ class Casanova_Payments_Service {
   }
 
   /**
+   * @param array<string,array<string,mixed>> $actions
+   * @return array<string,array<string,mixed>>
+   */
+  private static function build_usd_quotes(array $actions): array {
+    if (!function_exists('casanova_stripe_usd_quote')) {
+      return [];
+    }
+
+    $quotes = [];
+    foreach ($actions as $key => $action) {
+      if (empty($action['allowed'])) {
+        continue;
+      }
+
+      $amount = round((float) ($action['amount'] ?? 0), 2);
+      if ($amount <= 0.0) {
+        continue;
+      }
+
+      $quote = casanova_stripe_usd_quote($amount);
+      if (is_wp_error($quote) || !is_array($quote)) {
+        continue;
+      }
+
+      $quotes[$key] = $quote;
+    }
+
+    return $quotes;
+  }
+
+  /**
    * Describe el estado de pagos de un expediente autorizado.
    *
    * @return array<string,mixed>|WP_Error
@@ -164,11 +195,38 @@ class Casanova_Payments_Service {
       && Casanova_Aplazame_Service::is_enabled()
       && $aplazame_giav_method_id > 0;
 
+    $actions_payload = [
+      'deposit' => [
+        'allowed' => !$is_read_only && (bool) $payment_options['can_pay_deposit'],
+        'amount' => (float) $payment_options['deposit_amount'],
+      ],
+      'balance' => [
+        'allowed' => !$is_read_only && (bool) $payment_options['can_pay_full'],
+        'amount' => (float) $payment_options['pending_amount'],
+      ],
+    ];
+
+    $portal_usd_allowed = !$is_read_only
+      && function_exists('casanova_portal_user_usd_payments_enabled')
+      && casanova_portal_user_usd_payments_enabled($user_id);
+    $stripe_usd_available = function_exists('casanova_stripe_is_available') && casanova_stripe_is_available();
+    $usd_quotes = ($portal_usd_allowed && $stripe_usd_available)
+      ? self::build_usd_quotes($actions_payload)
+      : [];
+    $portal_usd_enabled = $portal_usd_allowed && $stripe_usd_available && !empty($usd_quotes);
+
+    $payment_options['can_pay_usd'] = (bool) $portal_usd_enabled;
+
     $payment_methods = [
       [
         'id' => 'card',
         'enabled' => true,
         'label' => __('Tarjeta', 'casanova-portal'),
+      ],
+      [
+        'id' => 'card_usd',
+        'enabled' => (bool) $portal_usd_enabled,
+        'label' => __('Tarjeta en USD', 'casanova-portal'),
       ],
       [
         'id' => 'bank_transfer',
@@ -213,16 +271,9 @@ class Casanova_Payments_Service {
       'mulligans_available' => $mulligans_available,
       'payment_options' => $payment_options,
       'payment_methods' => $payment_methods,
-      'actions' => [
-        'deposit' => [
-          'allowed' => !$is_read_only && (bool) $payment_options['can_pay_deposit'],
-          'amount' => (float) $payment_options['deposit_amount'],
-        ],
-        'balance' => [
-          'allowed' => !$is_read_only && (bool) $payment_options['can_pay_full'],
-          'amount' => (float) $payment_options['pending_amount'],
-        ],
-      ],
+      'usd_enabled' => (bool) $portal_usd_enabled,
+      'usd_quotes' => $usd_quotes,
+      'actions' => $actions_payload,
     ];
   }
 

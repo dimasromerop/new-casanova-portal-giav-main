@@ -164,3 +164,136 @@ add_action('admin_post_casanova_create_group_token', function () {
   ], $base));
   exit;
 });
+
+add_action('admin_post_casanova_delete_group_tokens', function () {
+  if (!current_user_can('manage_options')) {
+    wp_die(__('No autorizado.', 'casanova-portal'), 403);
+  }
+  check_admin_referer('casanova_delete_group_tokens');
+
+  $ids = [];
+  if (isset($_REQUEST['id'])) {
+    $ids[] = absint($_REQUEST['id']);
+  }
+  if (!empty($_POST['group_token_ids']) && is_array($_POST['group_token_ids'])) {
+    foreach ($_POST['group_token_ids'] as $v) $ids[] = absint($v);
+  }
+  $ids = array_values(array_filter(array_unique($ids)));
+
+  $base = function_exists('casanova_payment_links_admin_base_url')
+    ? casanova_payment_links_admin_base_url()
+    : admin_url('admin.php?page=casanova-payments-links');
+
+  if (empty($ids)) {
+    wp_safe_redirect(add_query_arg(['group_deleted' => '0'], $base));
+    exit;
+  }
+
+  if (!function_exists('casanova_group_pay_tokens_table')) {
+    wp_safe_redirect(add_query_arg(['group_deleted' => '0'], $base));
+    exit;
+  }
+
+  global $wpdb;
+  $table = casanova_group_pay_tokens_table();
+  $placeholders = implode(',', array_fill(0, count($ids), '%d'));
+  $sql = "DELETE FROM {$table} WHERE id IN ({$placeholders})";
+  $wpdb->query($wpdb->prepare($sql, ...$ids));
+
+  wp_safe_redirect(add_query_arg(['group_deleted' => (string)count($ids)], $base));
+  exit;
+});
+
+add_action('admin_post_casanova_update_group_token', function () {
+  if (!current_user_can('manage_options')) {
+    wp_die(__('No autorizado.', 'casanova-portal'), 403);
+  }
+  check_admin_referer('casanova_update_group_token');
+
+  $base = function_exists('casanova_payment_links_admin_base_url')
+    ? casanova_payment_links_admin_base_url()
+    : admin_url('admin.php?page=casanova-payments-links');
+
+  $id = isset($_POST['group_token_id']) ? absint($_POST['group_token_id']) : 0;
+  if ($id <= 0 || !function_exists('casanova_group_token_get_by_id') || !function_exists('casanova_group_token_update')) {
+    wp_safe_redirect(add_query_arg(['group_error' => 'update'], $base));
+    exit;
+  }
+
+  $existing = casanova_group_token_get_by_id($id);
+  if (!$existing) {
+    wp_safe_redirect(add_query_arg(['group_error' => 'update'], $base));
+    exit;
+  }
+
+  $group_units = isset($_POST['group_units']) ? absint($_POST['group_units']) : 0;
+  $unit_total = casanova_group_pay_admin_amount(isset($_POST['group_unit_total']) ? (string)$_POST['group_unit_total'] : '');
+  $concepts = casanova_group_pay_admin_collect_concepts();
+  $offer_usd_payment = !empty($_POST['group_offer_usd_payment']);
+
+  $status = isset($_POST['group_status']) ? sanitize_key((string)$_POST['group_status']) : 'active';
+  if (!in_array($status, ['active', 'expired'], true)) {
+    $status = 'active';
+  }
+
+  $expires_at = null;
+  $exp_raw = isset($_POST['group_expires_at']) ? sanitize_text_field((string)$_POST['group_expires_at']) : '';
+  if ($exp_raw !== '') {
+    try {
+      $dt = new DateTimeImmutable($exp_raw, wp_timezone());
+      $expires_at = $dt->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+    } catch (Throwable $e) {
+      $expires_at = null;
+    }
+  }
+
+  if ($unit_total <= 0.0 && !empty($concepts)) {
+    $unit_total = (float)($concepts[0]['unit_total'] ?? 0);
+  }
+  if ($unit_total <= 0.0) {
+    wp_safe_redirect(add_query_arg(['group_error' => 'unit_total'], $base));
+    exit;
+  }
+
+  $meta = [];
+  $raw_meta = (string)($existing->metadata ?? '');
+  if ($raw_meta !== '') {
+    $decoded = json_decode($raw_meta, true);
+    if (is_array($decoded)) $meta = $decoded;
+  }
+
+  if (!empty($concepts)) {
+    $meta['concepts'] = $concepts;
+    $meta['concepts_enabled'] = true;
+  } else {
+    unset($meta['concepts'], $meta['concepts_enabled']);
+  }
+
+  if ($group_units > 0) {
+    $meta['group_units'] = $group_units;
+    $meta['group_units_source'] = 'manual';
+  } else {
+    unset($meta['group_units'], $meta['group_units_source']);
+  }
+
+  if ($offer_usd_payment) {
+    $meta['offer_usd_payment'] = true;
+  } else {
+    unset($meta['offer_usd_payment']);
+  }
+
+  $ok = casanova_group_token_update($id, [
+    'status' => $status,
+    'unit_total' => $unit_total,
+    'expires_at' => $expires_at,
+    'metadata' => !empty($meta) ? $meta : '',
+  ]);
+
+  if (!$ok) {
+    wp_safe_redirect(add_query_arg(['group_error' => 'update'], $base));
+    exit;
+  }
+
+  wp_safe_redirect(add_query_arg(['group_updated' => '1'], $base));
+  exit;
+});

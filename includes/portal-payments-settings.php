@@ -1399,7 +1399,21 @@ function casanova_payments_render_settings_page(): void {
       if ($group_error === 'expediente_ambiguous') $msg = 'Ese numero coincide con un ID interno y con un codigo visible de expedientes distintos. Usa el ID interno para evitar errores.';
       if ($group_error === 'missing') $msg = 'Modulo de grupos no disponible.';
       if ($group_error === 'create') $msg = 'Error al crear el token de grupo.';
+      if ($group_error === 'unit_total') $msg = 'Debes indicar un importe por persona o al menos un concepto con importe.';
+      if ($group_error === 'update') $msg = 'No se pudo actualizar el token de grupo.';
       echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
+    }
+
+    if (isset($_GET['group_updated']) && $_GET['group_updated'] === '1') {
+      echo '<div class="notice notice-success"><p>' . esc_html('Token de grupo actualizado.') . '</p></div>';
+    }
+    $group_deleted = isset($_GET['group_deleted']) ? absint($_GET['group_deleted']) : -1;
+    if ($group_deleted >= 0) {
+      if ($group_deleted > 0) {
+        echo '<div class="notice notice-success"><p>' . esc_html(sprintf('Tokens de grupo eliminados: %d', $group_deleted)) . '</p></div>';
+      } else {
+        echo '<div class="notice notice-info"><p>' . esc_html('No se eliminaron tokens de grupo.') . '</p></div>';
+      }
     }
 
     echo '<h2>Crear Payment Link individual</h2>';
@@ -1428,6 +1442,84 @@ function casanova_payments_render_settings_page(): void {
 
     submit_button('Crear link');
     echo '</form>';
+
+    $edit_group_id = isset($_GET['edit_group']) ? absint($_GET['edit_group']) : 0;
+    $edit_group = ($edit_group_id > 0 && function_exists('casanova_group_token_get_by_id'))
+      ? casanova_group_token_get_by_id($edit_group_id)
+      : null;
+    if ($edit_group) {
+      $eg_meta = [];
+      $eg_raw_meta = (string)($edit_group->metadata ?? '');
+      if ($eg_raw_meta !== '') {
+        $eg_decoded = json_decode($eg_raw_meta, true);
+        if (is_array($eg_decoded)) $eg_meta = $eg_decoded;
+      }
+      $eg_units = (int)($eg_meta['group_units'] ?? 0);
+      $eg_unit_total = number_format((float)($edit_group->unit_total ?? 0), 2, '.', '');
+      $eg_concepts = is_array($eg_meta['concepts'] ?? null) ? $eg_meta['concepts'] : [];
+      $eg_offer_usd = !empty($eg_meta['offer_usd_payment']);
+      $eg_status = strtolower(trim((string)($edit_group->status ?? 'active')));
+      $eg_expires = '';
+      if (!empty($edit_group->expires_at)) {
+        $eg_ts = strtotime((string)$edit_group->expires_at);
+        if ($eg_ts) $eg_expires = date('Y-m-d', $eg_ts);
+      }
+
+      echo '<hr />';
+      echo '<h2 id="casanova-edit-group">Editar token de grupo #' . esc_html((string)$edit_group->id) . '</h2>';
+      echo '<p class="description">El expediente no se puede cambiar. Si modificas conceptos ya usados en pagos anteriores, el calculo de "pagar el resto" de esos depositos podria verse afectado.</p>';
+      echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+      wp_nonce_field('casanova_update_group_token');
+      echo '<input type="hidden" name="action" value="casanova_update_group_token" />';
+      echo '<input type="hidden" name="group_token_id" value="' . esc_attr((string)$edit_group->id) . '" />';
+
+      echo '<table class="form-table" role="presentation">';
+      echo '<tr><th scope="row">Expediente</th><td><strong>' . esc_html((string)$edit_group->id_expediente) . '</strong></td></tr>';
+
+      echo '<tr><th scope="row"><label for="edit_group_status">Estado</label></th>';
+      echo '<td><select name="group_status" id="edit_group_status">';
+      echo '<option value="active"' . selected($eg_status, 'active', false) . '>Activo</option>';
+      echo '<option value="expired"' . selected($eg_status !== 'active', true, false) . '>Desactivado</option>';
+      echo '</select></td></tr>';
+
+      echo '<tr><th scope="row"><label for="edit_group_units">Personas del grupo (opcional)</label></th>';
+      echo '<td><input name="group_units" id="edit_group_units" type="number" min="1" step="1" class="regular-text" value="' . esc_attr($eg_units > 0 ? (string)$eg_units : '') . '" />';
+      echo '<p class="description">Si lo dejas vacio, se usara el numero de pasajeros detectado en el expediente.</p></td></tr>';
+
+      echo '<tr><th scope="row"><label for="edit_group_unit_total">Importe unico por persona (EUR)</label></th>';
+      echo '<td><input name="group_unit_total" id="edit_group_unit_total" type="text" class="regular-text" value="' . esc_attr($eg_unit_total) . '" />';
+      echo '<p class="description">Usalo si todos pagan lo mismo. Si defines conceptos abajo, este campo puede quedar vacio.</p></td></tr>';
+
+      echo '<tr><th scope="row">Conceptos con precio distinto</th><td>';
+      echo '<p class="description">Opcional. Si vacias todos los conceptos, el token usara el importe unico por persona.</p>';
+      echo '<table class="widefat striped" id="casanova-edit-group-concepts-table" style="max-width:760px">';
+      echo '<thead><tr><th>Concepto</th><th>Importe por persona (EUR)</th><th></th></tr></thead><tbody>';
+      $eg_concept_rows = !empty($eg_concepts) ? $eg_concepts : [['label' => '', 'unit_total' => ''], ['label' => '', 'unit_total' => '']];
+      foreach ($eg_concept_rows as $eg_concept) {
+        $c_label = is_array($eg_concept) ? (string)($eg_concept['label'] ?? '') : '';
+        $c_amount_raw = is_array($eg_concept) ? ($eg_concept['unit_total'] ?? '') : '';
+        $c_amount = ($c_amount_raw === '' || $c_amount_raw === null) ? '' : number_format((float)$c_amount_raw, 2, '.', '');
+        echo '<tr>';
+        echo '<td><input type="text" name="group_concept_label[]" class="regular-text" value="' . esc_attr($c_label) . '" /></td>';
+        echo '<td><input type="text" name="group_concept_amount[]" class="regular-text" value="' . esc_attr((string)$c_amount) . '" /></td>';
+        echo '<td><button type="button" class="button casanova-edit-group-concept-remove">Quitar</button></td>';
+        echo '</tr>';
+      }
+      echo '</tbody></table>';
+      echo '<p><button type="button" class="button" id="casanova-edit-group-concept-add">Anadir concepto</button></p>';
+      echo '<script>(function(){var table=document.getElementById("casanova-edit-group-concepts-table");var add=document.getElementById("casanova-edit-group-concept-add");if(!table||!add)return;function bind(row){var btn=row.querySelector(".casanova-edit-group-concept-remove");if(btn){btn.addEventListener("click",function(){var rows=table.querySelectorAll("tbody tr");if(rows.length>1){row.parentNode.removeChild(row);}else{row.querySelectorAll("input").forEach(function(i){i.value="";});}});}}table.querySelectorAll("tbody tr").forEach(bind);add.addEventListener("click",function(){var tr=document.createElement("tr");tr.innerHTML="<td><input type=\"text\" name=\"group_concept_label[]\" class=\"regular-text\" placeholder=\"Concepto\" /></td><td><input type=\"text\" name=\"group_concept_amount[]\" class=\"regular-text\" placeholder=\"0.00\" /></td><td><button type=\"button\" class=\"button casanova-edit-group-concept-remove\">Quitar</button></td>";table.querySelector("tbody").appendChild(tr);bind(tr);});})();</script>';
+      echo '</td></tr>';
+
+      echo '<tr><th scope="row">Pago en USD</th>';
+      echo '<td><label for="edit_group_offer_usd_payment"><input name="group_offer_usd_payment" id="edit_group_offer_usd_payment" type="checkbox" value="1" ' . checked($eg_offer_usd, true, false) . ' /> Ofrecer pago en dolares con Stripe</label></td></tr>';
+
+      echo '<tr><th scope="row"><label for="edit_group_expires_at">Caduca el (opcional)</label></th>';
+      echo '<td><input name="group_expires_at" id="edit_group_expires_at" type="date" class="regular-text" value="' . esc_attr($eg_expires) . '" /></td></tr>';
+      echo '</table>';
+      submit_button('Guardar cambios');
+      echo ' <a href="' . esc_url(casanova_payment_links_admin_base_url()) . '" class="button button-secondary">Cancelar</a>';
+      echo '</form>';
+    }
 
     echo '<hr />';
     echo '<h2>Crear token reusable de grupo</h2>';
@@ -1580,8 +1672,14 @@ function casanova_payments_render_settings_page(): void {
       if ($exists === $gt) {
         $rows = $wpdb->get_results("SELECT * FROM {$gt} ORDER BY id DESC LIMIT 20");
         if (!empty($rows)) {
+          echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+          wp_nonce_field('casanova_delete_group_tokens');
+          echo '<input type="hidden" name="action" value="casanova_delete_group_tokens" />';
+          echo '<div class="casanova-admin-stack--xs">';
+          echo '<button type="submit" class="button button-secondary" onclick="return confirm(\'Eliminar tokens de grupo seleccionados?\')">Eliminar seleccionados</button>';
+          echo '</div>';
           echo '<table class="widefat striped">';
-          echo '<thead><tr><th>ID</th><th>Expediente</th><th>PQ</th><th>Personas</th><th>Conceptos</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th></tr></thead><tbody>';
+          echo '<thead><tr><th class="casanova-admin-col--check"><input type="checkbox" id="casanova_group_tokens_checkall" /></th><th>ID</th><th>Expediente</th><th>PQ</th><th>Personas</th><th>Conceptos</th><th>Status</th><th>Token</th><th>URL</th><th>Caduca</th><th>Creado</th><th>Acciones</th></tr></thead><tbody>';
           foreach ($rows as $r) {
             $token = (string)($r->token ?? '');
             $url = ($token && function_exists('casanova_group_pay_url')) ? casanova_group_pay_url($token) : '';
@@ -1611,7 +1709,10 @@ function casanova_payments_render_settings_page(): void {
             if (!empty($decoded_meta['offer_usd_payment'])) {
               $concepts_txt .= ' / USD';
             }
+            $edit_url = add_query_arg(['edit_group' => (int)$r->id], casanova_payment_links_admin_base_url()) . '#casanova-edit-group';
+            $del_url = wp_nonce_url(add_query_arg(['action' => 'casanova_delete_group_tokens', 'id' => (int)$r->id], admin_url('admin-post.php')), 'casanova_delete_group_tokens');
             echo '<tr>';
+            echo '<td><input type="checkbox" name="group_token_ids[]" value="' . esc_attr((string)$r->id) . '" /></td>';
             echo '<td>' . esc_html((string)$r->id) . '</td>';
             echo '<td>' . esc_html((string)$r->id_expediente) . '</td>';
             echo '<td>' . esc_html((string)($r->id_reserva_pq ?? '')) . '</td>';
@@ -1622,9 +1723,12 @@ function casanova_payments_render_settings_page(): void {
             echo '<td>' . ($url ? '<a href="' . esc_url($url) . '" target="_blank" rel="noopener">Abrir</a>' : '') . '</td>';
             echo '<td>' . esc_html((string)($r->expires_at ?? '')) . '</td>';
             echo '<td>' . esc_html((string)($r->created_at ?? '')) . '</td>';
+            echo '<td><a href="' . esc_url($edit_url) . '">Editar</a> | <a href="' . esc_url($del_url) . '" class="button-link-delete" onclick="return confirm(\'Eliminar este token de grupo?\')">Eliminar</a></td>';
             echo '</tr>';
           }
           echo '</tbody></table>';
+          echo '<script>(function(){var a=document.getElementById("casanova_group_tokens_checkall");if(!a)return; a.addEventListener("change",function(){document.querySelectorAll("input[name=\"group_token_ids[]\"]").forEach(function(c){c.checked=a.checked;});});})();</script>';
+          echo '</form>';
         } else {
           echo '<p class="description">No hay tokens de grupo.</p>';
         }
