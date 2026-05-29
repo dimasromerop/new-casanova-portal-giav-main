@@ -1435,6 +1435,10 @@ function casanova_payments_render_settings_page(): void {
     echo '<td><label for="offer_usd_payment"><input name="offer_usd_payment" id="offer_usd_payment" type="checkbox" value="1" /> Ofrecer pago en dolares con Stripe</label>';
     echo '<p class="description">El importe se introduce siempre en EUR. Si el cliente elige USD, se calcula EUR/USD con comisiones y margen configurados, y se cobra tarjeta por Stripe.</p></td></tr>';
 
+    echo '<tr><th scope="row">Usar solo Stripe</th>';
+    echo '<td><label for="stripe_only"><input name="stripe_only" id="stripe_only" type="checkbox" value="1" /> Procesar todos los pagos por Stripe (tarjeta internacional)</label>';
+    echo '<p class="description">Recomendado para clientes extranjeros. Todos los pagos van por Stripe (tambien en EUR), sin Redsys ni transferencia. Al cliente solo se le pide elegir moneda (EUR/USD) y no se le pregunta el tipo de tarjeta. Implica ofrecer USD.</p></td></tr>';
+
     echo '<tr><th scope="row"><label for="expires_at">Caduca el (opcional)</label></th>';
     echo '<td><input name="expires_at" id="expires_at" type="date" class="regular-text" />';
     echo '<p class="description">Se aplica a fin de dia (23:59:59).</p></td></tr>';
@@ -1458,6 +1462,7 @@ function casanova_payments_render_settings_page(): void {
       $eg_unit_total = number_format((float)($edit_group->unit_total ?? 0), 2, '.', '');
       $eg_concepts = is_array($eg_meta['concepts'] ?? null) ? $eg_meta['concepts'] : [];
       $eg_offer_usd = !empty($eg_meta['offer_usd_payment']);
+      $eg_stripe_only = !empty($eg_meta['stripe_only']);
       $eg_status = strtolower(trim((string)($edit_group->status ?? 'active')));
       $eg_expires = '';
       if (!empty($edit_group->expires_at)) {
@@ -1513,6 +1518,10 @@ function casanova_payments_render_settings_page(): void {
       echo '<tr><th scope="row">Pago en USD</th>';
       echo '<td><label for="edit_group_offer_usd_payment"><input name="group_offer_usd_payment" id="edit_group_offer_usd_payment" type="checkbox" value="1" ' . checked($eg_offer_usd, true, false) . ' /> Ofrecer pago en dolares con Stripe</label></td></tr>';
 
+      echo '<tr><th scope="row">Usar solo Stripe</th>';
+      echo '<td><label for="edit_group_stripe_only"><input name="group_stripe_only" id="edit_group_stripe_only" type="checkbox" value="1" ' . checked($eg_stripe_only, true, false) . ' /> Procesar todos los pagos por Stripe (tarjeta internacional)</label>';
+      echo '<p class="description">Todos los pagos van por Stripe (tambien en EUR), sin Redsys ni transferencia. Solo se pide moneda (EUR/USD), sin preguntar tipo de tarjeta. Implica ofrecer USD.</p></td></tr>';
+
       echo '<tr><th scope="row"><label for="edit_group_expires_at">Caduca el (opcional)</label></th>';
       echo '<td><input name="group_expires_at" id="edit_group_expires_at" type="date" class="regular-text" value="' . esc_attr($eg_expires) . '" /></td></tr>';
       echo '</table>';
@@ -1562,6 +1571,10 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><th scope="row">Pago en USD</th>';
     echo '<td><label for="group_offer_usd_payment"><input name="group_offer_usd_payment" id="group_offer_usd_payment" type="checkbox" value="1" /> Ofrecer pago en dolares con Stripe</label>';
     echo '<p class="description">El importe del grupo se introduce siempre en EUR. Si el cliente elige USD, solo vera tarjeta y se cobrara por Stripe.</p></td></tr>';
+
+    echo '<tr><th scope="row">Usar solo Stripe</th>';
+    echo '<td><label for="group_stripe_only"><input name="group_stripe_only" id="group_stripe_only" type="checkbox" value="1" /> Procesar todos los pagos por Stripe (tarjeta internacional)</label>';
+    echo '<p class="description">Recomendado para grupos extranjeros. Todos los pagos van por Stripe (tambien en EUR), sin Redsys ni transferencia. Al cliente solo se le pide elegir moneda (EUR/USD) y no se le pregunta el tipo de tarjeta. Implica ofrecer USD.</p></td></tr>';
 
     echo '<tr><th scope="row"><label for="group_expires_at">Caduca el (opcional)</label></th>';
     echo '<td><input name="group_expires_at" id="group_expires_at" type="date" class="regular-text" /></td></tr>';
@@ -1622,6 +1635,9 @@ function casanova_payments_render_settings_page(): void {
               if (!empty($meta['preferred_currency']) && strtoupper((string)$meta['preferred_currency']) === 'USD') {
                 $detail .= ' / USD';
               }
+              if (!empty($meta['stripe_only'])) {
+                $detail .= ' / Solo Stripe';
+              }
             } elseif ((string)($r->scope ?? '') === 'individual_link') {
               $detail = 'individual';
               $meta = [];
@@ -1632,6 +1648,9 @@ function casanova_payments_render_settings_page(): void {
               }
               if (!empty($meta['offer_usd_payment'])) {
                 $detail .= ' / USD';
+              }
+              if (!empty($meta['stripe_only'])) {
+                $detail .= ' / Solo Stripe';
               }
             }
             echo '<tr>';
@@ -1708,6 +1727,9 @@ function casanova_payments_render_settings_page(): void {
             }
             if (!empty($decoded_meta['offer_usd_payment'])) {
               $concepts_txt .= ' / USD';
+            }
+            if (!empty($decoded_meta['stripe_only'])) {
+              $concepts_txt .= ' / Solo Stripe';
             }
             $edit_url = add_query_arg(['edit_group' => (int)$r->id], casanova_payment_links_admin_base_url()) . '#casanova-edit-group';
             $del_url = wp_nonce_url(add_query_arg(['action' => 'casanova_delete_group_tokens', 'id' => (int)$r->id], admin_url('admin-post.php')), 'casanova_delete_group_tokens');

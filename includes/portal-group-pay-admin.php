@@ -79,7 +79,8 @@ add_action('admin_post_casanova_create_group_token', function () {
   $unit_total_raw = isset($_POST['group_unit_total']) ? (string)$_POST['group_unit_total'] : '';
   $unit_total = casanova_group_pay_admin_amount($unit_total_raw);
   $concepts = casanova_group_pay_admin_collect_concepts();
-  $offer_usd_payment = !empty($_POST['group_offer_usd_payment']);
+  $stripe_only = !empty($_POST['group_stripe_only']);
+  $offer_usd_payment = !empty($_POST['group_offer_usd_payment']) || $stripe_only;
   $expires_at = null;
   $exp_raw = isset($_POST['group_expires_at']) ? sanitize_text_field((string)$_POST['group_expires_at']) : '';
   if ($exp_raw !== '') {
@@ -142,6 +143,9 @@ add_action('admin_post_casanova_create_group_token', function () {
   }
   if ($offer_usd_payment) {
     $metadata['offer_usd_payment'] = true;
+  }
+  if ($stripe_only) {
+    $metadata['stripe_only'] = true;
   }
 
   $token = casanova_group_tokens_create([
@@ -229,7 +233,8 @@ add_action('admin_post_casanova_update_group_token', function () {
   $group_units = isset($_POST['group_units']) ? absint($_POST['group_units']) : 0;
   $unit_total = casanova_group_pay_admin_amount(isset($_POST['group_unit_total']) ? (string)$_POST['group_unit_total'] : '');
   $concepts = casanova_group_pay_admin_collect_concepts();
-  $offer_usd_payment = !empty($_POST['group_offer_usd_payment']);
+  $stripe_only = !empty($_POST['group_stripe_only']);
+  $offer_usd_payment = !empty($_POST['group_offer_usd_payment']) || $stripe_only;
 
   $status = isset($_POST['group_status']) ? sanitize_key((string)$_POST['group_status']) : 'active';
   if (!in_array($status, ['active', 'expired'], true)) {
@@ -280,6 +285,12 @@ add_action('admin_post_casanova_update_group_token', function () {
     $meta['offer_usd_payment'] = true;
   } else {
     unset($meta['offer_usd_payment']);
+  }
+
+  if ($stripe_only) {
+    $meta['stripe_only'] = true;
+  } else {
+    unset($meta['stripe_only']);
   }
 
   $ok = casanova_group_token_update($id, [

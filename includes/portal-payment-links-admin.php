@@ -71,7 +71,8 @@ add_action('admin_post_casanova_create_payment_link', function () {
   $currency = 'EUR';
   $scope = 'individual_link';
   $amount_source = 'manual';
-  $offer_usd_payment = !empty($_POST['offer_usd_payment']);
+  $stripe_only = !empty($_POST['stripe_only']);
+  $offer_usd_payment = !empty($_POST['offer_usd_payment']) || $stripe_only;
 
   $expires_at = null;
   $exp_raw = isset($_POST['expires_at']) ? sanitize_text_field((string)$_POST['expires_at']) : '';
@@ -162,6 +163,7 @@ add_action('admin_post_casanova_create_payment_link', function () {
       'link_kind' => 'individual',
       'amount_source' => $amount_source,
       'offer_usd_payment' => $offer_usd_payment,
+      'stripe_only' => $stripe_only,
       'giav_pending_amount' => (!is_wp_error($pending_amount) && $pending_amount !== null) ? (float)$pending_amount : null,
       'created_by_user' => (int) get_current_user_id(),
       'expediente_lookup' => [

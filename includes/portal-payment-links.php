@@ -5,6 +5,56 @@ function casanova_payment_link_new_token(): string {
   return bin2hex(random_bytes(24)); // 48 chars
 }
 
+/**
+ * Firma CSRF estable para las paginas publicas de pago.
+ *
+ * A diferencia de un nonce de WordPress, no caduca: se deriva del propio token
+ * secreto del enlace (que ya es la puerta de acceso) + el salt del sitio. Un
+ * tercero no puede falsificarla sin acceso al servidor, asi que mantiene la
+ * proteccion CSRF, pero no rompe cuando el cliente abre el enlace y paga horas
+ * o dias despues.
+ */
+if (!function_exists('casanova_pay_csrf_token')) {
+  function casanova_pay_csrf_token(string $scope, string $token): string {
+    $token = trim($token);
+    return hash_hmac('sha256', $scope . '|' . $token, wp_salt('nonce'));
+  }
+}
+
+if (!function_exists('casanova_pay_csrf_verify')) {
+  function casanova_pay_csrf_verify(string $scope, string $token, string $candidate, string $legacy_nonce_action = ''): bool {
+    $candidate = trim($candidate);
+    if ($candidate === '') return false;
+
+    $expected = casanova_pay_csrf_token($scope, $token);
+    if (hash_equals($expected, $candidate)) {
+      return true;
+    }
+
+    // Compatibilidad: aceptar un nonce de WordPress todavia valido (paginas ya abiertas).
+    if ($legacy_nonce_action !== '' && wp_verify_nonce($candidate, $legacy_nonce_action)) {
+      return true;
+    }
+
+    return false;
+  }
+}
+
+/**
+ * Evita que cualquier capa de cache (plugin/CDN/hosting) sirva una pagina de
+ * pago con una firma o un importe desactualizado.
+ */
+if (!function_exists('casanova_pay_send_nocache_headers')) {
+  function casanova_pay_send_nocache_headers(): void {
+    if (!defined('DONOTCACHEPAGE')) define('DONOTCACHEPAGE', true);
+    if (!defined('DONOTCACHEOBJECT')) define('DONOTCACHEOBJECT', true);
+    if (!defined('DONOTCACHEDB')) define('DONOTCACHEDB', true);
+    if (function_exists('nocache_headers') && !headers_sent()) {
+      nocache_headers();
+    }
+  }
+}
+
 function casanova_payment_link_create(array $data) {
   global $wpdb;
   $table = casanova_payment_links_table();
@@ -330,6 +380,7 @@ add_action('template_redirect', function () {
 
 function casanova_handle_payment_link_request(string $token): void {
   $token = sanitize_text_field($token);
+  casanova_pay_send_nocache_headers();
   if (function_exists('casanova_portal_maybe_switch_public_locale')) {
     casanova_portal_maybe_switch_public_locale();
   }
@@ -395,14 +446,15 @@ function casanova_handle_payment_link_request(string $token): void {
     $prefill_card_brand = ($prefill_card_brand_raw === 'amex' || $prefill_card_brand_raw === 'american_express') ? 'amex' : 'other';
   }
   $auto_start = !empty($meta_prefill['auto_start']);
-  $offer_usd_payment = !empty($meta_prefill['offer_usd_payment']);
+  $stripe_only = !empty($meta_prefill['stripe_only']);
+  $offer_usd_payment = !empty($meta_prefill['offer_usd_payment']) || $stripe_only;
   $stripe_available = function_exists('casanova_stripe_is_available') && casanova_stripe_is_available();
   $usd_payment_enabled = $offer_usd_payment && $stripe_available;
   $prefill_currency = !empty($meta_prefill['preferred_currency']) ? strtoupper(trim((string)$meta_prefill['preferred_currency'])) : 'EUR';
   if ($prefill_currency !== 'USD' || !$usd_payment_enabled) {
     $prefill_currency = 'EUR';
   }
-  if ($prefill_currency === 'USD' || $offer_usd_payment) {
+  if ($prefill_currency === 'USD' || $offer_usd_payment || $stripe_only) {
     $prefill_method = 'card';
   }
   $public_locale = function_exists('casanova_portal_get_public_requested_locale')
@@ -531,13 +583,19 @@ function casanova_handle_payment_link_request(string $token): void {
     }
     $mode_prefill = $autostart_mode !== '' ? $autostart_mode : $prefill_mode;
     $mode = ($mode_prefill === 'deposit' && $deposit_effective) ? 'deposit' : 'full';
-    $nonce = wp_create_nonce('casanova_pay_link_' . (int)$link->id);
+    $nonce = casanova_pay_csrf_token('pay_link', (string)$link->token);
     $autostart_url = casanova_payment_link_url((string)$link->token);
     if (function_exists('casanova_portal_add_public_locale_arg')) {
       $autostart_url = casanova_portal_add_public_locale_arg($autostart_url, $public_locale);
     }
 
-    header('Content-Type: text/html; charset=' . get_bloginfo('charset'));
+    casanova_portal_render_public_document_start(__('Redirigiendo al pago', 'casanova-portal'));
+    echo '<section class="casanova-public-page casanova-public-page--loading">';
+    echo casanova_portal_public_logo_html();
+    echo '<h2 class="casanova-public-page__title">' . esc_html__('Redirigiendo a la pasarela de pago segura', 'casanova-portal') . '</h2>';
+    echo '<p class="casanova-public-page__intro">' . esc_html__('Estamos preparando tu pago. No cierres ni recargues esta pagina; te redirigiremos en unos segundos.', 'casanova-portal') . '</p>';
+    echo '<div class="casanova-pay-spinner" role="status" aria-live="polite"></div>';
+    echo '<style>.casanova-pay-spinner{width:46px;height:46px;margin:28px auto;border:4px solid #d9e5df;border-top-color:#13715f;border-radius:50%;animation:casanova-pay-spin .9s linear infinite}@keyframes casanova-pay-spin{to{transform:rotate(360deg)}}</style>';
     echo '<form id="casanova-auto" method="post" action="' . esc_url($autostart_url) . '">';
     echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
     echo '<input type="hidden" name="billing_name" value="' . esc_attr($prefill_name) . '" />';
@@ -549,15 +607,21 @@ function casanova_handle_payment_link_request(string $token): void {
     echo '<input type="hidden" name="method" value="' . esc_attr($method) . '" />';
     echo '<input type="hidden" name="card_brand" value="' . esc_attr($card_brand) . '" />';
     echo '</form>';
-    echo '<script>document.getElementById("casanova-auto").submit();</script>';
+    echo '</section>';
+    echo '<script>(function(){var f=document.getElementById("casanova-auto");if(f){window.setTimeout(function(){f.submit();},50);}})();</script>';
+    casanova_portal_render_public_document_end();
     exit;
   }
 
   $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
   if ($method === 'POST') {
     $nonce = isset($_POST['_wpnonce']) ? (string)$_POST['_wpnonce'] : '';
-    if ($nonce === '' || !wp_verify_nonce($nonce, 'casanova_pay_link_' . (int)$link->id)) {
-      casanova_render_payment_link_error(__('Solicitud no valida.', 'casanova-portal'));
+    if (!casanova_pay_csrf_verify('pay_link', (string)$link->token, $nonce, 'casanova_pay_link_' . (int)$link->id)) {
+      $retry_url = casanova_payment_link_url((string)$link->token);
+      if (function_exists('casanova_portal_add_public_locale_arg')) {
+        $retry_url = casanova_portal_add_public_locale_arg($retry_url, $public_locale);
+      }
+      casanova_render_payment_link_error(__('Tu sesion de pago ha caducado o la pagina estaba desactualizada. Recarga la pagina e intentalo de nuevo.', 'casanova-portal'), $retry_url);
       exit;
     }
 
@@ -692,19 +756,25 @@ function casanova_handle_payment_link_request(string $token): void {
       ],
     ];
 
-    if ($selected_currency === 'USD') {
-      if (!function_exists('casanova_stripe_usd_quote') || !function_exists('casanova_stripe_create_checkout_session')) {
-        casanova_render_payment_link_error(__('Stripe no disponible.', 'casanova-portal'));
+    if ($selected_currency === 'USD' || $stripe_only) {
+      if (!function_exists('casanova_stripe_create_checkout_session')) {
+        casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'));
         exit;
       }
 
-      $quote = casanova_stripe_usd_quote($amount_to_pay);
-      if (is_wp_error($quote)) {
-        casanova_render_payment_link_error($quote->get_error_message());
-        exit;
+      $quote = null;
+      if ($selected_currency === 'USD') {
+        if (!function_exists('casanova_stripe_usd_quote')) {
+          casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'));
+          exit;
+        }
+        $quote = casanova_stripe_usd_quote($amount_to_pay);
+        if (is_wp_error($quote)) {
+          casanova_render_payment_link_error($quote->get_error_message());
+          exit;
+        }
+        $payload_base['stripe_quote'] = $quote;
       }
-
-      $payload_base['stripe_quote'] = $quote;
 
       $reference = 'STR-' . (int)$idExpediente . '-' . substr(casanova_payments_new_token(), 0, 12);
       $intent = casanova_payment_intent_create([
@@ -731,6 +801,7 @@ function casanova_handle_payment_link_request(string $token): void {
       }
 
       $session = casanova_stripe_create_checkout_session($intent, [
+        'currency' => $selected_currency,
         'quote' => $quote,
         'mode' => $mode,
         'billing_email' => $billing_email,
@@ -754,7 +825,7 @@ function casanova_handle_payment_link_request(string $token): void {
             ],
           ]),
         ]);
-        casanova_render_payment_link_error(__('No se pudo iniciar el pago con Stripe.', 'casanova-portal'));
+        casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
         exit;
       }
 
@@ -771,7 +842,7 @@ function casanova_handle_payment_link_request(string $token): void {
             ],
           ]),
         ]);
-        casanova_render_payment_link_error(__('Stripe no devolvio un enlace de pago.', 'casanova-portal'));
+        casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
         exit;
       }
 
@@ -807,7 +878,7 @@ function casanova_handle_payment_link_request(string $token): void {
     }
 
       if (!class_exists('Casanova_Inespay_Service')) {
-        casanova_render_payment_link_error(__('Inespay no disponible.', 'casanova-portal'));
+        casanova_render_payment_link_error(__('El pago por transferencia no está disponible en este momento. Prueba con tarjeta o contacta con la agencia.', 'casanova-portal'));
         exit;
       }
 
@@ -887,7 +958,7 @@ function casanova_handle_payment_link_request(string $token): void {
             ],
           ]),
         ]);
-        casanova_render_payment_link_error(__('Inespay no devolvio un enlace de pago.', 'casanova-portal'));
+        casanova_render_payment_link_error(__('No se pudo iniciar el pago por transferencia. Inténtalo de nuevo o prueba con tarjeta.', 'casanova-portal'));
         exit;
       }
 
@@ -928,7 +999,7 @@ function casanova_handle_payment_link_request(string $token): void {
     }
 
     if (!function_exists('casanova_redsys_order_from_intent_id')) {
-      casanova_render_payment_link_error(__('Redsys no disponible.', 'casanova-portal'));
+      casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'));
       exit;
     }
 
@@ -937,7 +1008,7 @@ function casanova_handle_payment_link_request(string $token): void {
     $intent->order_redsys = $order;
 
     if (!function_exists('casanova_redsys_prepare_redirect_data')) {
-      casanova_render_payment_link_error(__('Config Redsys no disponible.', 'casanova-portal'));
+      casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'));
       exit;
     }
 
@@ -1000,12 +1071,12 @@ function casanova_handle_payment_link_request(string $token): void {
     }
   }
 
-  $nonce = wp_create_nonce('casanova_pay_link_' . (int)$link->id);
+  $nonce = casanova_pay_csrf_token('pay_link', (string)$link->token);
   $pref_mode = isset($_GET['mode']) ? strtolower(trim((string)$_GET['mode'])) : '';
   if ($pref_mode !== 'deposit' && $pref_mode !== 'full') $pref_mode = '';
   $checked_deposit = ($deposit_effective && ($pref_mode === 'deposit' || $pref_mode === ''));
   $checked_full = !$checked_deposit;
-  $transfer_note = __('El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
+  $transfer_note = __('El pago por transferencia bancaria no tiene recargo y es totalmente seguro. Te llevaremos a una página donde podrás elegir tu banco y autorizar la transferencia desde tu banca online. Al terminar, volverás automáticamente aquí. Compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
   $payment_page_url = casanova_payment_link_url((string)$link->token);
   if (function_exists('casanova_portal_add_public_locale_arg')) {
     $payment_page_url = casanova_portal_add_public_locale_arg($payment_page_url, $public_locale);
@@ -1067,7 +1138,7 @@ function casanova_handle_payment_link_request(string $token): void {
 
   echo '</div>';
 
-  echo '<form class="casanova-public-form" method="post" action="' . esc_url($payment_page_url) . '">';
+  echo '<form id="casanova-pay-form" class="casanova-public-form" method="post" action="' . esc_url($payment_page_url) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
 
   echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombre', 'casanova-portal') . '</span>';
@@ -1098,7 +1169,7 @@ function casanova_handle_payment_link_request(string $token): void {
     echo '</label>';
     echo '<label class="casanova-public-choice casanova-public-choice--compact">';
     echo '<input class="casanova-public-choice__control" type="radio" name="currency" value="USD" ' . $usd_checked . ' />USD';
-    $usd_hint = __('Tarjeta con Stripe.', 'casanova-portal');
+    $usd_hint = __('Pago con tarjeta.', 'casanova-portal');
     if (!is_wp_error($usd_quote_authorized) && is_array($usd_quote_authorized)) {
       $usd_hint .= ' ' . sprintf(__('Total: %s', 'casanova-portal'), casanova_stripe_format_usd((float)$usd_quote_authorized['usd_amount']));
       if ($deposit_effective && !is_wp_error($usd_quote_deposit) && is_array($usd_quote_deposit)) {
@@ -1126,7 +1197,7 @@ function casanova_handle_payment_link_request(string $token): void {
     echo '</label>';
     echo '<label class="casanova-public-choice casanova-public-choice--compact">';
     echo '<input class="casanova-public-choice__control" type="radio" name="method" value="bank_transfer" ' . $bank_checked . ' />' . esc_html__('Transferencia bancaria online', 'casanova-portal');
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('PSD2 · Sin recargo.', 'casanova-portal') . '</span>';
+    echo '<span class="casanova-public-choice__hint">' . esc_html__('Sin recargo.', 'casanova-portal') . '</span>';
     echo '</label>';
     echo '</div>';
     $note_class = 'casanova-public-page__method-note';
@@ -1139,21 +1210,25 @@ function casanova_handle_payment_link_request(string $token): void {
     echo '<div class="casanova-public-field__hint">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
   }
 
-  $card_brand_wrap_class = (($inespay_enabled && $prefill_method === 'bank_transfer') || $prefill_currency === 'USD') ? 'casanova-hidden' : '';
-  echo '<div id="casanova-card-brand-wrap" class="' . esc_attr($card_brand_wrap_class) . '">';
-  echo '<div class="casanova-public-section-label">' . esc_html__('Tipo de tarjeta', 'casanova-portal') . '</div>';
-  echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
-  echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-  echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="other" ' . ($prefill_card_brand === 'amex' ? '' : 'checked') . ' />' . esc_html__('Otra tarjeta', 'casanova-portal');
-  echo '<span class="casanova-public-choice__hint">' . esc_html__('Visa, Mastercard y similares.', 'casanova-portal') . '</span>';
-  echo '</label>';
-  echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-  echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="amex" ' . ($prefill_card_brand === 'amex' ? 'checked' : '') . ' />' . esc_html__('American Express (AMEX)', 'casanova-portal');
-  echo '<span class="casanova-public-choice__hint">' . esc_html__('Selecciona esta opcion si vas a pagar con AMEX.', 'casanova-portal') . '</span>';
-  echo '</label>';
-  echo '</div>';
-  echo '<div class="casanova-public-field__hint">' . esc_html__('Elige el tipo de tarjeta que deseas utilizar.', 'casanova-portal') . '</div>';
-  echo '</div>';
+  if ($stripe_only) {
+    echo '<input type="hidden" name="card_brand" value="other" />';
+  } else {
+    $card_brand_wrap_class = (($inespay_enabled && $prefill_method === 'bank_transfer') || $prefill_currency === 'USD') ? 'casanova-hidden' : '';
+    echo '<div id="casanova-card-brand-wrap" class="' . esc_attr($card_brand_wrap_class) . '">';
+    echo '<div class="casanova-public-section-label">' . esc_html__('Tipo de tarjeta', 'casanova-portal') . '</div>';
+    echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
+    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
+    echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="other" ' . ($prefill_card_brand === 'amex' ? '' : 'checked') . ' />' . esc_html__('Otra tarjeta', 'casanova-portal');
+    echo '<span class="casanova-public-choice__hint">' . esc_html__('Visa, Mastercard y similares.', 'casanova-portal') . '</span>';
+    echo '</label>';
+    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
+    echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="amex" ' . ($prefill_card_brand === 'amex' ? 'checked' : '') . ' />' . esc_html__('American Express (AMEX)', 'casanova-portal');
+    echo '<span class="casanova-public-choice__hint">' . esc_html__('Selecciona esta opcion si vas a pagar con AMEX.', 'casanova-portal') . '</span>';
+    echo '</label>';
+    echo '</div>';
+    echo '<div class="casanova-public-field__hint">' . esc_html__('Elige el tipo de tarjeta que deseas utilizar.', 'casanova-portal') . '</div>';
+    echo '</div>';
+  }
 
   if ($deposit_effective) {
     echo '<label class="casanova-public-choice">';
@@ -1190,10 +1265,12 @@ function casanova_handle_payment_link_request(string $token): void {
   echo '</label>';
 
   echo '<div class="casanova-public-page__actions">';
-  echo '<button class="casanova-public-button" type="submit">' . esc_html__('Continuar al pago', 'casanova-portal') . '</button>';
+  echo '<button id="casanova-pay-submit" class="casanova-public-button" type="submit">' . esc_html__('Continuar al pago', 'casanova-portal') . '</button>';
   echo '</div>';
 
   echo '</form>';
+  echo '<style>.casanova-public-button--loading{pointer-events:none;opacity:.75}</style>';
+  echo '<script>(function(){var f=document.getElementById("casanova-pay-form");if(!f)return;f.addEventListener("submit",function(){if(f.dataset.casanovaSubmitting==="1")return;f.dataset.casanovaSubmitting="1";var b=document.getElementById("casanova-pay-submit");if(b){b.textContent=' . wp_json_encode(__('Procesando, redirigiendo al pago...', 'casanova-portal')) . ';b.classList.add("casanova-public-button--loading");b.setAttribute("aria-busy","true");}});})();</script>';
   if ($inespay_enabled || $usd_payment_enabled) {
     echo '<script>
       (function(){
@@ -1292,11 +1369,16 @@ function casanova_render_payment_link_success($link): void {
   casanova_portal_render_public_document_end();
 }
 
-function casanova_render_payment_link_error(string $message): void {
+function casanova_render_payment_link_error(string $message, string $retry_url = ''): void {
   casanova_portal_render_public_document_start(__('No se pudo completar el pago', 'casanova-portal'));
   echo '<section class="casanova-public-page casanova-public-page--error">';
   echo '<h2 class="casanova-public-page__title">' . esc_html__('No se pudo completar el pago', 'casanova-portal') . '</h2>';
   echo '<div class="casanova-public-page__notice casanova-public-page__notice--error">' . esc_html($message) . '</div>';
+  if ($retry_url !== '') {
+    echo '<div class="casanova-public-page__actions">';
+    echo '<a class="casanova-public-button" href="' . esc_url($retry_url) . '">' . esc_html__('Recargar e intentar de nuevo', 'casanova-portal') . '</a>';
+    echo '</div>';
+  }
   echo '</section>';
   casanova_portal_render_public_document_end();
 }

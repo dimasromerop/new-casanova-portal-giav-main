@@ -284,10 +284,26 @@ if (!function_exists('casanova_stripe_create_checkout_session')) {
       return new WP_Error('stripe_invalid_intent', __('Intent invalido.', 'casanova-portal'));
     }
 
+    $currency = strtoupper(trim((string) ($context['currency'] ?? 'USD')));
+    if ($currency !== 'EUR') {
+      $currency = 'USD';
+    }
+
     $quote = is_array($context['quote'] ?? null) ? $context['quote'] : [];
-    $usd_cents = (int) ($quote['usd_cents'] ?? 0);
-    if ($usd_cents <= 0) {
-      return new WP_Error('stripe_invalid_usd_amount', __('Importe USD invalido.', 'casanova-portal'));
+
+    if ($currency === 'EUR') {
+      $eur_amount = round((float) ($intent->amount ?? 0), 2);
+      $charge_cents = (int) round($eur_amount * 100);
+      if ($charge_cents <= 0) {
+        return new WP_Error('stripe_invalid_eur_amount', __('Importe EUR invalido.', 'casanova-portal'));
+      }
+      $stripe_currency = 'eur';
+    } else {
+      $charge_cents = (int) ($quote['usd_cents'] ?? 0);
+      if ($charge_cents <= 0) {
+        return new WP_Error('stripe_invalid_usd_amount', __('Importe USD invalido.', 'casanova-portal'));
+      }
+      $stripe_currency = 'usd';
     }
 
     $payment_link = is_array($context['payment_link'] ?? null) ? $context['payment_link'] : [];
@@ -310,21 +326,29 @@ if (!function_exists('casanova_stripe_create_checkout_session')) {
       $locale = 'auto';
     }
 
+    $eur_base = round((float) ($quote['eur_amount'] ?? $intent->amount ?? 0), 2);
     $metadata = [
       'intent_id' => (string) (int) $intent->id,
       'intent_token' => (string) $intent->token,
       'id_expediente' => (string) (int) ($intent->id_expediente ?? 0),
       'payment_link_id' => (string) (int) ($payment_link['id'] ?? 0),
       'payment_link_token' => $link_token,
-      'eur_amount' => number_format((float) ($quote['eur_amount'] ?? $intent->amount ?? 0), 2, '.', ''),
-      'usd_amount' => number_format(((float) $usd_cents) / 100, 2, '.', ''),
-      'eur_usd_rate' => (string) ($quote['eur_usd_rate'] ?? ''),
+      'charge_currency' => $currency,
+      'eur_amount' => number_format($eur_base, 2, '.', ''),
     ];
+    if ($currency === 'USD') {
+      $metadata['usd_amount'] = number_format(((float) $charge_cents) / 100, 2, '.', '');
+      $metadata['eur_usd_rate'] = (string) ($quote['eur_usd_rate'] ?? '');
+    }
 
     $exp_id = (int) ($intent->id_expediente ?? 0);
     $mode = strtolower(trim((string) ($context['mode'] ?? '')));
     $label = $mode === 'deposit' ? 'Deposito' : 'Pago';
     $description = $label . ' Casanova Golf (' . $exp_id . ')';
+
+    $product_description = $currency === 'USD'
+      ? ('Importe base EUR: ' . number_format($eur_base, 2, '.', '') . ' EUR')
+      : ('Casanova Golf - expediente ' . $exp_id);
 
     $params = [
       'mode' => 'payment',
@@ -339,11 +363,11 @@ if (!function_exists('casanova_stripe_create_checkout_session')) {
         [
           'quantity' => 1,
           'price_data' => [
-            'currency' => 'usd',
-            'unit_amount' => $usd_cents,
+            'currency' => $stripe_currency,
+            'unit_amount' => $charge_cents,
             'product_data' => [
               'name' => $description,
-              'description' => 'Importe base EUR: ' . number_format((float) ($quote['eur_amount'] ?? 0), 2, '.', '') . ' EUR',
+              'description' => $product_description,
             ],
           ],
         ],
@@ -511,7 +535,11 @@ if (!function_exists('casanova_stripe_try_giav_cobro')) {
     elseif ($mode === 'rest') $mode_label = 'resto';
     $session_id = (string) ($session['id'] ?? '');
     $payment_intent = (string) ($session['payment_intent'] ?? '');
-    $usd_amount = ((float) ((int) ($session['amount_total'] ?? 0))) / 100;
+    $charged_currency = strtoupper(trim((string) ($session['currency'] ?? ($payload['payment_currency'] ?? 'USD'))));
+    if ($charged_currency !== 'EUR') {
+      $charged_currency = 'USD';
+    }
+    $charged_amount = ((float) ((int) ($session['amount_total'] ?? 0))) / 100;
     $stripe_quote = is_array($payload['stripe_quote'] ?? null) ? $payload['stripe_quote'] : [];
     $rate = (string) ($stripe_quote['eur_usd_rate'] ?? '');
 
@@ -520,9 +548,9 @@ if (!function_exists('casanova_stripe_try_giav_cobro')) {
       : ('Pago Stripe ' . $session_id);
 
     $is_group_payment = $payment_link_scope === 'group_base' || !empty($plink_meta['group_token_id']);
-    $stripe_note = 'Stripe USD ' . number_format($usd_amount, 2, '.', '')
+    $stripe_note = 'Stripe ' . $charged_currency . ' ' . number_format($charged_amount, 2, '.', '')
       . ' | EUR base ' . number_format((float) ($intent->amount ?? 0), 2, '.', '')
-      . ($rate !== '' ? (' | EUR/USD ' . $rate) : '')
+      . ($charged_currency === 'USD' && $rate !== '' ? (' | EUR/USD ' . $rate) : '')
       . ' | session=' . $session_id
       . ($payment_intent !== '' ? (' | payment_intent=' . $payment_intent) : '');
     $notas_internas = $stripe_note;
@@ -594,8 +622,16 @@ if (!function_exists('casanova_stripe_process_checkout_session')) {
       if (is_array($decoded)) $payload = $decoded;
     }
     $quote = is_array($payload['stripe_quote'] ?? null) ? $payload['stripe_quote'] : [];
-    $expected_cents = (int) ($quote['usd_cents'] ?? 0);
-    $paid = ($payment_status === 'paid') && ($status === '' || $status === 'complete') && $currency === 'usd';
+    $expected_currency = strtolower(trim((string) ($payload['payment_currency'] ?? 'usd')));
+    if ($expected_currency !== 'eur') {
+      $expected_currency = 'usd';
+    }
+    if ($expected_currency === 'eur') {
+      $expected_cents = (int) round((float) ($intent->amount ?? 0) * 100);
+    } else {
+      $expected_cents = (int) ($quote['usd_cents'] ?? 0);
+    }
+    $paid = ($payment_status === 'paid') && ($status === '' || $status === 'complete') && $currency === $expected_currency;
     if ($paid && $expected_cents > 0 && $amount_total !== $expected_cents) {
       $paid = false;
     }
