@@ -40,7 +40,7 @@ function casanova_manual_payment_import_rows_create_sql(string $table, string $c
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     batch_token VARCHAR(64) NOT NULL DEFAULT '',
     source_filename VARCHAR(255) NOT NULL DEFAULT '',
-    row_number INT NOT NULL DEFAULT 0,
+    `row_number` INT NOT NULL DEFAULT 0,
     row_hash CHAR(64) NOT NULL,
     id_expediente BIGINT UNSIGNED NOT NULL DEFAULT 0,
     id_cliente BIGINT UNSIGNED NOT NULL DEFAULT 0,
