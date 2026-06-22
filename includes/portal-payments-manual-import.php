@@ -57,8 +57,8 @@ if (!function_exists('casanova_manual_payment_import_create_table')) {
     error_message TEXT NULL,
     payload LONGTEXT NULL,
     created_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
+    updated_at DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
     PRIMARY KEY (id),
     UNIQUE KEY row_hash (row_hash),
     KEY idx_batch (batch_token),
@@ -70,6 +70,14 @@ if (!function_exists('casanova_manual_payment_import_create_table')) {
     dbDelta($sql);
 
     $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists !== $table) {
+      $wpdb->query($sql);
+      if (!empty($wpdb->last_error)) {
+        error_log('[CASANOVA][MANUAL_IMPORT][AUDIT] create table failed: ' . $wpdb->last_error);
+      }
+      $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    }
+
     return $exists === $table;
   }
 }
@@ -838,6 +846,7 @@ if (!function_exists('casanova_manual_payment_import_save_log')) {
       'error_message' => $error !== '' ? $error : null,
       'payload' => wp_json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
       'created_by' => (int) get_current_user_id(),
+      'updated_at' => current_time('mysql'),
     ];
 
     $existing_id = (int) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$table} WHERE row_hash = %s LIMIT 1", $row_hash));
@@ -850,6 +859,7 @@ if (!function_exists('casanova_manual_payment_import_save_log')) {
       return;
     }
 
+    $data['created_at'] = current_time('mysql');
     $ok = $wpdb->insert($table, $data);
     if ($ok === false && !empty($wpdb->last_error)) {
       error_log('[CASANOVA][MANUAL_IMPORT][AUDIT] insert failed: ' . $wpdb->last_error);
