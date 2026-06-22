@@ -1,6 +1,13 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+if (!function_exists('casanova_manual_payment_import_rows_table')) {
+  function casanova_manual_payment_import_rows_table(): string {
+    global $wpdb;
+    return $wpdb->prefix . 'casanova_manual_payment_import_rows';
+  }
+}
+
 if (!function_exists('casanova_manual_payment_import_admin_url')) {
   function casanova_manual_payment_import_admin_url(array $args = []): string {
     $base = function_exists('casanova_portal_admin_url')
@@ -18,6 +25,55 @@ if (!function_exists('casanova_manual_payment_import_transient_key')) {
   }
 }
 
+if (!function_exists('casanova_manual_payment_import_create_table')) {
+  function casanova_manual_payment_import_create_table(): bool {
+    if (!function_exists('casanova_manual_payment_import_rows_table')) return false;
+
+    global $wpdb;
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+    $table = casanova_manual_payment_import_rows_table();
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    batch_token VARCHAR(64) NOT NULL DEFAULT '',
+    source_filename VARCHAR(255) NOT NULL DEFAULT '',
+    row_number INT NOT NULL DEFAULT 0,
+    row_hash CHAR(64) NOT NULL,
+    id_expediente BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    id_cliente BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    id_forma_pago BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    payment_date DATE NULL,
+    amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    payer_name VARCHAR(190) NOT NULL DEFAULT '',
+    payer_dni VARCHAR(32) NOT NULL DEFAULT '',
+    method_label VARCHAR(96) NOT NULL DEFAULT '',
+    bank_label VARCHAR(96) NOT NULL DEFAULT '',
+    concept VARCHAR(255) NOT NULL DEFAULT '',
+    reference VARCHAR(190) NOT NULL DEFAULT '',
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    giav_cobro_id BIGINT UNSIGNED NULL,
+    error_message TEXT NULL,
+    payload LONGTEXT NULL,
+    created_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY row_hash (row_hash),
+    KEY idx_batch (batch_token),
+    KEY idx_expediente (id_expediente),
+    KEY idx_status (status),
+    KEY idx_created (created_at)
+  ) $charset_collate;";
+
+    dbDelta($sql);
+
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    return $exists === $table;
+  }
+}
+
 if (!function_exists('casanova_manual_payment_import_ensure_table')) {
   function casanova_manual_payment_import_ensure_table(): bool {
     if (!function_exists('casanova_manual_payment_import_rows_table')) return false;
@@ -27,13 +83,7 @@ if (!function_exists('casanova_manual_payment_import_ensure_table')) {
     $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
     if ($exists === $table) return true;
 
-    if (function_exists('casanova_payments_install')) {
-      casanova_payments_install();
-      $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
-      return $exists === $table;
-    }
-
-    return false;
+    return casanova_manual_payment_import_create_table();
   }
 }
 
@@ -1152,7 +1202,11 @@ if (!function_exists('casanova_manual_payments_render_admin_page')) {
     } else {
       echo '<section class="casanova-admin-card casanova-admin-card--wide">';
       echo '<h2>Ultimas importaciones</h2>';
-      echo '<div class="notice notice-error inline"><p>No se pudo preparar la tabla local de auditoria de importaciones.</p></div>';
+      global $wpdb;
+      $table_name = function_exists('casanova_manual_payment_import_rows_table') ? casanova_manual_payment_import_rows_table() : '';
+      $detail = !empty($wpdb->last_error) ? ' Error MySQL: ' . $wpdb->last_error : '';
+      $table_hint = $table_name !== '' ? ' Tabla esperada: ' . $table_name . '.' : '';
+      echo '<div class="notice notice-error inline"><p>No se pudo preparar la tabla local de auditoria de importaciones.' . esc_html($table_hint . $detail) . '</p></div>';
       echo '</section>';
     }
 
