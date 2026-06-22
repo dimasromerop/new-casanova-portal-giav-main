@@ -1364,6 +1364,23 @@ function casanova_payments_render_settings_page(): void {
     $group_error = isset($_GET['group_error']) ? sanitize_key((string) $_GET['group_error']) : '';
 
     echo '<h2>Cobros y enlaces</h2>';
+    $links_section = isset($_GET['section']) ? sanitize_key((string) $_GET['section']) : 'links';
+    $links_url = casanova_portal_admin_url('links');
+    $manual_import_url = add_query_arg(['section' => 'manual-import'], $links_url);
+    echo '<p>';
+    echo '<a class="button ' . ($links_section !== 'manual-import' ? 'button-primary' : '') . '" href="' . esc_url($links_url) . '">Enlaces y tokens</a> ';
+    echo '<a class="button ' . ($links_section === 'manual-import' ? 'button-primary' : '') . '" href="' . esc_url($manual_import_url) . '">Importar cobros</a>';
+    echo '</p>';
+
+    if ($links_section === 'manual-import') {
+      if (function_exists('casanova_manual_payments_render_admin_page')) {
+        casanova_manual_payments_render_admin_page();
+      } else {
+        echo '<div class="notice notice-error"><p>No esta disponible el modulo de importacion.</p></div>';
+      }
+      echo '</div>';
+      return;
+    }
 
     if ($created && $token !== '') {
       $url = function_exists('casanova_payment_link_url') ? casanova_payment_link_url($token) : '';

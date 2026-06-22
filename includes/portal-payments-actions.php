@@ -171,12 +171,19 @@ if (!function_exists('casanova_payments_record_cobro')) {
     $id_oficina = (int) ($provider_data['id_oficina'] ?? 0);
     $concepto = (string) ($provider_data['concepto'] ?? '');
     $documento = (string) ($provider_data['documento'] ?? '');
+    $fecha_cobro = trim((string) ($provider_data['fecha_cobro'] ?? ''));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_cobro)) {
+      $fecha_cobro = current_time('Y-m-d');
+    }
     $payer_name = trim((string) ($provider_data['payer_name'] ?? ''));
     if ($billing_fullname !== '' && ($payer_name === '' || $payer_name === $billing_name)) {
       $payer_name = $billing_fullname;
     }
     if ($payer_name === '') $payer_name = 'Portal';
     $notas_internas = (string) ($provider_data['notas_internas'] ?? '');
+    $create_payer_if_missing = array_key_exists('create_payer_if_missing', $provider_data)
+      ? (bool) $provider_data['create_payer_if_missing']
+      : true;
 
     $expediente_cliente_id = (int) ($intent->id_cliente ?? 0);
     $payer_id_cliente = 0;
@@ -197,7 +204,7 @@ if (!function_exists('casanova_payments_record_cobro')) {
       }
     }
 
-    if (!$payer_lookup_resolved && $billing_dni !== '' && function_exists('casanova_giav_cliente_create_from_billing')) {
+    if (!$payer_lookup_resolved && $billing_dni !== '' && $create_payer_if_missing && function_exists('casanova_giav_cliente_create_from_billing')) {
       $bid = casanova_giav_cliente_create_from_billing([
         'dni' => $billing_dni,
         'email' => $billing_email,
@@ -228,7 +235,7 @@ if (!function_exists('casanova_payments_record_cobro')) {
       'idRelacionPasajeroReserva' => null,
       'idTipoOperacion' => 'Cobro',
       'importe' => (double) $intent->amount,
-      'fechaCobro' => current_time('Y-m-d'),
+      'fechaCobro' => $fecha_cobro,
       'concepto' => $concepto,
       'documento' => $documento,
       'pagador' => $payer_name,
