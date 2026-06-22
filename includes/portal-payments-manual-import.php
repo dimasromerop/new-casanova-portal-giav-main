@@ -18,6 +18,25 @@ if (!function_exists('casanova_manual_payment_import_transient_key')) {
   }
 }
 
+if (!function_exists('casanova_manual_payment_import_ensure_table')) {
+  function casanova_manual_payment_import_ensure_table(): bool {
+    if (!function_exists('casanova_manual_payment_import_rows_table')) return false;
+
+    global $wpdb;
+    $table = casanova_manual_payment_import_rows_table();
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists === $table) return true;
+
+    if (function_exists('casanova_payments_install')) {
+      casanova_payments_install();
+      $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+      return $exists === $table;
+    }
+
+    return false;
+  }
+}
+
 if (!function_exists('casanova_manual_payment_import_normalize_text')) {
   function casanova_manual_payment_import_normalize_text($value): string {
     $value = trim((string) $value);
@@ -506,6 +525,7 @@ if (!function_exists('casanova_manual_payment_import_row_hash')) {
 if (!function_exists('casanova_manual_payment_import_existing_local_status')) {
   function casanova_manual_payment_import_existing_local_status(string $row_hash): string {
     if ($row_hash === '' || !function_exists('casanova_manual_payment_import_rows_table')) return '';
+    if (!casanova_manual_payment_import_ensure_table()) return '';
 
     global $wpdb;
     $table = casanova_manual_payment_import_rows_table();
@@ -737,6 +757,10 @@ if (!function_exists('casanova_manual_payment_import_build_preview')) {
 if (!function_exists('casanova_manual_payment_import_save_log')) {
   function casanova_manual_payment_import_save_log(array $row, string $batch_token, string $status, int $giav_cobro_id = 0, string $error = ''): void {
     if (!function_exists('casanova_manual_payment_import_rows_table')) return;
+    if (!casanova_manual_payment_import_ensure_table()) {
+      error_log('[CASANOVA][MANUAL_IMPORT][AUDIT] audit table missing and could not be created');
+      return;
+    }
 
     global $wpdb;
     $table = casanova_manual_payment_import_rows_table();
@@ -769,11 +793,17 @@ if (!function_exists('casanova_manual_payment_import_save_log')) {
     $existing_id = (int) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$table} WHERE row_hash = %s LIMIT 1", $row_hash));
     if ($existing_id > 0) {
       unset($data['row_hash'], $data['created_by']);
-      $wpdb->update($table, $data, ['id' => $existing_id]);
+      $ok = $wpdb->update($table, $data, ['id' => $existing_id]);
+      if ($ok === false && !empty($wpdb->last_error)) {
+        error_log('[CASANOVA][MANUAL_IMPORT][AUDIT] update failed: ' . $wpdb->last_error);
+      }
       return;
     }
 
-    $wpdb->insert($table, $data);
+    $ok = $wpdb->insert($table, $data);
+    if ($ok === false && !empty($wpdb->last_error)) {
+      error_log('[CASANOVA][MANUAL_IMPORT][AUDIT] insert failed: ' . $wpdb->last_error);
+    }
   }
 }
 
@@ -866,6 +896,8 @@ add_action('admin_post_casanova_manual_payment_import_confirm', function (): voi
       casanova_manual_payment_import_save_log($row, $token, 'skipped', 0, 'Ya fue importado anteriormente.');
       continue;
     }
+
+    casanova_manual_payment_import_save_log($row, $token, 'processing', 0, '');
 
     if (!function_exists('casanova_payments_record_cobro')) {
       $failed++;
@@ -963,6 +995,7 @@ if (!function_exists('casanova_manual_payment_import_status_label')) {
       'invalid' => 'Revisar',
       'duplicate' => 'Duplicado',
       'not_received' => 'No recibido',
+      'processing' => 'Procesando',
       'registered' => 'Registrado',
       'failed' => 'Error',
       'skipped' => 'Omitido',
@@ -1002,8 +1035,8 @@ if (!function_exists('casanova_manual_payments_render_admin_page')) {
     echo '<p class="description">Si el archivo incluye una columna Expediente, se usara por fila. Si no, se usara este valor.</p></td></tr>';
 
     echo '<tr><th scope="row"><label for="manual_import_id_forma_pago">ID forma de pago GIAV</label></th>';
-    echo '<td><input name="id_forma_pago" id="manual_import_id_forma_pago" type="number" min="0" step="1" class="regular-text" required />';
-    echo '<p class="description">Ejemplo: forma de pago de transferencia manual, ingreso en efectivo o BBVA. Puedes consultar IDs en la pestana GIAV.</p></td></tr>';
+    echo '<td><input name="id_forma_pago" id="manual_import_id_forma_pago" type="number" min="0" step="1" class="regular-text" />';
+    echo '<p class="description">Opcional si el Excel incluye la columna <code>Id forma de pago</code>. Si una fila trae su propio ID, se usa el de la fila; si va vacia, se usa este valor por defecto.</p></td></tr>';
 
     echo '<tr><th scope="row"><label for="manual_import_id_oficina">ID oficina GIAV</label></th>';
     echo '<td><input name="id_oficina" id="manual_import_id_oficina" type="number" min="0" step="1" class="regular-text" />';
@@ -1087,12 +1120,15 @@ if (!function_exists('casanova_manual_payments_render_admin_page')) {
       }
     }
 
-    if (function_exists('casanova_manual_payment_import_rows_table')) {
+    if (function_exists('casanova_manual_payment_import_rows_table') && casanova_manual_payment_import_ensure_table()) {
       global $wpdb;
       $table = casanova_manual_payment_import_rows_table();
       $history = $wpdb->get_results("SELECT * FROM {$table} ORDER BY id DESC LIMIT 25");
       echo '<section class="casanova-admin-card casanova-admin-card--wide">';
       echo '<h2>Ultimas importaciones</h2>';
+      if (!empty($wpdb->last_error)) {
+        echo '<div class="notice notice-error inline"><p>No se pudo consultar el historial local: ' . esc_html($wpdb->last_error) . '</p></div>';
+      }
       if (!empty($history)) {
         echo '<table class="widefat striped">';
         echo '<thead><tr><th>Fecha importacion</th><th>Estado</th><th>Expediente</th><th>Fecha pago</th><th>Pagador</th><th>Importe</th><th>Cobro GIAV</th><th>Error</th></tr></thead><tbody>';
@@ -1112,6 +1148,11 @@ if (!function_exists('casanova_manual_payments_render_admin_page')) {
       } else {
         echo '<p class="description">Todavia no hay importaciones registradas.</p>';
       }
+      echo '</section>';
+    } else {
+      echo '<section class="casanova-admin-card casanova-admin-card--wide">';
+      echo '<h2>Ultimas importaciones</h2>';
+      echo '<div class="notice notice-error inline"><p>No se pudo preparar la tabla local de auditoria de importaciones.</p></div>';
       echo '</section>';
     }
 
