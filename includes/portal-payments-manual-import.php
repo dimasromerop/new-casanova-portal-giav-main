@@ -32,40 +32,15 @@ if (!function_exists('casanova_manual_payment_import_create_table')) {
     global $wpdb;
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
+    if (!function_exists('casanova_manual_payment_import_rows_create_sql')) {
+      error_log('[CASANOVA][MANUAL_IMPORT][AUDIT] schema helper missing; cannot create table');
+      return false;
+    }
+
     $table = casanova_manual_payment_import_rows_table();
     $charset_collate = $wpdb->get_charset_collate();
 
-    $sql = "CREATE TABLE $table (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    batch_token VARCHAR(64) NOT NULL DEFAULT '',
-    source_filename VARCHAR(255) NOT NULL DEFAULT '',
-    row_number INT NOT NULL DEFAULT 0,
-    row_hash CHAR(64) NOT NULL,
-    id_expediente BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    id_cliente BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    id_forma_pago BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    payment_date DATE NULL,
-    amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-    payer_name VARCHAR(190) NOT NULL DEFAULT '',
-    payer_dni VARCHAR(32) NOT NULL DEFAULT '',
-    method_label VARCHAR(96) NOT NULL DEFAULT '',
-    bank_label VARCHAR(96) NOT NULL DEFAULT '',
-    concept VARCHAR(255) NOT NULL DEFAULT '',
-    reference VARCHAR(190) NOT NULL DEFAULT '',
-    status VARCHAR(32) NOT NULL DEFAULT 'pending',
-    giav_cobro_id BIGINT UNSIGNED NULL,
-    error_message TEXT NULL,
-    payload LONGTEXT NULL,
-    created_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
-    updated_at DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
-    PRIMARY KEY (id),
-    UNIQUE KEY row_hash (row_hash),
-    KEY idx_batch (batch_token),
-    KEY idx_expediente (id_expediente),
-    KEY idx_status (status),
-    KEY idx_created (created_at)
-  ) $charset_collate;";
+    $sql = casanova_manual_payment_import_rows_create_sql($table, $charset_collate);
 
     dbDelta($sql);
 
