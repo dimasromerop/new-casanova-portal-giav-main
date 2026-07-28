@@ -448,13 +448,32 @@ function casanova_handle_payment_link_request(string $token): void {
   $auto_start = !empty($meta_prefill['auto_start']);
   $stripe_only = !empty($meta_prefill['stripe_only']);
   $offer_usd_payment = !empty($meta_prefill['offer_usd_payment']) || $stripe_only;
+  $disable_bank_transfer = !empty($meta_prefill['disable_bank_transfer']) || $offer_usd_payment;
+  // Precio pactado en dolares: el USD es el importe de partida y no se convierte.
+  $usd_fixed = !empty($meta_prefill['usd_fixed']);
+  $usd_fixed_amount = round((float)($meta_prefill['usd_fixed_amount'] ?? 0), 2);
+  if ($usd_fixed && $usd_fixed_amount <= 0) {
+    $usd_fixed = false;
+  }
+  if ($usd_fixed) {
+    $stripe_only = true;
+    $offer_usd_payment = true;
+    $disable_bank_transfer = true;
+  }
   $stripe_available = function_exists('casanova_stripe_is_available') && casanova_stripe_is_available();
   $usd_payment_enabled = $offer_usd_payment && $stripe_available;
   $prefill_currency = !empty($meta_prefill['preferred_currency']) ? strtoupper(trim((string)$meta_prefill['preferred_currency'])) : 'EUR';
   if ($prefill_currency !== 'USD' || !$usd_payment_enabled) {
     $prefill_currency = 'EUR';
   }
-  if ($prefill_currency === 'USD' || $offer_usd_payment || $stripe_only) {
+  if ($usd_fixed) {
+    if (!$usd_payment_enabled || !function_exists('casanova_stripe_usd_fixed_quote')) {
+      casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Contacta con la agencia.', 'casanova-portal'));
+      exit;
+    }
+    $prefill_currency = 'USD';
+  }
+  if ($prefill_currency === 'USD' || $offer_usd_payment || $stripe_only || $disable_bank_transfer) {
     $prefill_method = 'card';
   }
   $public_locale = function_exists('casanova_portal_get_public_requested_locale')
@@ -552,6 +571,13 @@ function casanova_handle_payment_link_request(string $token): void {
     $deposit_amount = casanova_payments_calc_deposit_amount($deposit_base, $idExpediente);
   }
   $deposit_effective = ($deposit_allowed && ($deposit_amount + 0.01 < $deposit_base));
+  if ($usd_fixed) {
+    // El precio en dolares se pacto para el importe completo del enlace; un
+    // deposito obligaria a repartir esa cifra y dejaria de ser el precio dado.
+    $deposit_allowed = false;
+    $deposit_amount = 0.0;
+    $deposit_effective = false;
+  }
 
   $min_amount = (float) apply_filters(
     'casanova_min_partial_payment_amount',
@@ -565,7 +591,7 @@ function casanova_handle_payment_link_request(string $token): void {
     $cfg = Casanova_Inespay_Service::config();
     $inespay_enabled = !is_wp_error($cfg);
   }
-  if ($offer_usd_payment) {
+  if ($disable_bank_transfer) {
     $inespay_enabled = false;
   }
 
@@ -576,7 +602,7 @@ function casanova_handle_payment_link_request(string $token): void {
 
   if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && !empty($_GET['autostart']) && $auto_start && $prefill_name !== '' && $prefill_lastname !== '' && $prefill_dni !== '') {
     $currency = ($prefill_currency === 'USD' && $usd_payment_enabled) ? 'USD' : 'EUR';
-    $method = ($currency === 'USD' || $offer_usd_payment) ? 'card' : (($prefill_method === 'bank_transfer' && $inespay_enabled) ? 'bank_transfer' : 'card');
+    $method = ($currency === 'USD' || $disable_bank_transfer) ? 'card' : (($prefill_method === 'bank_transfer' && $inespay_enabled) ? 'bank_transfer' : 'card');
     $card_brand = $method === 'card' ? $prefill_card_brand : 'other';
     if ($currency === 'USD') {
       $card_brand = 'other';
@@ -668,7 +694,9 @@ function casanova_handle_payment_link_request(string $token): void {
       exit;
     }
 
-    $is_full = ($amount_to_pay + 0.01 >= $pending);
+    // El minimo de pago parcial no aplica cuando el importe lo fijo el admin
+    // junto al precio en dolares: no es una eleccion del cliente.
+    $is_full = ($amount_to_pay + 0.01 >= $pending) || $usd_fixed;
     if (!$is_full && $amount_to_pay < $min_amount) {
       casanova_render_payment_link_error(__('Importe inferior al minimo permitido.', 'casanova-portal'));
       exit;
@@ -683,6 +711,9 @@ function casanova_handle_payment_link_request(string $token): void {
     if ($selected_currency !== 'USD') {
       $selected_currency = 'EUR';
     }
+    if ($usd_fixed) {
+      $selected_currency = 'USD';
+    }
     if ($selected_currency === 'USD' && !$usd_payment_enabled) {
       casanova_render_payment_link_error(__('Pago en USD no disponible.', 'casanova-portal'));
       exit;
@@ -690,7 +721,7 @@ function casanova_handle_payment_link_request(string $token): void {
 
     $selected_method = isset($_POST['method']) ? strtolower(trim((string)$_POST['method'])) : 'card';
     if ($selected_method !== 'card' && $selected_method !== 'bank_transfer') $selected_method = 'card';
-    if ($selected_currency === 'USD' || $offer_usd_payment) {
+    if ($selected_currency === 'USD' || $disable_bank_transfer) {
       $selected_method = 'card';
     }
 
@@ -764,11 +795,17 @@ function casanova_handle_payment_link_request(string $token): void {
 
       $quote = null;
       if ($selected_currency === 'USD') {
-        if (!function_exists('casanova_stripe_usd_quote')) {
-          casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'));
-          exit;
+        if ($usd_fixed) {
+          // Precio cerrado: se cobra el USD tal cual y $amount_to_pay solo viaja
+          // como el EUR que se imputara al expediente en GIAV.
+          $quote = casanova_stripe_usd_fixed_quote($usd_fixed_amount, $amount_to_pay);
+        } else {
+          if (!function_exists('casanova_stripe_usd_quote')) {
+            casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'));
+            exit;
+          }
+          $quote = casanova_stripe_usd_quote($amount_to_pay);
         }
-        $quote = casanova_stripe_usd_quote($amount_to_pay);
         if (is_wp_error($quote)) {
           casanova_render_payment_link_error($quote->get_error_message());
           exit;
@@ -1086,7 +1123,8 @@ function casanova_handle_payment_link_request(string $token): void {
     : '';
   $usd_quote_authorized = null;
   $usd_quote_deposit = null;
-  if ($usd_payment_enabled && function_exists('casanova_stripe_usd_quote')) {
+  // Con precio pactado no hay cotizacion que calcular: se muestra el USD tal cual.
+  if (!$usd_fixed && $usd_payment_enabled && function_exists('casanova_stripe_usd_quote')) {
     $usd_quote_authorized = casanova_stripe_usd_quote($authorized);
     if ($deposit_effective) {
       $usd_quote_deposit = casanova_stripe_usd_quote($deposit_amount);
@@ -1119,13 +1157,17 @@ function casanova_handle_payment_link_request(string $token): void {
 
   echo '<div class="casanova-public-page__summary">';
 
-  $pendiente_html = '<strong>' . esc_html(number_format_i18n($pending, 2)) . ' EUR</strong>';
-  echo '<div class="casanova-public-page__summary-line">' . wp_kses_post(
-    sprintf(
-      __('Pendiente total: %s', 'casanova-portal'),
-      $pendiente_html
-    )
-  ) . '</div>';
+  // Con precio pactado en dolares no se enseña el pendiente en euros: seria una
+  // cifra distinta a la acordada y solo genera dudas al cliente.
+  if (!$usd_fixed) {
+    $pendiente_html = '<strong>' . esc_html(number_format_i18n($pending, 2)) . ' EUR</strong>';
+    echo '<div class="casanova-public-page__summary-line">' . wp_kses_post(
+      sprintf(
+        __('Pendiente total: %s', 'casanova-portal'),
+        $pendiente_html
+      )
+    ) . '</div>';
+  }
 
   if ($deadline_txt !== '') {
     echo '<div class="casanova-public-page__summary-line">' . esc_html(
@@ -1158,7 +1200,10 @@ function casanova_handle_payment_link_request(string $token): void {
   echo '<span class="casanova-public-field__hint">' . esc_html__('DNI/NIE, pasaporte o documento nacional.', 'casanova-portal') . '</span>';
   echo '</label>';
 
-  if ($usd_payment_enabled) {
+  if ($usd_fixed) {
+    // Sin selector: el precio se acordo en dolares y no hay alternativa en euros.
+    echo '<input type="hidden" name="currency" value="USD" />';
+  } elseif ($usd_payment_enabled) {
     $eur_checked = $prefill_currency === 'USD' ? '' : 'checked';
     $usd_checked = $prefill_currency === 'USD' ? 'checked' : '';
     echo '<div class="casanova-public-section-label">' . esc_html__('Moneda de pago', 'casanova-portal') . '</div>';
@@ -1207,7 +1252,9 @@ function casanova_handle_payment_link_request(string $token): void {
     echo '<div id="casanova-method-note" class="' . esc_attr($note_class) . '">' . esc_html($transfer_note) . '</div>';
   } else {
     echo '<input type="hidden" name="method" value="card" />';
-    echo '<div class="casanova-public-field__hint">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
+    if (!$usd_fixed) {
+      echo '<div class="casanova-public-field__hint">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
+    }
   }
 
   if ($stripe_only) {
@@ -1251,8 +1298,12 @@ function casanova_handle_payment_link_request(string $token): void {
 
   echo '<label class="casanova-public-choice">';
   echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="full" ' . ($checked_full ? 'checked' : '') . ' />';
-  $amount_html = '<strong>' . esc_html(number_format_i18n($authorized, 2)) . ' EUR</strong>';
-  if ($usd_payment_enabled && !is_wp_error($usd_quote_authorized) && is_array($usd_quote_authorized)) {
+  if ($usd_fixed) {
+    $amount_html = '<strong>' . esc_html(casanova_stripe_format_usd($usd_fixed_amount)) . '</strong>';
+  } else {
+    $amount_html = '<strong>' . esc_html(number_format_i18n($authorized, 2)) . ' EUR</strong>';
+  }
+  if (!$usd_fixed && $usd_payment_enabled && !is_wp_error($usd_quote_authorized) && is_array($usd_quote_authorized)) {
     $usd_class = $prefill_currency === 'USD' ? 'casanova-usd-amount' : 'casanova-usd-amount casanova-hidden';
     $amount_html .= ' <span class="' . esc_attr($usd_class) . '">(' . esc_html(casanova_stripe_format_usd((float)$usd_quote_authorized['usd_amount'])) . ')</span>';
   }
@@ -1271,7 +1322,9 @@ function casanova_handle_payment_link_request(string $token): void {
   echo '</form>';
   echo '<style>.casanova-public-button--loading{pointer-events:none;opacity:.75}</style>';
   echo '<script>(function(){var f=document.getElementById("casanova-pay-form");if(!f)return;f.addEventListener("submit",function(){if(f.dataset.casanovaSubmitting==="1")return;f.dataset.casanovaSubmitting="1";var b=document.getElementById("casanova-pay-submit");if(b){b.textContent=' . wp_json_encode(__('Procesando, redirigiendo al pago...', 'casanova-portal')) . ';b.classList.add("casanova-public-button--loading");b.setAttribute("aria-busy","true");}});})();</script>';
-  if ($inespay_enabled || $usd_payment_enabled) {
+  // En modo precio fijo no hay selector de moneda ni de metodo, asi que este
+  // script no tendria inputs que observar.
+  if (!$usd_fixed && ($inespay_enabled || $usd_payment_enabled)) {
     echo '<script>
       (function(){
         const note = document.getElementById("casanova-method-note");

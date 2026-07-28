@@ -73,6 +73,37 @@ add_action('admin_post_casanova_create_payment_link', function () {
   $amount_source = 'manual';
   $stripe_only = !empty($_POST['stripe_only']);
   $offer_usd_payment = !empty($_POST['offer_usd_payment']) || $stripe_only;
+  $disable_bank_transfer = !empty($_POST['disable_bank_transfer']);
+
+  // Precio pactado directamente en dolares: Stripe cobra esta cifra exacta y el
+  // importe en EUR pasa a ser solo el que se imputa al expediente en GIAV.
+  $usd_fixed_raw = isset($_POST['usd_fixed_amount']) ? trim((string) $_POST['usd_fixed_amount']) : '';
+  $usd_fixed_amount = $usd_fixed_raw !== '' ? round((float) str_replace(',', '.', $usd_fixed_raw), 2) : 0.0;
+  $usd_fixed = $usd_fixed_amount > 0;
+
+  $base = casanova_payment_links_admin_base_url();
+  if ($usd_fixed) {
+    // Stripe rechaza importes por debajo del minimo de la moneda.
+    if ($usd_fixed_amount < 0.50) {
+      wp_safe_redirect(add_query_arg(['link_error' => 'usd_fixed_amount'], $base));
+      exit;
+    }
+    if (!function_exists('casanova_stripe_is_available') || !casanova_stripe_is_available()) {
+      wp_safe_redirect(add_query_arg(['link_error' => 'usd_fixed_stripe'], $base));
+      exit;
+    }
+    // El EUR a imputar en GIAV no se puede deducir del precio en USD, asi que
+    // no vale el fallback al pendiente: lo tiene que decidir el admin.
+    if ($amount <= 0) {
+      wp_safe_redirect(add_query_arg(['link_error' => 'usd_fixed_eur'], $base));
+      exit;
+    }
+    // Sin seleccion de moneda, sin transferencia y solo Stripe: el cliente no
+    // debe poder desviarse del precio acordado pagando en euros.
+    $stripe_only = true;
+    $offer_usd_payment = true;
+    $disable_bank_transfer = true;
+  }
 
   $expires_at = null;
   $exp_raw = isset($_POST['expires_at']) ? sanitize_text_field((string)$_POST['expires_at']) : '';
@@ -164,6 +195,11 @@ add_action('admin_post_casanova_create_payment_link', function () {
       'amount_source' => $amount_source,
       'offer_usd_payment' => $offer_usd_payment,
       'stripe_only' => $stripe_only,
+      'disable_bank_transfer' => $disable_bank_transfer,
+      'usd_fixed' => $usd_fixed,
+      'usd_fixed_amount' => $usd_fixed ? $usd_fixed_amount : null,
+      'usd_fixed_cents' => $usd_fixed ? (int) round($usd_fixed_amount * 100) : null,
+      'usd_fixed_rate_at_create' => $usd_fixed ? (float) get_option('casanova_stripe_last_eur_usd_rate', 0) : null,
       'giav_pending_amount' => (!is_wp_error($pending_amount) && $pending_amount !== null) ? (float)$pending_amount : null,
       'created_by_user' => (int) get_current_user_id(),
       'expediente_lookup' => [

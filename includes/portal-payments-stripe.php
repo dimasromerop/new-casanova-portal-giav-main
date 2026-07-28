@@ -191,6 +191,52 @@ if (!function_exists('casanova_stripe_usd_quote')) {
   }
 }
 
+if (!function_exists('casanova_stripe_usd_fixed_quote')) {
+  /**
+   * Cotizacion para enlaces con el precio pactado directamente en dolares.
+   *
+   * A diferencia de casanova_stripe_usd_quote(), aqui el USD es el dato de
+   * partida: no se convierte desde EUR ni se le aplica el gross-up de
+   * comisiones, porque el precio ya se cerro comercialmente con el cliente.
+   * El EUR que acompana no interviene en el cobro de Stripe; es el importe que
+   * se imputara al expediente en GIAV y lo decide el admin al crear el enlace.
+   *
+   * El tipo EUR/USD que se devuelve es meramente informativo (se guarda en el
+   * payload y en las notas del cobro) y nunca se usa para calcular importes,
+   * por eso se lee de la ultima cotizacion cacheada en vez de forzar consulta.
+   */
+  function casanova_stripe_usd_fixed_quote(float $usd_amount, float $eur_amount) {
+    $usd_amount = round(max(0.0, $usd_amount), 2);
+    $usd_cents = (int) round($usd_amount * 100);
+    if ($usd_cents < 50) {
+      return new WP_Error('stripe_quote_invalid_amount', __('Importe USD invalido.', 'casanova-portal'));
+    }
+
+    $reference_rate = (float) get_option('casanova_stripe_last_eur_usd_rate', 0);
+
+    return [
+      'pricing' => 'fixed_usd',
+      'eur_amount' => round(max(0.0, $eur_amount), 2),
+      'currency' => 'USD',
+      'usd_amount' => $usd_amount,
+      'usd_cents' => $usd_cents,
+      'eur_usd_rate' => $reference_rate > 0 ? round($reference_rate, 6) : '',
+      'rate_source' => 'reference_only',
+      'stripe_fee_percent' => 0.0,
+      'fx_fee_percent' => 0.0,
+      'margin_percent' => 0.0,
+      'gross_up_percent' => 0.0,
+      'calculated_at' => current_time('mysql'),
+    ];
+  }
+}
+
+if (!function_exists('casanova_stripe_quote_is_fixed_usd')) {
+  function casanova_stripe_quote_is_fixed_usd($quote): bool {
+    return is_array($quote) && (string) ($quote['pricing'] ?? '') === 'fixed_usd';
+  }
+}
+
 if (!function_exists('casanova_stripe_format_usd')) {
   function casanova_stripe_format_usd(float $amount): string {
     return '$' . number_format($amount, 2, '.', ',') . ' USD';
@@ -336,9 +382,13 @@ if (!function_exists('casanova_stripe_create_checkout_session')) {
       'charge_currency' => $currency,
       'eur_amount' => number_format($eur_base, 2, '.', ''),
     ];
+    $is_fixed_usd = ($currency === 'USD') && casanova_stripe_quote_is_fixed_usd($quote);
     if ($currency === 'USD') {
       $metadata['usd_amount'] = number_format(((float) $charge_cents) / 100, 2, '.', '');
       $metadata['eur_usd_rate'] = (string) ($quote['eur_usd_rate'] ?? '');
+      if ($is_fixed_usd) {
+        $metadata['pricing'] = 'fixed_usd';
+      }
     }
 
     $exp_id = (int) ($intent->id_expediente ?? 0);
@@ -346,7 +396,9 @@ if (!function_exists('casanova_stripe_create_checkout_session')) {
     $label = $mode === 'deposit' ? 'Deposito' : 'Pago';
     $description = $label . ' Casanova Golf (' . $exp_id . ')';
 
-    $product_description = $currency === 'USD'
+    // Con precio pactado en USD no se muestra el EUR en el checkout: el cliente
+    // solo ha acordado la cifra en dolares y ver otra moneda genera confusion.
+    $product_description = ($currency === 'USD' && !$is_fixed_usd)
       ? ('Importe base EUR: ' . number_format($eur_base, 2, '.', '') . ' EUR')
       : ('Casanova Golf - expediente ' . $exp_id);
 
@@ -548,9 +600,14 @@ if (!function_exists('casanova_stripe_try_giav_cobro')) {
       : ('Pago Stripe ' . $session_id);
 
     $is_group_payment = $payment_link_scope === 'group_base' || !empty($plink_meta['group_token_id']);
+    $is_fixed_usd = casanova_stripe_quote_is_fixed_usd($stripe_quote);
+    // Con precio pactado en USD el EUR no sale de una conversion: lo fijo el
+    // admin al crear el enlace. Se deja constancia en las notas del cobro para
+    // que en GIAV se pueda ajustar despues a mano si hiciera falta.
     $stripe_note = 'Stripe ' . $charged_currency . ' ' . number_format($charged_amount, 2, '.', '')
-      . ' | EUR base ' . number_format((float) ($intent->amount ?? 0), 2, '.', '')
-      . ($charged_currency === 'USD' && $rate !== '' ? (' | EUR/USD ' . $rate) : '')
+      . ($is_fixed_usd ? ' (precio pactado en USD)' : '')
+      . ($is_fixed_usd ? ' | EUR imputado ' : ' | EUR base ') . number_format((float) ($intent->amount ?? 0), 2, '.', '')
+      . ($charged_currency === 'USD' && $rate !== '' ? (' | EUR/USD ' . $rate . ($is_fixed_usd ? ' (ref.)' : '')) : '')
       . ' | session=' . $session_id
       . ($payment_intent !== '' ? (' | payment_intent=' . $payment_intent) : '');
     $notas_internas = $stripe_note;

@@ -1399,6 +1399,9 @@ function casanova_payments_render_settings_page(): void {
       if ($error === 'expediente_ambiguous') $msg = 'Ese numero coincide con un ID interno y con un codigo visible de expedientes distintos. Usa el ID interno para evitar errores.';
       if ($error === 'missing') $msg = 'Modulo de payment links no disponible.';
       if ($error === 'create') $msg = 'Error al crear el link.';
+      if ($error === 'usd_fixed_amount') $msg = 'El precio fijo en USD no es valido. Debe ser al menos 0,50 USD.';
+      if ($error === 'usd_fixed_stripe') $msg = 'No puedes usar precio fijo en USD: Stripe no esta configurado (falta la clave secreta o la forma de pago de GIAV).';
+      if ($error === 'usd_fixed_eur') $msg = 'Con precio fijo en USD tienes que indicar tambien el Importe autorizado (EUR): es el importe que se registrara como cobro en GIAV.';
       echo '<div class="notice notice-error"><p>' . esc_html($msg) . '</p></div>';
     }
 
@@ -1446,11 +1449,28 @@ function casanova_payments_render_settings_page(): void {
 
     echo '<tr><th scope="row"><label for="amount_authorized">Importe autorizado (EUR)</label></th>';
     echo '<td><input name="amount_authorized" id="amount_authorized" type="text" class="regular-text" placeholder="Ej: 300.00" />';
-    echo '<p class="description">Opcional. Si lo dejas vacío, se usará el pendiente real actual del expediente en GIAV.</p></td></tr>';
+    echo '<p class="description">Opcional. Si lo dejas vacío, se usará el pendiente real actual del expediente en GIAV. Este es siempre el importe que se imputa al cobro del expediente en GIAV.</p></td></tr>';
+
+    $usd_rate_hint = '';
+    $last_usd_rate = (float) get_option('casanova_stripe_last_eur_usd_rate', 0);
+    if ($last_usd_rate > 0) {
+      $last_usd_rate_at = trim((string) get_option('casanova_stripe_last_eur_usd_rate_at', ''));
+      $usd_rate_hint = '<br />Referencia orientativa EUR/USD: <code>' . esc_html(number_format($last_usd_rate, 4, ',', '.')) . '</code>'
+        . ($last_usd_rate_at !== '' ? ' (' . esc_html($last_usd_rate_at) . ')' : '')
+        . '. Solo para ayudarte a decidir el EUR; no se aplica al cobro.';
+    }
+
+    echo '<tr><th scope="row"><label for="usd_fixed_amount">Precio fijo en USD</label></th>';
+    echo '<td><input name="usd_fixed_amount" id="usd_fixed_amount" type="text" class="regular-text" placeholder="Ej: 1250.00" />';
+    echo '<p class="description">Solo para clientes a los que ya se les dio el precio en dolares. Stripe cobrara <strong>exactamente</strong> esta cifra en USD, sin conversion ni recargos, y el <strong>Importe autorizado (EUR)</strong> pasa a ser obligatorio: es lo que se registra como cobro en GIAV (ajustable despues a mano desde GIAV si hiciera falta). El enlace queda forzado a Stripe en USD: sin seleccion de moneda, sin transferencia y sin pago parcial ni deposito. Dejalo vacio para el comportamiento normal.' . $usd_rate_hint . '</p></td></tr>';
 
     echo '<tr><th scope="row">Pago en USD</th>';
     echo '<td><label for="offer_usd_payment"><input name="offer_usd_payment" id="offer_usd_payment" type="checkbox" value="1" /> Ofrecer pago en dolares con Stripe</label>';
-    echo '<p class="description">El importe se introduce siempre en EUR. Si el cliente elige USD, se calcula EUR/USD con comisiones y margen configurados, y se cobra tarjeta por Stripe.</p></td></tr>';
+    echo '<p class="description">Para precios pactados en EUR: el importe se introduce en EUR y, si el cliente elige USD, se calcula EUR/USD con comisiones y margen configurados. No lo uses junto a "Precio fijo en USD" (ese campo ya lo activa por su cuenta).</p></td></tr>';
+
+    echo '<tr><th scope="row">Transferencia bancaria</th>';
+    echo '<td><label for="disable_bank_transfer"><input name="disable_bank_transfer" id="disable_bank_transfer" type="checkbox" value="1" /> Desactivar transferencia bancaria online</label>';
+    echo '<p class="description">Usalo para clientes extranjeros cuando no quieras ofrecer Inespay. El cliente seguira pudiendo pagar con tarjeta segun la configuracion del enlace.</p></td></tr>';
 
     echo '<tr><th scope="row">Usar solo Stripe</th>';
     echo '<td><label for="stripe_only"><input name="stripe_only" id="stripe_only" type="checkbox" value="1" /> Procesar todos los pagos por Stripe (tarjeta internacional)</label>';
@@ -1480,6 +1500,7 @@ function casanova_payments_render_settings_page(): void {
       $eg_concepts = is_array($eg_meta['concepts'] ?? null) ? $eg_meta['concepts'] : [];
       $eg_offer_usd = !empty($eg_meta['offer_usd_payment']);
       $eg_stripe_only = !empty($eg_meta['stripe_only']);
+      $eg_disable_bank_transfer = !empty($eg_meta['disable_bank_transfer']);
       $eg_status = strtolower(trim((string)($edit_group->status ?? 'active')));
       $eg_expires = '';
       if (!empty($edit_group->expires_at)) {
@@ -1535,6 +1556,10 @@ function casanova_payments_render_settings_page(): void {
       echo '<tr><th scope="row">Pago en USD</th>';
       echo '<td><label for="edit_group_offer_usd_payment"><input name="group_offer_usd_payment" id="edit_group_offer_usd_payment" type="checkbox" value="1" ' . checked($eg_offer_usd, true, false) . ' /> Ofrecer pago en dolares con Stripe</label></td></tr>';
 
+      echo '<tr><th scope="row">Transferencia bancaria</th>';
+      echo '<td><label for="edit_group_disable_bank_transfer"><input name="group_disable_bank_transfer" id="edit_group_disable_bank_transfer" type="checkbox" value="1" ' . checked($eg_disable_bank_transfer, true, false) . ' /> Desactivar transferencia bancaria online</label>';
+      echo '<p class="description">Evita que los participantes puedan elegir transferencia/Inespay desde este token de grupo.</p></td></tr>';
+
       echo '<tr><th scope="row">Usar solo Stripe</th>';
       echo '<td><label for="edit_group_stripe_only"><input name="group_stripe_only" id="edit_group_stripe_only" type="checkbox" value="1" ' . checked($eg_stripe_only, true, false) . ' /> Procesar todos los pagos por Stripe (tarjeta internacional)</label>';
       echo '<p class="description">Todos los pagos van por Stripe (tambien en EUR), sin Redsys ni transferencia. Solo se pide moneda (EUR/USD), sin preguntar tipo de tarjeta. Implica ofrecer USD.</p></td></tr>';
@@ -1588,6 +1613,10 @@ function casanova_payments_render_settings_page(): void {
     echo '<tr><th scope="row">Pago en USD</th>';
     echo '<td><label for="group_offer_usd_payment"><input name="group_offer_usd_payment" id="group_offer_usd_payment" type="checkbox" value="1" /> Ofrecer pago en dolares con Stripe</label>';
     echo '<p class="description">El importe del grupo se introduce siempre en EUR. Si el cliente elige USD, solo vera tarjeta y se cobrara por Stripe.</p></td></tr>';
+
+    echo '<tr><th scope="row">Transferencia bancaria</th>';
+    echo '<td><label for="group_disable_bank_transfer"><input name="group_disable_bank_transfer" id="group_disable_bank_transfer" type="checkbox" value="1" /> Desactivar transferencia bancaria online</label>';
+    echo '<p class="description">Recomendado para grupos extranjeros cuando no quieras ofrecer Inespay. Los participantes seguiran viendo las opciones de tarjeta aplicables.</p></td></tr>';
 
     echo '<tr><th scope="row">Usar solo Stripe</th>';
     echo '<td><label for="group_stripe_only"><input name="group_stripe_only" id="group_stripe_only" type="checkbox" value="1" /> Procesar todos los pagos por Stripe (tarjeta internacional)</label>';
@@ -1655,6 +1684,9 @@ function casanova_payments_render_settings_page(): void {
               if (!empty($meta['stripe_only'])) {
                 $detail .= ' / Solo Stripe';
               }
+              if (!empty($meta['disable_bank_transfer'])) {
+                $detail .= ' / Sin transferencia';
+              }
             } elseif ((string)($r->scope ?? '') === 'individual_link') {
               $detail = 'individual';
               $meta = [];
@@ -1663,11 +1695,16 @@ function casanova_payments_render_settings_page(): void {
                 $decoded = json_decode($raw, true);
                 if (is_array($decoded)) $meta = $decoded;
               }
-              if (!empty($meta['offer_usd_payment'])) {
+              if (!empty($meta['usd_fixed'])) {
+                $detail .= ' / USD fijo ' . number_format((float)($meta['usd_fixed_amount'] ?? 0), 2, ',', '.');
+              } elseif (!empty($meta['offer_usd_payment'])) {
                 $detail .= ' / USD';
               }
               if (!empty($meta['stripe_only'])) {
                 $detail .= ' / Solo Stripe';
+              }
+              if (!empty($meta['disable_bank_transfer'])) {
+                $detail .= ' / Sin transferencia';
               }
             }
             echo '<tr>';
@@ -1747,6 +1784,9 @@ function casanova_payments_render_settings_page(): void {
             }
             if (!empty($decoded_meta['stripe_only'])) {
               $concepts_txt .= ' / Solo Stripe';
+            }
+            if (!empty($decoded_meta['disable_bank_transfer'])) {
+              $concepts_txt .= ' / Sin transferencia';
             }
             $edit_url = add_query_arg(['edit_group' => (int)$r->id], casanova_payment_links_admin_base_url()) . '#casanova-edit-group';
             $del_url = wp_nonce_url(add_query_arg(['action' => 'casanova_delete_group_tokens', 'id' => (int)$r->id], admin_url('admin-post.php')), 'casanova_delete_group_tokens');

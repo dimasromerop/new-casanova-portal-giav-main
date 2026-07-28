@@ -436,7 +436,8 @@ function casanova_handle_group_pay_request(string $token): void {
   $group_meta = casanova_group_pay_token_metadata($group);
   $stripe_only = !empty($group_meta['stripe_only']);
   $offer_usd_payment = !empty($group_meta['offer_usd_payment']) || $stripe_only;
-  if ($offer_usd_payment) {
+  $disable_bank_transfer = !empty($group_meta['disable_bank_transfer']) || $offer_usd_payment;
+  if ($disable_bank_transfer) {
     $inespay_enabled = false;
   }
   $stripe_available = function_exists('casanova_stripe_is_available') && casanova_stripe_is_available();
@@ -592,7 +593,7 @@ function casanova_handle_group_pay_request(string $token): void {
 
       $selected_method = isset($_POST['method']) ? strtolower(trim((string)$_POST['method'])) : 'card';
       if ($selected_method !== 'card' && $selected_method !== 'bank_transfer') $selected_method = 'card';
-      if ($selected_currency === 'USD' || $offer_usd_payment) {
+      if ($selected_currency === 'USD' || $disable_bank_transfer) {
         $selected_method = 'card';
       }
       if ($selected_method === 'bank_transfer' && !$inespay_enabled) $selected_method = 'card';
@@ -647,6 +648,7 @@ function casanova_handle_group_pay_request(string $token): void {
           'preferred_currency' => $selected_currency,
           'offer_usd_payment' => $offer_usd_payment,
           'stripe_only' => $stripe_only,
+          'disable_bank_transfer' => $disable_bank_transfer,
           'auto_start' => true,
           'total_due' => $total_due,
           'deposit_total' => $deposit_total,
@@ -759,7 +761,7 @@ function casanova_handle_group_pay_request(string $token): void {
 
     $selected_method = isset($_POST['method']) ? strtolower(trim((string)$_POST['method'])) : 'card';
     if ($selected_method !== 'card' && $selected_method !== 'bank_transfer') $selected_method = 'card';
-    if ($selected_currency === 'USD' || $offer_usd_payment) {
+    if ($selected_currency === 'USD' || $disable_bank_transfer) {
       $selected_method = 'card';
     }
     if ($selected_method === 'bank_transfer' && !$inespay_enabled) $selected_method = 'card';
@@ -806,6 +808,7 @@ function casanova_handle_group_pay_request(string $token): void {
         'preferred_currency' => $selected_currency,
         'offer_usd_payment' => $offer_usd_payment,
         'stripe_only' => $stripe_only,
+        'disable_bank_transfer' => $disable_bank_transfer,
         'auto_start' => true,
         'total_due' => $total_due,
         'deposit_total' => ($mode === 'deposit') ? $deposit_total : 0,

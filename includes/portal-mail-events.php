@@ -93,6 +93,35 @@ function casanova_payment_intent_email_context(object $intent): array {
   ];
 }
 
+/**
+ * Importe a mostrar al cliente en los emails de cobro.
+ *
+ * En los enlaces con precio pactado en dolares, el intent guarda el EUR que se
+ * imputa al expediente en GIAV, no lo que se le cobro a la tarjeta. Mostrarle
+ * ese EUR seria ensenarle una cifra que nunca acordo.
+ */
+function casanova_payment_intent_charged_amount_label(object $intent): string {
+  $payload = casanova_payment_intent_payload_array($intent);
+  $quote = is_array($payload['stripe_quote'] ?? null) ? $payload['stripe_quote'] : [];
+  $usd_amount = (float)($quote['usd_amount'] ?? 0);
+  if ((string)($quote['pricing'] ?? '') === 'fixed_usd' && $usd_amount > 0) {
+    return number_format($usd_amount, 2, ',', '.') . ' USD';
+  }
+
+  return number_format((float)($intent->amount ?? 0), 2, ',', '.') . ' €';
+}
+
+/**
+ * Variante para avisos internos: anade el EUR imputado en GIAV cuando difiere
+ * de lo cobrado, para poder cuadrarlo desde el aviso.
+ */
+function casanova_payment_intent_charged_amount_label_admin(object $intent): string {
+  $charged = casanova_payment_intent_charged_amount_label($intent);
+  $eur = number_format((float)($intent->amount ?? 0), 2, ',', '.') . ' €';
+
+  return $charged === $eur ? $charged : ($charged . ' (imputado en GIAV: ' . $eur . ')');
+}
+
 function casanova_expediente_paid_mail_meta_key(int $idExpediente): string {
   return 'casanova_paid_email_sent_v1_' . (int) $idExpediente;
 }
@@ -227,7 +256,7 @@ function casanova_on_payment_cobro_recorded_send_email(int $intent_id): void {
     'cliente_nombre' => (string)($mail_ctx['cliente_nombre'] ?? ''),
     'idExpediente' => $exp_id,
     'codigoExpediente' => $codExp,
-    'importe' => number_format((float)($intent->amount ?? 0), 2, ',', '.') . ' €',
+    'importe' => casanova_payment_intent_charged_amount_label($intent),
     'fecha' => date_i18n('d/m/Y H:i', current_time('timestamp')),
     'pagado' => '',
     'pendiente' => '',
@@ -343,7 +372,7 @@ function casanova_on_payment_cobro_recorded_notify_admins(int $intent_id): void 
     'trip_title' => $trip_title,
     'payer_name' => $payer_name,
     'payer_email' => $payer_email,
-    'importe' => number_format((float)($intent->amount ?? 0), 2, ',', '.') . ' €',
+    'importe' => casanova_payment_intent_charged_amount_label_admin($intent),
     'fecha' => date_i18n('d/m/Y H:i', current_time('timestamp')),
     'modalidad' => $mode_label,
     'provider' => $provider_label,
@@ -503,7 +532,7 @@ function casanova_on_payment_reconciled_send_emails(int $intent_id): void {
     'cliente_nombre' => ($user->first_name ?: $user->display_name),
     'idExpediente' => $exp_id,
     'codigoExpediente' => $codExp,
-    'importe' => number_format((float)($intent->amount ?? 0), 2, ',', '.') . ' €',
+    'importe' => casanova_payment_intent_charged_amount_label($intent),
     'fecha' => date_i18n('d/m/Y H:i', current_time('timestamp')),
     'pagado' => '',
     'pendiente' => '',

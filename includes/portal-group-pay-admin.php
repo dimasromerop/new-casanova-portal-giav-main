@@ -81,6 +81,7 @@ add_action('admin_post_casanova_create_group_token', function () {
   $concepts = casanova_group_pay_admin_collect_concepts();
   $stripe_only = !empty($_POST['group_stripe_only']);
   $offer_usd_payment = !empty($_POST['group_offer_usd_payment']) || $stripe_only;
+  $disable_bank_transfer = !empty($_POST['group_disable_bank_transfer']);
   $expires_at = null;
   $exp_raw = isset($_POST['group_expires_at']) ? sanitize_text_field((string)$_POST['group_expires_at']) : '';
   if ($exp_raw !== '') {
@@ -146,6 +147,9 @@ add_action('admin_post_casanova_create_group_token', function () {
   }
   if ($stripe_only) {
     $metadata['stripe_only'] = true;
+  }
+  if ($disable_bank_transfer) {
+    $metadata['disable_bank_transfer'] = true;
   }
 
   $token = casanova_group_tokens_create([
@@ -235,6 +239,7 @@ add_action('admin_post_casanova_update_group_token', function () {
   $concepts = casanova_group_pay_admin_collect_concepts();
   $stripe_only = !empty($_POST['group_stripe_only']);
   $offer_usd_payment = !empty($_POST['group_offer_usd_payment']) || $stripe_only;
+  $disable_bank_transfer = !empty($_POST['group_disable_bank_transfer']);
 
   $status = isset($_POST['group_status']) ? sanitize_key((string)$_POST['group_status']) : 'active';
   if (!in_array($status, ['active', 'expired'], true)) {
@@ -291,6 +296,12 @@ add_action('admin_post_casanova_update_group_token', function () {
     $meta['stripe_only'] = true;
   } else {
     unset($meta['stripe_only']);
+  }
+
+  if ($disable_bank_transfer) {
+    $meta['disable_bank_transfer'] = true;
+  } else {
+    unset($meta['disable_bank_transfer']);
   }
 
   $ok = casanova_group_token_update($id, [
