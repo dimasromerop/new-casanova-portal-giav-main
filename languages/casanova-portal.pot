@@ -573,6 +573,9 @@ msgstr ""
 msgid "Email (obligatorio)"
 msgstr ""
 
+msgid "En \"%1$s\" solo quedan %2$d personas con depósito pendiente de resto."
+msgstr ""
+
 msgid "En %s días"
 msgstr ""
 
@@ -658,6 +661,12 @@ msgid "Este bono es válido únicamente si el expediente no tiene pagos pendient
 msgstr ""
 
 msgid "Este cliente existe en GIAV, pero todavia no tiene usuario WordPress vinculado. La vista previa usa directamente su contexto de cliente."
+msgstr ""
+
+msgid "Este enlace solo admite %d personas más. Ajusta las cantidades e inténtalo de nuevo."
+msgstr ""
+
+msgid "Este enlace solo admite %s personas más."
 msgstr ""
 
 msgid "Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila."
@@ -909,7 +918,13 @@ msgstr ""
 msgid "Importe por persona: %s EUR"
 msgstr ""
 
+msgid "Importe restante por persona:"
+msgstr ""
+
 msgid "Importe superior al pendiente."
+msgstr ""
+
+msgid "Indica cuántas personas pagas de cada opción"
 msgstr ""
 
 msgid "Inespay no devolvio un enlace de pago."
@@ -1755,6 +1770,9 @@ msgstr ""
 msgid "Puedes adjuntar como máximo 3 archivos por mensaje."
 msgstr ""
 
+msgid "Puedes combinar varias opciones en un mismo pago."
+msgstr ""
+
 msgid "Puedes consultar los datos del cliente, pero no modificarlos desde esta vista."
 msgstr ""
 
@@ -1864,6 +1882,9 @@ msgid "Segmentos:"
 msgstr ""
 
 msgid "Seguridad"
+msgstr ""
+
+msgid "Selecciona al menos 1 persona."
 msgstr ""
 
 msgid "Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador."

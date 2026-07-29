@@ -620,6 +620,12 @@ if (!function_exists('casanova_stripe_try_giav_cobro')) {
       if ($units > 0) {
         $parts[] = 'Personas: ' . $units . '.';
       }
+      $concepts_note = function_exists('casanova_group_pay_concepts_note')
+        ? casanova_group_pay_concepts_note($plink_meta)
+        : '';
+      if ($concepts_note !== '') {
+        $parts[] = 'Conceptos: ' . $concepts_note . '.';
+      }
       if ($mode_label !== '') {
         $parts[] = 'Modalidad: ' . $mode_label . '.';
       }

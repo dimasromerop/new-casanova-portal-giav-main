@@ -280,6 +280,29 @@ function casanova_payment_link_resolve_pending_amount(int $idExpediente, int $id
   return round((float)($calc['pendiente_real'] ?? 0), 2);
 }
 
+/**
+ * Un enlace de un solo pago se cierra en cuanto se cobra, aunque al expediente
+ * le quede pendiente.
+ *
+ * Es el caso del precio pactado en dolares: la cifra se cerro con una persona
+ * concreta, asi que en cuanto paga el enlace ya cumplio. Dejarlo activo -que es
+ * lo correcto para un enlace individual normal, donde caben pagos parciales
+ * sucesivos- permitiria a su destinatario reabrirlo y volver a pagar el mismo
+ * importe en USD, algo especialmente facil cuando se reparte un expediente
+ * entre varios enlaces y ninguno llega a dejar el pendiente a cero.
+ */
+function casanova_payment_link_is_single_payment(int $payment_link_id): bool {
+  if ($payment_link_id <= 0) return false;
+  if (!function_exists('casanova_payment_link_get')) return false;
+
+  $link = casanova_payment_link_get($payment_link_id);
+  if (!$link) return false;
+
+  $meta = casanova_payment_links_read_metadata($link);
+
+  return !empty($meta['usd_fixed']);
+}
+
 function casanova_payment_link_sync_after_cobro(object $intent, int $payment_link_id, string $payment_link_scope, int $giav_payment_id = 0, string $billing_dni = ''): bool {
   if ($payment_link_id <= 0) return false;
 
@@ -292,6 +315,10 @@ function casanova_payment_link_sync_after_cobro(object $intent, int $payment_lin
       }
     }
     return $ok;
+  }
+
+  if (casanova_payment_link_is_single_payment($payment_link_id)) {
+    return casanova_payment_link_mark_paid($payment_link_id, $giav_payment_id, $billing_dni);
   }
 
   $remaining = casanova_payment_link_resolve_pending_amount((int)($intent->id_expediente ?? 0), (int)($intent->id_cliente ?? 0));
@@ -553,7 +580,10 @@ function casanova_handle_payment_link_request(string $token): void {
     $group_units = (int)($meta_prefill['units'] ?? 0);
     $group_unit_total = (float)($meta_prefill['unit_total'] ?? 0);
     $group_unit_deposit = (float)($meta_prefill['unit_deposit'] ?? 0);
-    if ($group_units > 0 && $group_unit_total > 0) {
+    // Con varios conceptos en el mismo pago el precio unitario es una media: los
+    // totales buenos son los que guardo el enlace, no el producto por personas.
+    $group_mixed_concepts = !empty($meta_prefill['concept_lines']) && is_array($meta_prefill['concept_lines']);
+    if (!$group_mixed_concepts && $group_units > 0 && $group_unit_total > 0) {
       $group_total_due = round($group_unit_total * (float)$group_units, 2);
       $group_deposit_total = round($group_unit_deposit * (float)$group_units, 2);
     }
@@ -1495,7 +1525,7 @@ function casanova_maybe_send_magic_resto_link(int $intent_id): void {
     $total_due = (float)($meta['total_due'] ?? 0);
     $deposit_total = (float)($meta['deposit_total'] ?? 0);
 
-    if ($payment_link_scope === 'group_base') {
+    if ($payment_link_scope === 'group_base' && empty($meta['concept_lines'])) {
       $units = (int)($meta['units'] ?? 0);
       $unit_total = (float)($meta['unit_total'] ?? 0);
       $unit_deposit = (float)($meta['unit_deposit'] ?? 0);
@@ -1648,7 +1678,9 @@ function casanova_payment_links_deposit_amounts($link, array $meta, $intent = nu
   $total_due = (float)($meta['total_due'] ?? 0);
   $deposit_total = (float)($meta['deposit_total'] ?? 0);
 
-  if ($scope === 'group_base') {
+  // Los pagos que mezclan conceptos guardan sus totales exactos: recalcularlos a
+  // partir del precio unitario medio dejaria descuadres de centimos.
+  if ($scope === 'group_base' && empty($meta['concept_lines'])) {
     $units = (int)($meta['units'] ?? 0);
     $unit_total = (float)($meta['unit_total'] ?? 0);
     $unit_deposit = (float)($meta['unit_deposit'] ?? 0);

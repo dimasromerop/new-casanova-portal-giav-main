@@ -131,6 +131,139 @@ function casanova_group_pay_link_matches_concept(array $meta, string $concept_id
   return $concept_id === 'default';
 }
 
+/**
+ * Lineas de conceptos de un pago de grupo (un pago puede mezclar varios conceptos).
+ * Devuelve [] para enlaces antiguos de concepto unico.
+ */
+function casanova_group_pay_meta_concept_lines(array $meta): array {
+  $raw = is_array($meta['concept_lines'] ?? null) ? $meta['concept_lines'] : [];
+  $lines = [];
+
+  foreach ($raw as $line) {
+    if (!is_array($line)) continue;
+    $units = (int)($line['units'] ?? 0);
+    if ($units <= 0) continue;
+
+    $lines[] = [
+      'id' => trim((string)($line['id'] ?? '')),
+      'label' => trim((string)($line['label'] ?? '')),
+      'unit_total' => round((float)($line['unit_total'] ?? 0), 2),
+      'unit_deposit' => round((float)($line['unit_deposit'] ?? 0), 2),
+      'unit_rest' => round((float)($line['unit_rest'] ?? 0), 2),
+      'units' => $units,
+    ];
+  }
+
+  return $lines;
+}
+
+/**
+ * Personas de un pago que corresponden a un concepto concreto.
+ * Con $concept_id vacio devuelve el total del pago.
+ */
+function casanova_group_pay_link_units_for_concept(array $meta, string $concept_id): int {
+  $concept_id = trim($concept_id);
+  $lines = casanova_group_pay_meta_concept_lines($meta);
+
+  if (!empty($lines)) {
+    $units = 0;
+    foreach ($lines as $line) {
+      if ($concept_id !== '' && $line['id'] !== $concept_id) continue;
+      $units += (int)$line['units'];
+    }
+    return $units;
+  }
+
+  if (!casanova_group_pay_link_matches_concept($meta, $concept_id)) return 0;
+  return max(0, (int)($meta['units'] ?? 0));
+}
+
+/**
+ * Deposito unitario que se cobro en ese enlace para un concepto concreto.
+ */
+function casanova_group_pay_link_unit_deposit_for_concept($row, array $meta, string $concept_id): float {
+  $concept_id = trim($concept_id);
+  $lines = casanova_group_pay_meta_concept_lines($meta);
+
+  if (!empty($lines)) {
+    $amount = 0.0;
+    $units = 0;
+    foreach ($lines as $line) {
+      if ($concept_id !== '' && $line['id'] !== $concept_id) continue;
+      $amount += round((float)$line['unit_deposit'] * (int)$line['units'], 2);
+      $units += (int)$line['units'];
+    }
+    if ($units > 0 && $amount > 0.0) return round($amount / (float)$units, 2);
+  }
+
+  $unit_deposit = round((float)($meta['unit_deposit'] ?? 0), 2);
+  if ($unit_deposit > 0.0) return $unit_deposit;
+
+  $total_units = max(0, (int)($meta['units'] ?? 0));
+  if ($total_units > 0) {
+    return round(((float)($row->amount_authorized ?? 0)) / (float)$total_units, 2);
+  }
+
+  return 0.0;
+}
+
+/**
+ * Texto corto del desglose de conceptos: "Jugador x1, No jugador x1".
+ */
+function casanova_group_pay_lines_label(array $lines): string {
+  $parts = [];
+  foreach ($lines as $line) {
+    $units = (int)($line['units'] ?? 0);
+    if ($units <= 0) continue;
+    $label = trim((string)($line['label'] ?? ''));
+    if ($label === '') $label = trim((string)($line['id'] ?? ''));
+    if ($label === '') continue;
+    $parts[] = $label . ' x' . $units;
+  }
+  return implode(', ', $parts);
+}
+
+/**
+ * Desglose de conceptos de un pago para las notas de GIAV.
+ */
+function casanova_group_pay_concepts_note(array $meta): string {
+  $lines = casanova_group_pay_meta_concept_lines($meta);
+  if (!empty($lines)) return casanova_group_pay_lines_label($lines);
+
+  return trim((string)($meta['concept_label'] ?? ''));
+}
+
+/**
+ * Cantidades por concepto recibidas del formulario publico: [concept_id => personas].
+ * Mantiene compatibilidad con el formato antiguo (un concepto + numero de personas).
+ */
+function casanova_group_pay_quantities_from_request(array $concepts, string $qty_field, array $request, string $legacy_concept_field = '', string $legacy_units_field = ''): array {
+  $out = [];
+  $qty_raw = isset($request[$qty_field]) && is_array($request[$qty_field]) ? $request[$qty_field] : [];
+
+  if (!empty($qty_raw)) {
+    foreach ($concepts as $concept) {
+      $cid = trim((string)($concept['id'] ?? ''));
+      if ($cid === '') continue;
+      $qty = isset($qty_raw[$cid]) ? (int)$qty_raw[$cid] : 0;
+      if ($qty > 0) $out[$cid] = $qty;
+    }
+    return $out;
+  }
+
+  if ($legacy_concept_field === '') return $out;
+
+  $concept = casanova_group_pay_concept_by_id($concepts, (string)($request[$legacy_concept_field] ?? ''));
+  $cid = trim((string)($concept['id'] ?? ''));
+  if ($cid === '') return $out;
+
+  $units = ($legacy_units_field !== '' && isset($request[$legacy_units_field])) ? (int)$request[$legacy_units_field] : 1;
+  if ($units < 1) $units = 1;
+  $out[$cid] = $units;
+
+  return $out;
+}
+
 function casanova_group_pay_token_configured_units($group): int {
   $meta = casanova_group_pay_token_metadata($group);
   foreach (['group_units', 'group_pax', 'max_units'] as $key) {
@@ -283,23 +416,18 @@ function casanova_group_pay_rest_status(int $idExpediente, int $group_id, int $i
     if (!casanova_group_pay_link_matches_token($meta, $group_id, $idReservaPQ, $row, $allow_related)) {
       continue;
     }
-    if (!casanova_group_pay_link_matches_concept($meta, $concept_id)) {
-      continue;
-    }
     if (!casanova_group_pay_link_is_confirmed($row)) {
       continue;
     }
 
-    $units = (int)($meta['units'] ?? 0);
+    // Un pago puede mezclar conceptos: contamos solo las personas de este concepto.
+    $units = casanova_group_pay_link_units_for_concept($meta, $concept_id);
     if ($units <= 0) continue;
 
     $mode = strtolower(trim((string)($meta['mode'] ?? '')));
     if (function_exists('casanova_payment_links_is_effective_deposit') && casanova_payment_links_is_effective_deposit($row, $meta)) {
       $out['deposit_units'] += $units;
-      $unit_deposit = round((float)($meta['unit_deposit'] ?? 0), 2);
-      if ($unit_deposit <= 0.0) {
-        $unit_deposit = round(((float)($row->amount_authorized ?? 0)) / (float)$units, 2);
-      }
+      $unit_deposit = casanova_group_pay_link_unit_deposit_for_concept($row, $meta, $concept_id);
       if ($unit_deposit > 0.0) {
         $out['deposit_amount_total'] += round($unit_deposit * (float)$units, 2);
       }
@@ -414,7 +542,6 @@ function casanova_handle_group_pay_request(string $token): void {
   }
   $default_concept = $group_concepts[0];
   $unit_total = round((float)($default_concept['unit_total'] ?? 0), 2);
-  $default_concept_id = (string)($default_concept['id'] ?? 'default');
   $has_group_concepts = count($group_concepts) > 1;
   $group_units_limit = casanova_group_pay_token_units_limit($group, $numPax);
   $configured_units = casanova_group_pay_token_configured_units($group);
@@ -511,26 +638,68 @@ function casanova_handle_group_pay_request(string $token): void {
 
       // Continuamos para renderizar la página con el mensaje.
     } elseif ($action === 'pay_rest') {
-      $rest_concept = casanova_group_pay_concept_by_id($group_concepts, (string)($_POST['rest_concept_id'] ?? $default_concept_id));
-      $rest_concept_id = (string)($rest_concept['id'] ?? $default_concept_id);
-      $rest_concept_label = (string)($rest_concept['label'] ?? '');
-      $rest_unit_total = round((float)($rest_concept['unit_total'] ?? $unit_total), 2);
-      $rest_status = casanova_group_pay_rest_status($idExpediente, (int)$group->id, $idReservaPQ, $rest_concept_id, $allow_related_group_links);
-      $rest_unit_deposit = round((float)($rest_status['unit_deposit'] ?? 0), 2);
-      if ($rest_unit_deposit <= 0.0) {
-        $rest_unit_deposit = casanova_group_pay_concept_deposit($rest_unit_total, $idExpediente);
-      }
-      $unit_rest = round(max(0.0, $rest_unit_total - $rest_unit_deposit), 2);
-      if ($unit_rest <= 0.01) {
-        casanova_render_payment_link_error(__('No hay importe restante disponible para este viaje.', 'casanova-portal'));
-        exit;
+      // Cada persona puede pagar el resto de varios conceptos a la vez (jugador + no jugador).
+      $rest_quantities = casanova_group_pay_quantities_from_request($group_concepts, 'rest_concept_qty', $_POST, 'rest_concept_id', 'rest_units');
+      $rest_lines = [];
+      $units = 0;
+      $amount_to_pay = 0.0;
+      $total_due = 0.0;
+      $deposit_total = 0.0;
+
+      foreach ($group_concepts as $concept) {
+        $cid = trim((string)($concept['id'] ?? ''));
+        $qty = (int)($rest_quantities[$cid] ?? 0);
+        if ($cid === '' || $qty <= 0) continue;
+
+        $line_unit_total = round((float)($concept['unit_total'] ?? 0), 2);
+        if ($line_unit_total <= 0.0) continue;
+
+        $line_status = casanova_group_pay_rest_status($idExpediente, (int)$group->id, $idReservaPQ, $cid, $allow_related_group_links);
+        $line_available = max(0, (int)($line_status['available_units'] ?? 0));
+        if ($line_available <= 0) continue;
+        if ($qty > $line_available) {
+          casanova_render_payment_link_error(sprintf(
+            __('En "%1$s" solo quedan %2$d personas con depósito pendiente de resto.', 'casanova-portal'),
+            (string)($concept['label'] ?? ''),
+            $line_available
+          ));
+          exit;
+        }
+
+        $line_unit_deposit = round((float)($line_status['unit_deposit'] ?? 0), 2);
+        if ($line_unit_deposit <= 0.0) {
+          $line_unit_deposit = casanova_group_pay_concept_deposit($line_unit_total, $idExpediente);
+        }
+        $line_unit_rest = round(max(0.0, $line_unit_total - $line_unit_deposit), 2);
+        if ($line_unit_rest <= 0.01) continue;
+
+        $rest_lines[] = [
+          'id' => $cid,
+          'label' => trim((string)($concept['label'] ?? '')),
+          'unit_total' => $line_unit_total,
+          'unit_deposit' => $line_unit_deposit,
+          'unit_rest' => $line_unit_rest,
+          'units' => $qty,
+        ];
+        $units += $qty;
+        $amount_to_pay += round($line_unit_rest * (float)$qty, 2);
+        $total_due += round($line_unit_total * (float)$qty, 2);
+        $deposit_total += round($line_unit_deposit * (float)$qty, 2);
       }
 
-      $available_units = max(0, (int)($rest_status['available_units'] ?? 0));
-      if ($available_units <= 0) {
+      if (empty($rest_lines) || $units <= 0) {
         casanova_render_payment_link_error(__('No hay pagos restantes pendientes para este enlace de grupo.', 'casanova-portal'));
         exit;
       }
+
+      $amount_to_pay = round($amount_to_pay, 2);
+      $total_due = round($total_due, 2);
+      $deposit_total = round($deposit_total, 2);
+      $rest_concept_id = (count($rest_lines) === 1) ? (string)$rest_lines[0]['id'] : 'mixto';
+      $rest_concept_label = casanova_group_pay_lines_label($rest_lines);
+      $rest_unit_total = round($total_due / (float)$units, 2);
+      $rest_unit_deposit = round($deposit_total / (float)$units, 2);
+      $unit_rest = round($amount_to_pay / (float)$units, 2);
 
       $name_raw = isset($_POST['billing_name']) ? (string)$_POST['billing_name'] : '';
       $lastname_raw = isset($_POST['billing_lastname']) ? (string)$_POST['billing_lastname'] : '';
@@ -556,10 +725,6 @@ function casanova_handle_group_pay_request(string $token): void {
         exit;
       }
 
-      $units = isset($_POST['rest_units']) ? (int)$_POST['rest_units'] : 1;
-      if ($units < 1) $units = 1;
-      if ($units > $available_units) $units = $available_units;
-
       $others_raw = isset($_POST['others_names']) ? (string)$_POST['others_names'] : '';
       $others_names = trim(sanitize_textarea_field($others_raw));
       $others_list = [];
@@ -571,7 +736,6 @@ function casanova_handle_group_pay_request(string $token): void {
         }
       }
 
-      $amount_to_pay = round($unit_rest * (float)$units, 2);
       if ($amount_to_pay <= 0.01) {
         casanova_render_payment_link_error(__('Importe invalido.', 'casanova-portal'));
         exit;
@@ -614,8 +778,6 @@ function casanova_handle_group_pay_request(string $token): void {
       $expires_at = function_exists('casanova_payment_links_rest_expires_at')
         ? casanova_payment_links_rest_expires_at($idExpediente)
         : null;
-      $total_due = round($rest_unit_total * (float)$units, 2);
-      $deposit_total = round($rest_unit_deposit * (float)$units, 2);
 
       $link = casanova_payment_link_create([
         'id_expediente' => $idExpediente,
@@ -635,6 +797,7 @@ function casanova_handle_group_pay_request(string $token): void {
           'unit_rest' => $unit_rest,
           'concept_id' => $rest_concept_id,
           'concept_label' => $rest_concept_label,
+          'concept_lines' => $rest_lines,
           'billing_name' => $billing_name,
           'billing_lastname' => $billing_lastname,
           'billing_fullname' => $billing_fullname,
@@ -700,10 +863,6 @@ function casanova_handle_group_pay_request(string $token): void {
       exit;
     }
 
-    $units = isset($_POST['units']) ? (int)$_POST['units'] : 1;
-    if ($units < 1) $units = 1;
-    if ($units > $main_available_units) $units = $main_available_units;
-
     $others_raw = isset($_POST['others_names']) ? (string)$_POST['others_names'] : '';
     $others_names = trim(sanitize_textarea_field($others_raw));
     $others_list = [];
@@ -714,30 +873,67 @@ function casanova_handle_group_pay_request(string $token): void {
         if ($ln !== '') $others_list[] = $ln;
       }
     }
-    if ($units <= 0) {
-      casanova_render_payment_link_error(__('Debes seleccionar al menos 1 persona.', 'casanova-portal'));
-      exit;
-    }
-
-    $pay_concept = casanova_group_pay_concept_by_id($group_concepts, (string)($_POST['concept_id'] ?? $default_concept_id));
-    $pay_concept_id = (string)($pay_concept['id'] ?? $default_concept_id);
-    $pay_concept_label = (string)($pay_concept['label'] ?? '');
-    $pay_unit_total = round((float)($pay_concept['unit_total'] ?? $unit_total), 2);
-    if ($pay_unit_total <= 0.0) {
-      casanova_render_payment_link_error(__('Importe invalido.', 'casanova-portal'));
-      exit;
-    }
 
     $mode = isset($_POST['mode']) ? strtolower(trim((string)$_POST['mode'])) : 'full';
     if ($mode !== 'deposit' && $mode !== 'full') $mode = 'full';
     if (!$deposit_allowed) $mode = 'full';
 
-    $unit_deposit = ($mode === 'deposit') ? casanova_group_pay_concept_deposit($pay_unit_total, $idExpediente) : 0.0;
+    // Un mismo pago puede cubrir varios conceptos a la vez (jugador + no jugador).
+    $pay_quantities = casanova_group_pay_quantities_from_request($group_concepts, 'concept_qty', $_POST, 'concept_id', 'units');
+    $pay_lines = [];
+    $units = 0;
+    $total_due = 0.0;
+    $deposit_total = 0.0;
 
-    $total_due = round($pay_unit_total * (float)$units, 2);
-    $deposit_total = round($unit_deposit * (float)$units, 2);
-    $deposit_effective = ($mode === 'deposit') && ($deposit_total + 0.01 < $total_due);
-    if ($mode === 'deposit' && !$deposit_effective) $mode = 'full';
+    foreach ($group_concepts as $concept) {
+      $cid = trim((string)($concept['id'] ?? ''));
+      $qty = (int)($pay_quantities[$cid] ?? 0);
+      if ($cid === '' || $qty <= 0) continue;
+
+      $line_unit_total = round((float)($concept['unit_total'] ?? 0), 2);
+      if ($line_unit_total <= 0.0) continue;
+
+      $line_unit_deposit = ($mode === 'deposit') ? casanova_group_pay_concept_deposit($line_unit_total, $idExpediente) : 0.0;
+
+      $pay_lines[] = [
+        'id' => $cid,
+        'label' => trim((string)($concept['label'] ?? '')),
+        'unit_total' => $line_unit_total,
+        'unit_deposit' => $line_unit_deposit,
+        'units' => $qty,
+      ];
+      $units += $qty;
+      $total_due += round($line_unit_total * (float)$qty, 2);
+      $deposit_total += round($line_unit_deposit * (float)$qty, 2);
+    }
+
+    if (empty($pay_lines) || $units <= 0) {
+      casanova_render_payment_link_error(__('Debes seleccionar al menos 1 persona.', 'casanova-portal'));
+      exit;
+    }
+    if ($units > $main_available_units) {
+      casanova_render_payment_link_error(sprintf(
+        __('Este enlace solo admite %d personas más. Ajusta las cantidades e inténtalo de nuevo.', 'casanova-portal'),
+        $main_available_units
+      ));
+      exit;
+    }
+
+    $total_due = round($total_due, 2);
+    $deposit_total = round($deposit_total, 2);
+    $deposit_effective = ($mode === 'deposit') && ($deposit_total > 0.01) && ($deposit_total + 0.01 < $total_due);
+    if ($mode === 'deposit' && !$deposit_effective) {
+      $mode = 'full';
+      $deposit_total = 0.0;
+      foreach (array_keys($pay_lines) as $idx) {
+        $pay_lines[$idx]['unit_deposit'] = 0.0;
+      }
+    }
+
+    $pay_concept_id = (count($pay_lines) === 1) ? (string)$pay_lines[0]['id'] : 'mixto';
+    $pay_concept_label = casanova_group_pay_lines_label($pay_lines);
+    $pay_unit_total = round($total_due / (float)$units, 2);
+    $unit_deposit = round($deposit_total / (float)$units, 2);
 
     $amount_to_pay = ($mode === 'deposit') ? $deposit_total : $total_due;
     if ($amount_to_pay <= 0.01) {
@@ -795,6 +991,7 @@ function casanova_handle_group_pay_request(string $token): void {
         'unit_deposit' => $unit_deposit,
         'concept_id' => $pay_concept_id,
         'concept_label' => $pay_concept_label,
+        'concept_lines' => $pay_lines,
         'billing_name' => $billing_name,
         'billing_lastname' => $billing_lastname,
         'billing_fullname' => $billing_fullname,
@@ -850,7 +1047,6 @@ function casanova_handle_group_pay_request(string $token): void {
   $unit_deposit_preview = $deposit_allowed ? $unit_deposit_configured : 0.0;
   $concept_public = [];
   $rest_available_units = 0;
-  $rest_default_concept_id = $default_concept_id;
   $unit_rest_preview = 0.0;
   foreach ($group_concepts as $concept) {
     $cid = (string)($concept['id'] ?? 'default');
@@ -866,7 +1062,6 @@ function casanova_handle_group_pay_request(string $token): void {
     $c_available = max(0, (int)($c_status['available_units'] ?? 0));
 
     if ($c_available > 0 && $rest_available_units <= 0) {
-      $rest_default_concept_id = $cid;
       $unit_rest_preview = $c_unit_rest;
     }
     $rest_available_units += $c_available;
@@ -910,6 +1105,8 @@ function casanova_handle_group_pay_request(string $token): void {
   $js_pay_label = __('Pagar', 'casanova-portal');
   $js_rest_amount_template = sprintf(__('Importe restante por persona: %s EUR', 'casanova-portal'), '__AMOUNT__');
   $js_pay_rest_label = __('Pagar resto', 'casanova-portal');
+  $js_min_units_message = __('Selecciona al menos 1 persona.', 'casanova-portal');
+  $js_max_units_template = sprintf(__('Este enlace solo admite %s personas más.', 'casanova-portal'), '__UNITS__');
 
   $nonce = function_exists('casanova_pay_csrf_token')
     ? casanova_pay_csrf_token('group_pay', (string)$group->token)
@@ -1005,13 +1202,22 @@ function casanova_handle_group_pay_request(string $token): void {
       $rest_options = array_values(array_filter($concept_public, function ($concept) {
         return (int)($concept['rest_available_units'] ?? 0) > 0;
       }));
-      $rest_units_max = 1;
-      foreach ($rest_options as $concept) {
-        $rest_units_max = max($rest_units_max, (int)($concept['rest_available_units'] ?? 0));
-      }
+      $rest_has_choices = count($rest_options) > 1;
 
       echo '<div class="casanova-public-page__summary">';
-      echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Importe restante por persona: %s EUR', 'casanova-portal'), number_format_i18n($unit_rest_preview, 2))) . '</div>';
+      if ($rest_has_choices) {
+        echo '<div class="casanova-public-page__summary-line">' . esc_html__('Importe restante por persona:', 'casanova-portal') . '</div>';
+        foreach ($rest_options as $concept) {
+          echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(
+            '%s: %s EUR (%d pendientes)',
+            trim((string)($concept['label'] ?? '')),
+            number_format_i18n((float)($concept['unit_rest'] ?? 0), 2),
+            (int)($concept['rest_available_units'] ?? 0)
+          )) . '</div>';
+        }
+      } else {
+        echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Importe restante por persona: %s EUR', 'casanova-portal'), number_format_i18n($unit_rest_preview, 2))) . '</div>';
+      }
       echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Personas con depósito pendiente de resto: %d', 'casanova-portal'), $rest_available_units)) . '</div>';
       echo '</div>';
 
@@ -1023,32 +1229,29 @@ function casanova_handle_group_pay_request(string $token): void {
 
       echo '<div class="casanova-group-step" data-step-title="' . esc_attr__('Opción y personas', 'casanova-portal') . '">';
       echo '<div class="casanova-group-step-title">' . esc_html__('Elige qué parte quieres pagar', 'casanova-portal') . '</div>';
-      if (count($rest_options) > 1) {
-        echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('¿Qué opción quieres pagar?', 'casanova-portal') . '</span>';
-        echo '<select class="casanova-public-field__control" name="rest_concept_id" required>';
-        foreach ($rest_options as $concept) {
-          $label = trim((string)($concept['label'] ?? ''));
-          $available = (int)($concept['rest_available_units'] ?? 0);
-          $option_label = sprintf('%s - %s EUR (%d pendientes)', $label, number_format_i18n((float)($concept['unit_total'] ?? 0), 2), $available);
-          echo '<option value="' . esc_attr((string)($concept['id'] ?? '')) . '">' . esc_html($option_label) . '</option>';
+      if ($rest_has_choices) {
+        echo '<div class="casanova-public-section-label">' . esc_html__('Indica cuántas personas pagas de cada opción', 'casanova-portal') . '</div>';
+      }
+      $rest_first_option = true;
+      foreach ($rest_options as $concept) {
+        $cid = trim((string)($concept['id'] ?? ''));
+        if ($cid === '') continue;
+        $available = max(1, (int)($concept['rest_available_units'] ?? 0));
+        $field_label = $rest_has_choices
+          ? sprintf('%s - %s EUR (%d pendientes)', trim((string)($concept['label'] ?? '')), number_format_i18n((float)($concept['unit_total'] ?? 0), 2), $available)
+          : __('Personas incluidas en este pago restante', 'casanova-portal');
+        $min_qty = $rest_has_choices ? 0 : 1;
+        $default_qty = $rest_first_option ? 1 : 0;
+
+        echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html($field_label) . '</span>';
+        echo '<select class="casanova-public-field__control" name="rest_concept_qty[' . esc_attr($cid) . ']" data-rest-concept-qty="' . esc_attr($cid) . '" required>';
+        for ($i = $min_qty; $i <= $available; $i++) {
+          echo '<option value="' . esc_attr((string)$i) . '"' . selected($i, $default_qty, false) . '>' . esc_html((string)$i) . '</option>';
         }
         echo '</select>';
         echo '</label>';
-      } else {
-        $only_rest = $rest_options[0] ?? [];
-        echo '<input type="hidden" name="rest_concept_id" value="' . esc_attr((string)($only_rest['id'] ?? $rest_default_concept_id)) . '" />';
-        if ($has_group_concepts && !empty($only_rest)) {
-          echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Opción: %s', 'casanova-portal'), (string)($only_rest['label'] ?? ''))) . '</div>';
-        }
+        $rest_first_option = false;
       }
-
-      echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Personas incluidas en este pago restante', 'casanova-portal') . '</span>';
-      echo '<select class="casanova-public-field__control" name="rest_units" required>';
-      for ($i = 1; $i <= $rest_units_max; $i++) {
-        echo '<option value="' . esc_attr((string)$i) . '">' . esc_html((string)$i) . '</option>';
-      }
-      echo '</select>';
-      echo '</label>';
       echo '<div id="casanova-group-rest-option-summary" class="casanova-group-live-summary"></div>';
 
       echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombres de viajeros (opcional)', 'casanova-portal') . '</span>';
@@ -1258,26 +1461,32 @@ function casanova_handle_group_pay_request(string $token): void {
   echo '<div class="casanova-group-step" data-step-key="option" data-step-title="' . esc_attr__('Opción y personas', 'casanova-portal') . '" hidden>';
   echo '<div class="casanova-group-step-title">' . esc_html__('Elige tu opción y personas incluidas', 'casanova-portal') . '</div>';
 
-  if ($has_group_concepts) {
-    echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Selecciona tu opción', 'casanova-portal') . '</span>';
-    echo '<select class="casanova-public-field__control" name="concept_id" required>';
-    foreach ($concept_public as $concept) {
-      $option_label = trim((string)($concept['label'] ?? '')) . ' - ' . number_format_i18n((float)($concept['unit_total'] ?? 0), 2) . ' EUR';
-      echo '<option value="' . esc_attr((string)($concept['id'] ?? '')) . '">' . esc_html($option_label) . '</option>';
+  $has_concept_choices = count($concept_public) > 1;
+  if ($has_concept_choices) {
+    echo '<div class="casanova-public-section-label">' . esc_html__('Indica cuántas personas pagas de cada opción', 'casanova-portal') . '</div>';
+  }
+  $first_option = true;
+  foreach ($concept_public as $concept) {
+    $cid = trim((string)($concept['id'] ?? ''));
+    if ($cid === '') continue;
+    $field_label = $has_concept_choices
+      ? trim((string)($concept['label'] ?? '')) . ' - ' . number_format_i18n((float)($concept['unit_total'] ?? 0), 2) . ' EUR'
+      : __('Personas incluidas en este pago', 'casanova-portal');
+    $min_qty = $has_concept_choices ? 0 : 1;
+    $default_qty = $first_option ? 1 : 0;
+
+    echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html($field_label) . '</span>';
+    echo '<select class="casanova-public-field__control" name="concept_qty[' . esc_attr($cid) . ']" data-concept-qty="' . esc_attr($cid) . '" required>';
+    for ($i = $min_qty; $i <= $main_available_units; $i++) {
+      echo '<option value="' . esc_attr((string)$i) . '"' . selected($i, $default_qty, false) . '>' . esc_html((string)$i) . '</option>';
     }
     echo '</select>';
     echo '</label>';
-  } else {
-    echo '<input type="hidden" name="concept_id" value="' . esc_attr($default_concept_id) . '" />';
+    $first_option = false;
   }
-
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Personas incluidas en este pago', 'casanova-portal') . '</span>';
-  echo '<select class="casanova-public-field__control" name="units" required>';
-  for ($i = 1; $i <= $main_available_units; $i++) {
-    echo '<option value="' . esc_attr((string)$i) . '">' . esc_html((string)$i) . '</option>';
+  if ($has_concept_choices) {
+    echo '<div class="casanova-public-field__hint">' . esc_html__('Puedes combinar varias opciones en un mismo pago.', 'casanova-portal') . '</div>';
   }
-  echo '</select>';
-  echo '</label>';
   echo '<div id="casanova-group-option-summary" class="casanova-group-live-summary"></div>';
 
   echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombres de viajeros (opcional)', 'casanova-portal') . '</span>';
@@ -1330,14 +1539,11 @@ function casanova_handle_group_pay_request(string $token): void {
   echo '<p class="casanova-public-page__footer">' . esc_html__('Si tienes dudas, contacta con la agencia antes de pagar.', 'casanova-portal') . '</p>';
   echo '<script>
     (function(){
-      const unitTotal = ' . wp_json_encode(round($unit_total, 2)) . ';
-      const unitDeposit = ' . wp_json_encode(round($unit_deposit_preview, 2)) . ';
-      const unitRest = ' . wp_json_encode(round($unit_rest_preview, 2)) . ';
       const mainAvailableUnits = ' . wp_json_encode((int)$main_available_units) . ';
       const concepts = ' . wp_json_encode($concept_public) . ';
-      const defaultConceptId = ' . wp_json_encode($default_concept_id) . ';
-      const restDefaultConceptId = ' . wp_json_encode($rest_default_concept_id) . ';
       const locale = ' . wp_json_encode($public_locale_tag) . ';
+      const minUnitsMessage = ' . wp_json_encode($js_min_units_message) . ';
+      const maxUnitsTemplate = ' . wp_json_encode($js_max_units_template) . ';
       const amountTemplate = ' . wp_json_encode($js_summary_amount_template) . ';
       const restAmountTemplate = ' . wp_json_encode($js_rest_amount_template) . ';
       const peopleLabel = ' . wp_json_encode($js_people_label) . ';
@@ -1392,39 +1598,53 @@ function casanova_handle_group_pay_request(string $token): void {
         });
       }
 
-      function findConcept(id, fallbackId){
-        let found = null;
-        Array.prototype.forEach.call(concepts || [], function(c){
-          if (String(c.id || "") === String(id || "")) found = c;
+      const conceptById = {};
+      Array.prototype.forEach.call(concepts || [], function(c){
+        conceptById[String(c.id || "")] = c;
+      });
+
+      // Un pago puede mezclar conceptos: leemos la cantidad elegida en cada uno.
+      function readCart(selects, attrName){
+        const lines = [];
+        let units = 0;
+        selects.forEach(function(select){
+          const qty = parseInt(select.value || "0", 10);
+          if (!isFinite(qty) || qty <= 0) return;
+          const concept = conceptById[String(select.getAttribute(attrName) || "")];
+          if (!concept) return;
+          lines.push({ concept: concept, units: qty });
+          units += qty;
         });
-        if (found) return found;
-        Array.prototype.forEach.call(concepts || [], function(c){
-          if (!found && String(c.id || "") === String(fallbackId || "")) found = c;
-        });
-        return found || (concepts && concepts.length ? concepts[0] : { id: "default", label: "", unit_total: unitTotal, unit_deposit: unitDeposit, unit_rest: unitRest, rest_available_units: 1 });
+        return { lines: lines, units: units };
       }
 
-      function selectedConcept(form, fieldName, fallbackId){
-        const field = form && form.elements ? form.elements[fieldName] : null;
-        const value = field && field.value ? field.value : fallbackId;
-        return findConcept(value, fallbackId);
+      function cartAmount(cart, field){
+        let total = 0;
+        cart.lines.forEach(function(line){
+          total += Math.round(Number(line.concept[field] || 0) * line.units * 100) / 100;
+        });
+        return Math.round(total * 100) / 100;
       }
 
-      function syncUnitOptions(select, maxUnits){
-        if (!select) return;
-        maxUnits = parseInt(maxUnits || 1, 10);
-        if (!isFinite(maxUnits) || maxUnits < 1) maxUnits = 1;
-        const current = parseInt(select.value || "1", 10);
-        if (select.options.length !== maxUnits) {
-          select.innerHTML = "";
-          for (let i = 1; i <= maxUnits; i++) {
-            const opt = document.createElement("option");
-            opt.value = String(i);
-            opt.textContent = String(i);
-            select.appendChild(opt);
-          }
+      function cartLineSummaries(cart, field, currency){
+        return cart.lines.map(function(line){
+          const amount = Math.round(Number(line.concept[field] || 0) * line.units * 100) / 100;
+          const label = String(line.concept.label || "");
+          const prefix = label !== "" ? (label + " x" + String(line.units)) : (peopleLabel + ": " + String(line.units));
+          return prefix + " - " + displayAmount(amount, currency);
+        });
+      }
+
+      function setCartValidity(selects, cart, maxUnits){
+        if (!selects.length) return true;
+        let message = "";
+        if (cart.units < 1) {
+          message = minUnitsMessage;
+        } else if (maxUnits > 0 && cart.units > maxUnits) {
+          message = maxUnitsTemplate.replace("__UNITS__", String(maxUnits));
         }
-        select.value = String(Math.min(Math.max(1, isFinite(current) ? current : 1), maxUnits));
+        selects[0].setCustomValidity(message);
+        return message === "";
       }
 
       function initWizard(form){
@@ -1516,7 +1736,7 @@ function casanova_handle_group_pay_request(string $token): void {
       function init(){
         const restForm = document.getElementById("casanova-group-rest-form");
         if (restForm) {
-          const restUnitsSelect = restForm.elements["rest_units"];
+          const restQtySelects = Array.prototype.slice.call(restForm.querySelectorAll("[data-rest-concept-qty]"));
           const restMethodInputs = restForm.querySelectorAll("input[name=method]");
           const restCurrencyInputs = restForm.querySelectorAll("input[name=currency]");
           const restMethodWrap = document.getElementById("casanova-rest-method-wrap");
@@ -1526,13 +1746,6 @@ function casanova_handle_group_pay_request(string $token): void {
           const restSummary = document.getElementById("casanova-group-rest-summary");
           const restOptionSummary = document.getElementById("casanova-group-rest-option-summary");
           const restBtn = document.getElementById("casanova-group-rest-button");
-
-          function getRestUnits(maxUnits){
-            const raw = parseInt(restUnitsSelect && restUnitsSelect.value ? restUnitsSelect.value : "1", 10);
-            if (!isFinite(raw) || raw < 1) return 1;
-            if (maxUnits && raw > maxUnits) return maxUnits;
-            return raw;
-          }
 
           function getRestMethod(){
             let m = "card";
@@ -1547,28 +1760,31 @@ function casanova_handle_group_pay_request(string $token): void {
           }
 
           function updateRest(){
-            const concept = selectedConcept(restForm, "rest_concept_id", restDefaultConceptId);
-            const maxUnits = Math.max(1, parseInt(concept.rest_available_units || 1, 10));
-            syncUnitOptions(restUnitsSelect, maxUnits);
-            const units = getRestUnits(maxUnits);
+            const cart = readCart(restQtySelects, "data-rest-concept-qty");
+            setCartValidity(restQtySelects, cart, 0);
+            const units = cart.units;
             const currency = getRestCurrency();
             let method = getRestMethod();
             if (currency === "USD") {
               Array.prototype.forEach.call(restMethodInputs, function(i){ if (i.value === "card") i.checked = true; });
               method = "card";
             }
-            const restUnit = Number(concept.unit_rest || unitRest);
-            const amount = Math.round((restUnit * Number(units)) * 100) / 100;
+            const amount = cartAmount(cart, "unit_rest");
             if (restMethodNote) restMethodNote.classList.toggle("casanova-hidden", currency === "USD" || method !== "bank_transfer");
             if (restMethodWrap) restMethodWrap.classList.toggle("casanova-hidden", currency === "USD");
             if (restMethodLabel) restMethodLabel.classList.toggle("casanova-hidden", currency === "USD");
             if (restCardBrandWrap) restCardBrandWrap.classList.toggle("casanova-hidden", currency === "USD" || method !== "card");
+            const singleRest = cart.lines.length === 1 ? cart.lines[0] : null;
             const lines = [
-              restAmountTemplate.replace("__AMOUNT__", fmt(restUnit)),
-              concept.label ? "Opción: " + concept.label : "",
-              peopleLabel + ": " + String(units),
-              totalLabel + ": " + displayAmount(amount, currency)
-            ].filter(Boolean);
+              singleRest ? restAmountTemplate.replace("__AMOUNT__", fmt(Number(singleRest.concept.unit_rest || 0))) : "",
+              (singleRest && singleRest.concept.label) ? "Opción: " + singleRest.concept.label : ""
+            ].concat(
+              cart.lines.length > 1 ? cartLineSummaries(cart, "unit_rest", currency) : [],
+              [
+                peopleLabel + ": " + String(units),
+                totalLabel + ": " + displayAmount(amount, currency)
+              ]
+            ).filter(Boolean);
             const renderedSummary = lines.map(function(line){
                 return "<div class=\"casanova-public-page__summary-line\">" + escapeHtml(line) + "</div>";
               }).join("");
@@ -1588,7 +1804,7 @@ function casanova_handle_group_pay_request(string $token): void {
         if (!form) return;
         initWizard(form);
         casanovaPaySubmitLoading(form, "casanova-group-pay-button");
-        const unitsSelect = form.elements["units"];
+        const qtySelects = Array.prototype.slice.call(form.querySelectorAll("[data-concept-qty]"));
         const modeInputs = form.querySelectorAll("input[name=mode]");
         const methodInputs = form.querySelectorAll("input[name=method]");
         const currencyInputs = form.querySelectorAll("input[name=currency]");
@@ -1601,13 +1817,6 @@ function casanova_handle_group_pay_request(string $token): void {
         const btn = document.getElementById("casanova-group-pay-button");
         const modeAmountDeposit = form.querySelector(".casanova-group-mode-amount[data-mode=deposit]");
         const modeAmountFull = form.querySelector(".casanova-group-mode-amount[data-mode=full]");
-
-        function getUnits(){
-          const raw = parseInt(unitsSelect && unitsSelect.value ? unitsSelect.value : "1", 10);
-          if (!isFinite(raw) || raw < 1) return 1;
-          if (raw > mainAvailableUnits) return mainAvailableUnits;
-          return raw;
-        }
 
         function getMode(){
           let m = "full";
@@ -1628,7 +1837,9 @@ function casanova_handle_group_pay_request(string $token): void {
         }
 
         function update(){
-          const units = getUnits();
+          const cart = readCart(qtySelects, "data-concept-qty");
+          setCartValidity(qtySelects, cart, mainAvailableUnits);
+          const units = cart.units;
           const mode = getMode();
           const currency = getCurrency();
           let method = getMethod();
@@ -1636,24 +1847,24 @@ function casanova_handle_group_pay_request(string $token): void {
             Array.prototype.forEach.call(methodInputs, function(i){ if (i.value === "card") i.checked = true; });
             method = "card";
           }
-          const concept = selectedConcept(form, "concept_id", defaultConceptId);
-          const conceptUnitTotal = Number(concept.unit_total || unitTotal);
-          const conceptUnitDeposit = Number(concept.unit_deposit || unitDeposit);
-          const total = Math.round((conceptUnitTotal * Number(units)) * 100) / 100;
-          const dep = Math.round((conceptUnitDeposit * Number(units)) * 100) / 100;
+          const total = cartAmount(cart, "unit_total");
+          const dep = cartAmount(cart, "unit_deposit");
           const isDeposit = (mode === "deposit" && dep > 0.009 && dep + 0.01 < total);
           const amount = isDeposit ? dep : total;
           if (methodNote) methodNote.classList.toggle("casanova-hidden", currency === "USD" || method !== "bank_transfer");
           if (methodWrap) methodWrap.classList.toggle("casanova-hidden", currency === "USD");
           if (methodLabel) methodLabel.classList.toggle("casanova-hidden", currency === "USD");
           if (cardBrandWrap) cardBrandWrap.classList.toggle("casanova-hidden", currency === "USD" || method !== "card");
+          const single = cart.lines.length === 1 ? cart.lines[0] : null;
           const lines = [
-            amountTemplate.replace("__AMOUNT__", fmt(conceptUnitTotal)),
-            concept.label ? "Opción: " + concept.label : "",
-            peopleLabel + ": " + String(units)
-          ].filter(Boolean);
-          if (isDeposit) {
-            lines.push(depositLabel + ": " + displayAmount(conceptUnitDeposit, currency));
+            single ? amountTemplate.replace("__AMOUNT__", fmt(Number(single.concept.unit_total || 0))) : "",
+            (single && single.concept.label) ? "Opción: " + single.concept.label : ""
+          ].concat(
+            cart.lines.length > 1 ? cartLineSummaries(cart, "unit_total", currency) : [],
+            [peopleLabel + ": " + String(units)]
+          ).filter(Boolean);
+          if (isDeposit && single) {
+            lines.push(depositLabel + ": " + displayAmount(Number(single.concept.unit_deposit || 0), currency));
           }
           lines.push(totalLabel + ": " + displayAmount(amount, currency));
           const renderedSummary = lines.map(function(line){

@@ -573,6 +573,9 @@ msgstr "Email"
 msgid "Email (obligatorio)"
 msgstr "Email (obligatorio)"
 
+msgid "En \"%1$s\" solo quedan %2$d personas con depósito pendiente de resto."
+msgstr "En \"%1$s\" solo quedan %2$d personas con depósito pendiente de resto."
+
 msgid "En %s días"
 msgstr "En %s días"
 
@@ -659,6 +662,12 @@ msgstr "Este bono es válido únicamente si el expediente no tiene pagos pendien
 
 msgid "Este cliente existe en GIAV, pero todavia no tiene usuario WordPress vinculado. La vista previa usa directamente su contexto de cliente."
 msgstr "Este cliente existe en GIAV, pero todavia no tiene usuario WordPress vinculado. La vista previa usa directamente su contexto de cliente."
+
+msgid "Este enlace solo admite %d personas más. Ajusta las cantidades e inténtalo de nuevo."
+msgstr "Este enlace solo admite %d personas más. Ajusta las cantidades e inténtalo de nuevo."
+
+msgid "Este enlace solo admite %s personas más."
+msgstr "Este enlace solo admite %s personas más."
 
 msgid "Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila."
 msgstr "Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila."
@@ -909,8 +918,14 @@ msgstr "Importe pendiente: %s"
 msgid "Importe por persona: %s EUR"
 msgstr "Importe por persona: %s EUR"
 
+msgid "Importe restante por persona:"
+msgstr "Importe restante por persona:"
+
 msgid "Importe superior al pendiente."
 msgstr "Importe superior al pendiente."
+
+msgid "Indica cuántas personas pagas de cada opción"
+msgstr "Indica cuántas personas pagas de cada opción"
 
 msgid "Inespay no devolvio un enlace de pago."
 msgstr "Inespay no devolvio un enlace de pago."
@@ -1755,6 +1770,9 @@ msgstr "Puedes adjuntar como máximo %d archivos por mensaje."
 msgid "Puedes adjuntar como máximo 3 archivos por mensaje."
 msgstr "Puedes adjuntar como máximo 3 archivos por mensaje."
 
+msgid "Puedes combinar varias opciones en un mismo pago."
+msgstr "Puedes combinar varias opciones en un mismo pago."
+
 msgid "Puedes consultar los datos del cliente, pero no modificarlos desde esta vista."
 msgstr "Puedes consultar los datos del cliente, pero no modificarlos desde esta vista."
 
@@ -1865,6 +1883,9 @@ msgstr "Segmentos:"
 
 msgid "Seguridad"
 msgstr "Seguridad"
+
+msgid "Selecciona al menos 1 persona."
+msgstr "Selecciona al menos 1 persona."
 
 msgid "Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador."
 msgstr "Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador."

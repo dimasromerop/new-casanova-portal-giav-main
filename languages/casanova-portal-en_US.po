@@ -573,6 +573,9 @@ msgstr "Email"
 msgid "Email (obligatorio)"
 msgstr "Email (required)"
 
+msgid "En \"%1$s\" solo quedan %2$d personas con depósito pendiente de resto."
+msgstr "Only %2$d people are left with a pending balance in \"%1$s\"."
+
 msgid "En %s días"
 msgstr "In %s days"
 
@@ -659,6 +662,12 @@ msgstr "This voucher is only valid if the booking has no pending payments."
 
 msgid "Este cliente existe en GIAV, pero todavia no tiene usuario WordPress vinculado. La vista previa usa directamente su contexto de cliente."
 msgstr "This client exists in GIAV, but does not yet have a linked WordPress user. The preview uses their client context directly."
+
+msgid "Este enlace solo admite %d personas más. Ajusta las cantidades e inténtalo de nuevo."
+msgstr "This link only allows %d more people. Adjust the quantities and try again."
+
+msgid "Este enlace solo admite %s personas más."
+msgstr "This link only allows %s more people."
 
 msgid "Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila."
 msgstr "This space is ready to show you your next trip clearly and calmly."
@@ -909,8 +918,14 @@ msgstr "Pending amount: %s"
 msgid "Importe por persona: %s EUR"
 msgstr "Amount per person: %s EUR"
 
+msgid "Importe restante por persona:"
+msgstr "Remaining amount per person:"
+
 msgid "Importe superior al pendiente."
 msgstr "Amount exceeds the pending balance."
+
+msgid "Indica cuántas personas pagas de cada opción"
+msgstr "Tell us how many people you are paying for in each option"
 
 msgid "Inespay no devolvio un enlace de pago."
 msgstr "Inespay did not return a payment link."
@@ -1755,6 +1770,9 @@ msgstr "You can attach at most %d files per message."
 msgid "Puedes adjuntar como máximo 3 archivos por mensaje."
 msgstr "You can attach a maximum of 3 files per message."
 
+msgid "Puedes combinar varias opciones en un mismo pago."
+msgstr "You can combine several options in a single payment."
+
 msgid "Puedes consultar los datos del cliente, pero no modificarlos desde esta vista."
 msgstr "You can view the customer's data, but you can't edit it from this view."
 
@@ -1865,6 +1883,9 @@ msgstr "Segments:"
 
 msgid "Seguridad"
 msgstr "Security"
+
+msgid "Selecciona al menos 1 persona."
+msgstr "Select at least 1 person."
 
 msgid "Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador."
 msgstr "Select how many people are included in this payment and complete the payer's details."
