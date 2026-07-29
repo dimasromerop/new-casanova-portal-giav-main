@@ -2062,19 +2062,34 @@ function casanova_payment_links_send_rest_magic_email($deposit_link, array $magi
     ? number_format($remaining_value, 2, ',', '.') . ' €'
     : '';
 
-  $tpl = casanova_tpl_email_resto_pago_magic_link([
-    'to_email' => $to,
-    'cliente_nombre' => (string)($meta['billing_name'] ?? ($meta['billing_fullname'] ?? '')),
-    'idExpediente' => $exp_id,
-    'codigoExpediente' => casanova_payment_links_expediente_code($exp_id),
-    'importe' => $remaining,
-    'fecha_limite' => casanova_payment_links_final_payment_deadline_label($exp_id),
-    'url_pago' => $url_pago,
-  ]);
+  // Este email tambien sale desde el retorno del TPV o desde un webhook, sin
+  // idioma de peticion: se usa el que el cliente eligio al pagar el deposito.
+  $previous_locale = null;
+  $link_locale = trim((string)($meta['locale'] ?? ''));
+  if ($link_locale !== '' && function_exists('casanova_portal_switch_locale')) {
+    $previous_locale = casanova_portal_switch_locale($link_locale);
+  }
 
-  if (empty($tpl['to']) || empty($tpl['subject']) || empty($tpl['html'])) return false;
+  try {
+    $tpl = casanova_tpl_email_resto_pago_magic_link([
+      'to_email' => $to,
+      'cliente_nombre' => (string)($meta['billing_name'] ?? ($meta['billing_fullname'] ?? '')),
+      'idExpediente' => $exp_id,
+      'codigoExpediente' => casanova_payment_links_expediente_code($exp_id),
+      'importe' => $remaining,
+      'fecha_limite' => casanova_payment_links_final_payment_deadline_label($exp_id),
+      'url_pago' => $url_pago,
+    ]);
 
-  $ok = casanova_mail_send($tpl['to'], (string)$tpl['subject'], (string)$tpl['html']);
+    if (empty($tpl['to']) || empty($tpl['subject']) || empty($tpl['html'])) return false;
+
+    $ok = casanova_mail_send($tpl['to'], (string)$tpl['subject'], (string)$tpl['html']);
+  } finally {
+    if (function_exists('casanova_portal_restore_locale')) {
+      casanova_portal_restore_locale($previous_locale);
+    }
+  }
+
   if ($ok && function_exists('casanova_payment_link_update')) {
     $now = current_time('mysql');
     if (empty($meta['rest_magic_sent_at'])) {

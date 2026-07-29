@@ -63,6 +63,8 @@ function casanova_payment_intent_email_context(object $intent): array {
   $billing_fullname = trim((string)($link_meta['billing_fullname'] ?? ($payload['billing_fullname'] ?? trim($billing_name . ' ' . $billing_lastname))));
   $billing_email = trim((string)($link_meta['billing_email'] ?? ($payload['billing_email'] ?? '')));
   $mode = strtolower(trim((string)($link_meta['mode'] ?? ($payload['mode'] ?? ''))));
+  // Idioma con el que el cliente relleno el formulario de pago.
+  $locale = trim((string)($payload['locale'] ?? ($link_meta['locale'] ?? '')));
 
   $user = null;
   if (!empty($intent->user_id) && function_exists('get_user_by')) {
@@ -89,8 +91,32 @@ function casanova_payment_intent_email_context(object $intent): array {
     'billing_email' => $billing_email,
     'cliente_nombre' => $cliente_nombre,
     'mode' => $mode,
+    'locale' => $locale,
     'user' => $user,
   ];
+}
+
+/**
+ * Idioma en el que renderizar un email dirigido al cliente.
+ *
+ * Prioridad: la preferencia guardada del usuario del portal, si es un cliente
+ * con cuenta, y si no el idioma con el que relleno el formulario de pago. Si no
+ * hay ninguno se devuelve cadena vacia y se mantiene el idioma del sitio.
+ */
+function casanova_payment_intent_mail_locale(object $intent, array $mail_ctx = []): string {
+  $user_id = (int)($intent->user_id ?? 0);
+  if ($user_id > 0) {
+    $preferred = trim((string) get_user_meta($user_id, 'casanova_portal_locale', true));
+    if ($preferred !== '') return $preferred;
+  }
+
+  if (!empty($mail_ctx['locale'])) {
+    return trim((string) $mail_ctx['locale']);
+  }
+
+  $payload = casanova_payment_intent_payload_array($intent);
+
+  return trim((string)($payload['locale'] ?? ''));
 }
 
 /**
@@ -250,6 +276,20 @@ function casanova_on_payment_cobro_recorded_send_email(int $intent_id): void {
     }
   }
 
+  // El hook corre desde el retorno del TPV, un webhook o un cron, donde el
+  // idioma cargado es el del sitio. Hay que restaurarlo si o si al terminar:
+  // el aviso a administracion se envia despues, en esta misma peticion.
+  $previous_locale = null;
+  if (function_exists('casanova_portal_switch_locale')) {
+    $mail_locale = casanova_payment_intent_mail_locale($intent, $mail_ctx);
+    if ($mail_locale !== '') {
+      $previous_locale = casanova_portal_switch_locale($mail_locale);
+      error_log('[CASANOVA][MAIL] locale=' . $mail_locale . ' switched=' . ($previous_locale !== null ? 'YES' : 'NO'));
+    }
+  }
+
+  try {
+
   // Para evitar “dos cuerpos” en payment_confirmed, NO pasamos totales aquí.
   $ctx = [
     'to' => $to,
@@ -288,6 +328,12 @@ function casanova_on_payment_cobro_recorded_send_email(int $intent_id): void {
       'mail_cobro_sent_at' => current_time('mysql'),
     ]);
     error_log('[CASANOVA][MAIL] UPDATED: mail_cobro_sent_at (cobro_recorded)');
+  }
+
+  } finally {
+    if (function_exists('casanova_portal_restore_locale')) {
+      casanova_portal_restore_locale($previous_locale);
+    }
   }
 }
 
@@ -511,6 +557,19 @@ function casanova_on_payment_reconciled_send_emails(int $intent_id): void {
 
   error_log('[CASANOVA][MAIL] user OK id=' . (int)$user->ID . ' email=' . $user->user_email);
 
+  // Aqui siempre venimos de un cron, sin idioma de peticion. El try/finally es
+  // necesario porque abajo hay varios return intermedios.
+  $previous_locale = null;
+  if (function_exists('casanova_portal_switch_locale')) {
+    $mail_locale = casanova_payment_intent_mail_locale($intent);
+    if ($mail_locale !== '') {
+      $previous_locale = casanova_portal_switch_locale($mail_locale);
+      error_log('[CASANOVA][MAIL] locale=' . $mail_locale . ' switched=' . ($previous_locale !== null ? 'YES' : 'NO'));
+    }
+  }
+
+  try {
+
   $exp_id = (int)($intent->id_expediente ?? 0);
   $idCliente = (int)($intent->id_cliente ?? 0);
 
@@ -606,5 +665,11 @@ function casanova_on_payment_reconciled_send_emails(int $intent_id): void {
       'mail_expediente_sent_at' => current_time('mysql'),
     ]);
     error_log('[CASANOVA][MAIL] UPDATED: mail_expediente_sent_at');
+  }
+
+  } finally {
+    if (function_exists('casanova_portal_restore_locale')) {
+      casanova_portal_restore_locale($previous_locale);
+    }
   }
 }

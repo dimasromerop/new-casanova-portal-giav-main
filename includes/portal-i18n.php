@@ -239,6 +239,18 @@ function casanova_portal_maybe_switch_public_locale(): string {
     return $resolved;
   }
 
+  $current = casanova_portal_current_locale_code();
+
+  if ($resolved !== $current && function_exists('switch_to_locale')) {
+    switch_to_locale($resolved);
+  }
+
+  casanova_portal_load_plugin_textdomain_for($resolved);
+
+  return $resolved;
+}
+
+function casanova_portal_current_locale_code(): string {
   $current = '';
   if (function_exists('determine_locale')) {
     $current = casanova_portal_normalize_locale_code((string) determine_locale());
@@ -247,11 +259,15 @@ function casanova_portal_maybe_switch_public_locale(): string {
     $current = casanova_portal_normalize_locale_code((string) get_locale());
   }
 
-  if ($resolved !== $current && function_exists('switch_to_locale')) {
-    switch_to_locale($resolved);
-  }
+  return $current;
+}
 
-  $mofile = CASANOVA_GIAV_PLUGIN_PATH . 'languages/casanova-portal-' . $resolved . '.mo';
+/**
+ * switch_to_locale() no recarga el .mo del plugin, asi que hay que forzarlo a
+ * mano cada vez que se cambia de idioma.
+ */
+function casanova_portal_load_plugin_textdomain_for(string $locale): void {
+  $mofile = CASANOVA_GIAV_PLUGIN_PATH . 'languages/casanova-portal-' . $locale . '.mo';
   if (function_exists('unload_textdomain') && is_textdomain_loaded('casanova-portal')) {
     unload_textdomain('casanova-portal');
   }
@@ -260,8 +276,41 @@ function casanova_portal_maybe_switch_public_locale(): string {
   } elseif (function_exists('load_plugin_textdomain')) {
     load_plugin_textdomain('casanova-portal', false, basename(rtrim(CASANOVA_GIAV_PLUGIN_PATH, '/\\')) . '/languages');
   }
+}
 
-  return $resolved;
+/**
+ * Conmuta el locale para renderizar algo fuera del contexto web del cliente.
+ *
+ * Los emails de cobro se envian desde el retorno del TPV, desde un webhook o
+ * desde un cron, y en ninguno de esos casos hay un ?locale= del que tirar. A
+ * diferencia de casanova_portal_maybe_switch_public_locale(), esta recibe el
+ * locale explicito y no cachea en static: una misma peticion puede tener que
+ * renderizar en el idioma del cliente y despues en el del aviso interno.
+ *
+ * Devuelve el locale anterior, que hay que pasar a
+ * casanova_portal_restore_locale(); null si no hizo falta conmutar.
+ */
+function casanova_portal_switch_locale(string $locale): ?string {
+  $resolved = casanova_portal_resolve_available_locale($locale);
+  if ($resolved === '') return null;
+
+  $current = casanova_portal_current_locale_code();
+  if ($resolved === $current) return null;
+
+  if (!function_exists('switch_to_locale') || !switch_to_locale($resolved)) return null;
+
+  casanova_portal_load_plugin_textdomain_for($resolved);
+
+  return $current;
+}
+
+function casanova_portal_restore_locale(?string $previous): void {
+  if ($previous === null || $previous === '') return;
+
+  if (function_exists('restore_previous_locale')) {
+    restore_previous_locale();
+  }
+  casanova_portal_load_plugin_textdomain_for($previous);
 }
 
 function casanova_portal_public_language_selector_html(string $actionUrl, array $queryArgs = []): string {
