@@ -12,6 +12,9 @@ msgstr ""
 "X-Generator: casanova-portal catalog sync\n"
 "X-Domain: casanova-portal\n"
 
+msgid "%1$d de %2$d personas pendientes de pago"
+msgstr "%1$d of %2$d travelers pending payment"
+
 msgid "%d adultos"
 msgstr "%d adults"
 
@@ -24,11 +27,23 @@ msgstr "%d passengers"
 msgid "%d Pax"
 msgstr "%d Pax"
 
+msgid "%d pendientes"
+msgstr "%d pending"
+
 msgid "%s años"
 msgstr "%s years"
 
 msgid "%s nuevos"
 msgstr "%s new"
+
+msgid "%s por persona"
+msgstr "%s per person"
+
+msgid "%s restante por persona"
+msgstr "%s remaining per person"
+
+msgid "(opcional)"
+msgstr "(optional)"
 
 msgid "(Opcional, según datos de facturación)"
 msgstr "(Optional, depending on billing information)"
@@ -102,6 +117,9 @@ msgstr "Adjustment"
 msgid "Alojamiento en: %s"
 msgstr "Accommodation at: %s"
 
+msgid "American Express se procesa en una pasarela segura aparte."
+msgstr "American Express is processed on a separate secure gateway."
+
 msgid "Apellidos"
 msgstr "Last name"
 
@@ -138,8 +156,14 @@ msgstr "Here you'll see the latest messages about your trip: departure times, pa
 msgid "asistencia Casanova Golf"
 msgstr "Casanova Golf assistance"
 
+msgid "Atrás"
+msgstr "Back"
+
 msgid "Añadir a calendario"
 msgstr "Add to calendar"
+
+msgid "Añadir una persona: %s"
+msgstr "Add one traveler: %s"
 
 msgid "Año"
 msgstr "Year"
@@ -240,6 +264,9 @@ msgstr "Loading messages"
 msgid "Cargando…"
 msgstr "Loading…"
 
+msgid "Casanova Golf, S.L. · Madrid · CICMA 2969"
+msgstr "Casanova Golf, S.L. · Madrid · Licence CICMA 2969"
+
 msgid "Casanova Portal"
 msgstr "Casanova Portal"
 
@@ -291,6 +318,9 @@ msgstr "Client viewed right now"
 msgid "Cobro"
 msgstr "Charge"
 
+msgid "Completarás el pago en la página segura de nuestro proveedor de pagos."
+msgstr "You will complete the payment on our payment provider's secure page."
+
 msgid "Concepto"
 msgstr "Concept"
 
@@ -326,6 +356,9 @@ msgstr "Contact and access"
 
 msgid "Contenido del portal"
 msgstr "Portal content"
+
+msgid "Continuar"
+msgstr "Continue"
 
 msgid "Continuar al pago"
 msgstr "Continue to payment"
@@ -396,6 +429,13 @@ msgstr "Dashboard"
 msgid "Dashboard no disponible."
 msgstr "Dashboard not available."
 
+msgid "Datos del pagador"
+msgstr "Payer details"
+
+msgctxt "datos del pagador"
+msgid "Nombre"
+msgstr "First name"
+
 msgid "Datos de ubicación"
 msgstr "Location data"
 
@@ -407,6 +447,9 @@ msgstr "You must provide your ID/Tax number."
 
 msgid "Debes indicar email y DNI."
 msgstr "You must provide email and ID."
+
+msgid "Debes indicar email y documento de identidad o pasaporte."
+msgstr "Please enter your email and ID or passport number."
 
 msgid "Debes indicar Nombre y Apellidos."
 msgstr "You must provide first and last name."
@@ -483,6 +526,9 @@ msgstr "Distribution"
 msgid "DNI"
 msgstr "ID"
 
+msgid "DNI/NIE, pasaporte o documento nacional"
+msgstr "Passport or national ID"
+
 msgid "DNI / NIF"
 msgstr "ID / Tax number"
 
@@ -500,6 +546,9 @@ msgstr "Documentation available"
 
 msgid "Documento"
 msgstr "Document"
+
+msgid "Documento de identidad o pasaporte"
+msgstr "ID or passport number"
 
 msgid "Día %d - %s, %s"
 msgstr "Day %d - %s, %s"
@@ -612,6 +661,9 @@ msgstr "Payment link not found."
 msgid "Enlace para completar tu pago – Expediente %s"
 msgstr "Link to complete your payment – Booking %s"
 
+msgid "En USD solo se puede pagar con tarjeta."
+msgstr "Payments in USD are by card only."
+
 msgid "Enviando…"
 msgstr "Sending…"
 
@@ -657,6 +709,9 @@ msgstr "Stay"
 msgid "Estancia por confirmar"
 msgstr "Stay to be confirmed"
 
+msgid "Estas personas quedan totalmente pagadas"
+msgstr "These travelers will be fully paid"
+
 msgid "Este bono es válido únicamente si el expediente no tiene pagos pendientes."
 msgstr "This voucher is only valid if the booking has no pending payments."
 
@@ -668,6 +723,9 @@ msgstr "This link only allows %d more people. Adjust the quantities and try agai
 
 msgid "Este enlace solo admite %s personas más."
 msgstr "This link only allows %s more people."
+
+msgid "Este enlace ya tiene cubiertas todas las personas del grupo."
+msgstr "All travelers in this group link are already covered."
 
 msgid "Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila."
 msgstr "This space is ready to show you your next trip clearly and calmly."
@@ -924,6 +982,9 @@ msgstr "Remaining amount per person:"
 msgid "Importe superior al pendiente."
 msgstr "Amount exceeds the pending balance."
 
+msgid "Importe total"
+msgstr "Full amount"
+
 msgid "Indica cuántas personas pagas de cada opción"
 msgstr "Tell us how many people you are paying for in each option"
 
@@ -1017,6 +1078,9 @@ msgstr "Reference / Reference"
 msgid "Localizador:"
 msgstr "Reference:"
 
+msgid "Lo exige la normativa española para emitir tu factura y para el registro oficial de viajeros. Solo lo usamos para estos fines."
+msgstr "Required by Spanish law to issue your invoice and for the official traveler registration. We only use it for these purposes."
+
 msgid "Logo"
 msgstr "Logo"
 
@@ -1071,6 +1135,9 @@ msgstr "Test mode"
 msgid "Modo solo lectura activo."
 msgstr "Read-only mode active."
 
+msgid "Moneda de pago"
+msgstr "Payment currency"
+
 msgid "Mostrando clientes recientes con portal activo. Usa el buscador para afinar la seleccion o introduce un GIAV ID/DNI exacto para previsualizar clientes sin acceso web."
 msgstr "Showing recent clients with an active portal. Use the search to refine or enter an exact GIAV ID/ID number to preview clients without web access."
 
@@ -1095,6 +1162,9 @@ msgstr "Payment method"
 msgid "Método de pago inválido."
 msgstr "Invalid payment method."
 
+msgid "Método y confirmación"
+msgstr "Method and confirmation"
+
 msgid "Móvil"
 msgstr "Mobile"
 
@@ -1103,6 +1173,9 @@ msgstr "Portal navigation"
 
 msgid "Necesitas iniciar sesión para acceder al portal. <a href=\"%s\">Iniciar sesión</a>"
 msgstr "You need to log in to access the portal. <a href=\"%s\">Log in</a>"
+
+msgid "Necesito hacer otro pago: depósito o total"
+msgstr "I need to make another payment: deposit or full amount"
 
 msgid "Nivel"
 msgstr "Level"
@@ -1227,8 +1300,14 @@ msgstr "First name"
 msgid "Nombre, email, usuario, WP ID, GIAV ID o DNI exacto"
 msgstr "Name, email, username, WP ID, GIAV ID or exact ID number"
 
+msgid "Nombres de los viajeros"
+msgstr "Traveler names"
+
 msgid "Nombres de viajeros (opcional)"
 msgstr "Traveller names (optional)"
+
+msgid "Nombre y apellidos"
+msgstr "Full name"
 
 msgid "Nonce inválido"
 msgstr "Invalid nonce"
@@ -1500,6 +1579,9 @@ msgstr "Notes / Remarks"
 msgid "Observaciones:"
 msgstr "Notes:"
 
+msgid "Opción y personas"
+msgstr "Option and travelers"
+
 msgid "Otros servicios"
 msgstr "Other services"
 
@@ -1508,6 +1590,9 @@ msgstr "Another trip"
 
 msgid "Pagada"
 msgstr "Paid"
+
+msgid "Paga directamente desde tu banco"
+msgstr "Pay directly from your bank account"
 
 msgid "Pagado"
 msgstr "Paid"
@@ -1529,6 +1614,9 @@ msgstr "Paid {amount}"
 
 msgid "Pagar"
 msgstr "Pay"
+
+msgid "Pagar %s"
+msgstr "Pay %s"
 
 msgid "Pagar %s %s"
 msgstr "Pay %s %s"
@@ -1560,11 +1648,20 @@ msgstr "Pay total balance: %s"
 msgid "Pagar pendiente"
 msgstr "Pay outstanding balance"
 
+msgid "Pagar resto %s"
+msgstr "Pay balance %s"
+
 msgid "Pagar total"
 msgstr "Pay total"
 
 msgid "Pagar total pendiente: %s"
 msgstr "Pay total balance: %s"
+
+msgid "Pagas ahora"
+msgstr "You pay now"
+
+msgid "Pagas el importe completo de este enlace"
+msgstr "You pay the full amount of this link"
 
 msgid "Pago"
 msgstr "Pago"
@@ -1656,6 +1753,9 @@ msgstr "Passenger #%d"
 msgid "Pasajeros"
 msgstr "Passengers"
 
+msgid "Paso %1$s de %2$s"
+msgstr "Step %1$s of %2$s"
+
 msgid "Pax:"
 msgstr "Pax:"
 
@@ -1689,17 +1789,29 @@ msgstr "Estimated balance:"
 msgid "Pendiente total: %s"
 msgstr "Total balance: %s"
 
+msgid "Pendiente tras este pago"
+msgstr "Outstanding after this payment"
+
 msgid "Pendiente {amount}"
 msgstr "Outstanding {amount}"
 
 msgid "Perfil actualizado."
 msgstr "Profile updated."
 
+msgid "Persona"
+msgstr "Traveler"
+
+msgid "Personas"
+msgstr "Travelers"
+
 msgid "Personas incluidas en este pago"
 msgstr "People included in this payment"
 
 msgid "Población"
 msgstr "City"
+
+msgid "Porcentaje pagado del viaje"
+msgstr "Share of the trip already paid"
 
 msgid "Por seguridad, el DNI y el email no se pueden modificar desde aquí."
 msgstr "For security reasons, the ID and email cannot be changed here."
@@ -1718,6 +1830,9 @@ msgstr "Active client preview. Read-only."
 
 msgid "Previsualizacion GIAV activa: %s"
 msgstr "Active GIAV preview: %s"
+
+msgid "Procesando, redirigiendo al pago..."
+msgstr "Processing, redirecting to payment..."
 
 msgid "Programa de fidelización"
 msgstr "Loyalty program"
@@ -1770,6 +1885,9 @@ msgstr "You can attach at most %d files per message."
 msgid "Puedes adjuntar como máximo 3 archivos por mensaje."
 msgstr "You can attach a maximum of 3 files per message."
 
+msgid "Puedes combinar opciones en un mismo pago."
+msgstr "You can combine options in a single payment."
+
 msgid "Puedes combinar varias opciones en un mismo pago."
 msgstr "You can combine several options in a single payment."
 
@@ -1794,14 +1912,26 @@ msgstr "Points and level are automatically updated with your reservations."
 msgid "PVP:"
 msgstr "Price:"
 
+msgid "Quedan %1$s de %2$s personas por incluir."
+msgstr "%1$s of %2$s travelers left to include."
+
 msgid "Quedan %s € por abonar"
 msgstr "%s € remaining to pay"
+
+msgid "Quedará pendiente %s"
+msgstr "%s will remain outstanding"
 
 msgid "Quieres acceder a tus documentos y facturas?"
 msgstr "Do you want to access your documents and invoices?"
 
+msgid "Quiero pagar el resto del viaje"
+msgstr "I want to pay the rest of the trip"
+
 msgid "Quitar"
 msgstr "Remove"
+
+msgid "Quitar una persona: %s"
+msgstr "Remove one traveler: %s"
 
 msgid "Qué necesitas hacer ahora"
 msgstr "What you need to do now"
@@ -1830,6 +1960,12 @@ msgstr "Resend code"
 msgid "Reenviar código ({seconds}s)"
 msgstr "Resend code ({seconds}s)"
 
+msgid "Reenviar enlace"
+msgstr "Resend link"
+
+msgid "Ref. %s"
+msgstr "Booking ref. %s"
+
 msgid "Referencia interna #{id}"
 msgstr "Internal reference #{id}"
 
@@ -1854,6 +1990,9 @@ msgstr "Unexpected Cliente_GET response."
 msgid "Resumen"
 msgstr "Summary"
 
+msgid "Resumen del pago"
+msgstr "Payment summary"
+
 msgid "Resumen de pago"
 msgstr "Payment summary"
 
@@ -1868,6 +2007,21 @@ msgstr "Board basis"
 
 msgid "Régimen:"
 msgstr "Board basis:"
+
+msgid "Saldo del viaje"
+msgstr "Trip balance"
+
+msgctxt "saldo del viaje"
+msgid "Pagado"
+msgstr "Paid"
+
+msgctxt "saldo del viaje"
+msgid "Pendiente"
+msgstr "Outstanding"
+
+msgctxt "saldo del viaje"
+msgid "Total del viaje"
+msgstr "Trip total"
 
 msgid "Salir de vista cliente"
 msgstr "Exit client view"
@@ -1992,8 +2146,14 @@ msgstr "If we write to you, you will see it here immediately."
 msgid "Si tienes dudas, contacta con la agencia antes de pagar."
 msgstr "If you have any questions, please contact the agency before paying."
 
+msgid "Si ya hay depósitos pagados, cada persona puede pagar su parte restante desde aquí."
+msgstr "If deposits have already been paid, each traveler can pay their remaining balance here."
+
 msgid "Solicitud no valida."
 msgstr "Invalid request."
+
+msgid "Solo como referencia para la agencia."
+msgstr "For the agency's reference only."
 
 msgid "Solo lectura"
 msgstr "Read only"
@@ -2046,6 +2206,9 @@ msgstr "We have resent the final payment link if a deposit was on record."
 msgid "Tel."
 msgstr "Tel."
 
+msgid "Te llevaremos a una página donde podrás elegir tu banco y autorizar la transferencia desde tu banca online. Al terminar, volverás automáticamente aquí. Compatible con la mayoría de bancos españoles y portugueses."
+msgstr "We'll take you to a page where you can choose your bank and authorize the transfer from your online banking. When you're done, you'll come back here automatically. Works with most Spanish and Portuguese banks."
+
 msgid "Teléfono"
 msgstr "Phone"
 
@@ -2087,6 +2250,9 @@ msgstr "Type"
 
 msgid "Tipo:"
 msgstr "Type:"
+
+msgid "Tipo de pago"
+msgstr "Payment type"
 
 msgid "Tipo de pago inválido."
 msgstr "Invalid payment type."
@@ -2135,6 +2301,9 @@ msgstr "Total"
 
 msgid "Total:"
 msgstr "Total:"
+
+msgid "Total de estas personas"
+msgstr "Total for these travelers"
 
 msgid "Total expediente"
 msgstr "Booking total"
@@ -2211,6 +2380,9 @@ msgstr "Your next trip"
 msgid "Tu próximo viaje está al día. No tienes acciones pendientes ahora mismo."
 msgstr "Your next trip is up to date. You have no pending actions right now."
 
+msgid "Tus datos"
+msgstr "Your details"
+
 msgid "Tus Mulligans"
 msgstr "Your Mulligans"
 
@@ -2235,6 +2407,9 @@ msgstr "Your trip is underway"
 msgid "Tu viaje incluye"
 msgstr "Your trip includes"
 
+msgid "Tu viaje queda totalmente pagado"
+msgstr "Your trip is fully paid"
+
 msgid "Tú"
 msgstr "You"
 
@@ -2256,8 +2431,17 @@ msgstr "Use the button to view your list of bookings."
 msgid "Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos el enlace del pago restante."
 msgstr "Use the same email and ID/Tax number you used to pay the deposit and we'll resend the link for the remaining payment."
 
+msgid "Usa el mismo email y documento o pasaporte con el que pagaste el depósito. Si encontramos el depósito, te reenviaremos el enlace para continuar."
+msgstr "Use the same email and ID or passport you used to pay the deposit. If we find it, we'll resend the link so you can continue."
+
+msgid "Usa esta opción solo si todavía no has pagado el depósito o si quieres pagar el viaje completo."
+msgstr "Use this option only if you haven't paid the deposit yet or want to pay for the whole trip."
+
 msgid "Usuario"
 msgstr "User"
+
+msgid "Vence el %s"
+msgstr "Due %s"
 
 msgid "Ver"
 msgstr "View"
@@ -2328,6 +2512,9 @@ msgstr "Featured trip"
 msgid "Viaje pagado"
 msgstr "Paid trip"
 
+msgid "Viajero %s"
+msgstr "Traveler %s"
+
 msgid "Viajes"
 msgstr "Trips"
 
@@ -2336,6 +2523,12 @@ msgstr "Trips >"
 
 msgid "Vincula tu cuenta"
 msgstr "Link your account"
+
+msgid "Visa, Mastercard o American Express"
+msgstr "Visa, Mastercard or American Express"
+
+msgid "Visa, Mastercard y otras"
+msgstr "Visa, Mastercard & others"
 
 msgid "Vista cliente"
 msgstr "Client view"
@@ -2433,11 +2626,29 @@ msgstr "{paid} paid"
 msgid "· {label}: {value}"
 msgstr "· {label}: {value}"
 
+msgid "¿Con qué tarjeta vas a pagar?"
+msgstr "Which card will you use?"
+
+msgid "¿Cuántas personas incluye este pago?"
+msgstr "How many travelers does this payment include?"
+
+msgid "¿Cuántas personas pagan el resto?"
+msgstr "How many travelers are paying the balance?"
+
+msgid "¿Dudas antes de pagar?"
+msgstr "Questions before paying?"
+
 msgid "¿No tienes acceso a ese email? Escríbenos y lo solucionamos."
 msgstr "Don't have access to that email? Write to us and we'll sort it out."
 
+msgid "¿Qué quieres pagar?"
+msgstr "What would you like to pay?"
+
 msgid "¿Ya pagaste el depósito? Reenviar enlace para pagar el resto"
 msgstr "Already paid the deposit? Resend link to pay the remainder"
+
+msgid "¿Ya pagaste el depósito y no ves el pago restante?"
+msgstr "Already paid the deposit and can't see the remaining payment?"
 
 msgid "Última actualización hace %s"
 msgstr "Last updated %s ago"

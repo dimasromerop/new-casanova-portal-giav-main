@@ -1032,20 +1032,13 @@ function casanova_handle_group_pay_request(string $token): void {
     }
   }
 
-  $exp_label = '';
-  $exp_codigo = '';
-  if (function_exists('casanova_portal_expediente_meta')) {
-    $meta = casanova_portal_expediente_meta($idCliente, $idExpediente);
-    $exp_label = trim((string)($meta['label'] ?? ''));
-    $exp_codigo = trim((string)($meta['codigo'] ?? ''));
-  }
-  if ($exp_label === '') $exp_label = sprintf(__('Expediente %s', 'casanova-portal'), $idExpediente);
+  $trip = casanova_pay_ui_trip_identity($idCliente, $idExpediente, $exp);
 
-  $deadline_txt = '';
+  $deadline_label = '';
   if (function_exists('casanova_payments_min_fecha_limite')) {
     $deadline = casanova_payments_min_fecha_limite($reservas);
     if ($deadline instanceof DateTimeInterface) {
-      $deadline_txt = $deadline->format('d/m/Y');
+      $deadline_label = casanova_pay_ui_date($deadline);
     }
   }
 
@@ -1089,493 +1082,338 @@ function casanova_handle_group_pay_request(string $token): void {
   $default_amount = $deposit_allowed && $unit_deposit_preview > 0.009 && $unit_deposit_preview + 0.01 < $unit_total
     ? $unit_deposit_preview
     : $unit_total;
-  $transfer_note = __('El pago por transferencia bancaria no tiene recargo y es totalmente seguro. Te llevaremos a una página donde podrás elegir tu banco y autorizar la transferencia desde tu banca online. Al terminar, volverás automáticamente aquí. Compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
   $group_page_url = function_exists('casanova_group_pay_url') ? casanova_group_pay_url((string)$group->token) : home_url('/');
   if (function_exists('casanova_portal_add_public_locale_arg')) {
     $group_page_url = casanova_portal_add_public_locale_arg($group_page_url, $public_locale);
   }
-  $selector_html = function_exists('casanova_portal_public_language_selector_html')
-    ? casanova_portal_public_language_selector_html($group_page_url)
-    : '';
-  $public_locale_tag = function_exists('casanova_portal_normalize_locale_tag')
-    ? casanova_portal_normalize_locale_tag($public_locale)
-    : str_replace('_', '-', $public_locale);
-  if ($public_locale_tag === '') {
-    $public_locale_tag = 'es-ES';
-  }
-  $js_summary_amount_template = sprintf(__('Importe por persona: %s EUR', 'casanova-portal'), '__AMOUNT__');
-  $js_people_label = __('Personas incluidas en este pago', 'casanova-portal');
-  $js_deposit_label = __('Depósito', 'casanova-portal');
-  $js_total_label = __('Total', 'casanova-portal');
-  $js_pay_label = __('Pagar', 'casanova-portal');
-  $js_rest_amount_template = sprintf(__('Importe restante por persona: %s EUR', 'casanova-portal'), '__AMOUNT__');
-  $js_pay_rest_label = __('Pagar resto', 'casanova-portal');
+  $selector_html = casanova_pay_ui_language_selector($group_page_url);
   $js_min_units_message = __('Selecciona al menos 1 persona.', 'casanova-portal');
   $js_max_units_template = sprintf(__('Este enlace solo admite %s personas más.', 'casanova-portal'), '__UNITS__');
 
   $nonce = function_exists('casanova_pay_csrf_token')
     ? casanova_pay_csrf_token('group_pay', (string)$group->token)
     : wp_create_nonce('casanova_group_pay_' . (int)$group->id);
-  $euro_symbol = html_entity_decode('&euro;', ENT_QUOTES, 'UTF-8');
 
-  casanova_portal_render_public_document_start(__('Pago del viaje', 'casanova-portal'));
-  echo '<section class="casanova-public-page">';
-  if ($selector_html !== '') {
-    echo '<div class="casanova-public-page__toolbar">' . $selector_html . '</div>';
-  }
-  echo casanova_portal_public_logo_html();
-  echo '<h2 class="casanova-public-page__title">' . esc_html__('Pago del viaje', 'casanova-portal') . '</h2>';
-  echo '<p class="casanova-public-page__intro">' . esc_html__('Selecciona cuántas personas quedan incluidas en este pago y completa los datos del pagador.', 'casanova-portal') . '</p>';
-  $codigo_html = $exp_codigo ? ' <span class="casanova-public-page__code">(' . esc_html($exp_codigo) . ')</span>' : '';
-  echo '<p class="casanova-public-page__trip">' . wp_kses_post(
-    sprintf(__('Viaje: <strong>%1$s</strong>%2$s', 'casanova-portal'), esc_html($exp_label), $codigo_html)
-  ) . '</p>';
+  // Nombre visible de una opción. La opción única "legacy" se llama "Precio por
+  // persona"; en el resumen se muestra como "Persona(s)".
+  $concept_display_label = function (array $concept): string {
+    if ((string)($concept['id'] ?? '') === 'default') return __('Personas', 'casanova-portal');
+    return trim((string)($concept['label'] ?? ''));
+  };
 
-  echo '<div class="casanova-public-page__summary">';
-  if ($has_group_concepts) {
-    $concept_lines = [];
-    foreach ($concept_public as $concept) {
-      $concept_lines[] = trim((string)($concept['label'] ?? '')) . ': ' . number_format_i18n((float)($concept['unit_total'] ?? 0), 2) . ' EUR';
+  // Fila "− número +" que controla un select existente (queda oculto y es el que se envía).
+  $render_qty_row = function (array $concept, string $select_name, string $data_attr, int $min_qty, int $max_qty, int $default_qty, string $price_line) use ($concept_display_label): string {
+    $cid = trim((string)($concept['id'] ?? ''));
+    $label = $concept_display_label($concept);
+    $html = '<div class="cgp-qty__row" data-cgp-qty-row>';
+    $html .= '<div class="cgp-qty__info"><span class="cgp-qty__name">' . esc_html($label) . '</span><span class="cgp-qty__price">' . esc_html($price_line) . '</span></div>';
+    $html .= '<div class="cgp-stepper">';
+    $html .= '<button type="button" class="cgp-stepper__btn" data-cgp-step="-1" aria-label="' . esc_attr(sprintf(__('Quitar una persona: %s', 'casanova-portal'), $label)) . '">' . casanova_pay_ui_icon('minus') . '</button>';
+    $html .= '<output class="cgp-stepper__value" aria-live="polite" aria-label="' . esc_attr($label) . '">' . esc_html((string)$default_qty) . '</output>';
+    $html .= '<button type="button" class="cgp-stepper__btn" data-cgp-step="1" aria-label="' . esc_attr(sprintf(__('Añadir una persona: %s', 'casanova-portal'), $label)) . '">' . casanova_pay_ui_icon('plus') . '</button>';
+    $html .= '<select class="cgp-visually-hidden casanova-public-field__control" name="' . esc_attr($select_name) . '" ' . $data_attr . '="' . esc_attr($cid) . '" required tabindex="-1" aria-hidden="true">';
+    for ($i = $min_qty; $i <= $max_qty; $i++) {
+      $html .= '<option value="' . esc_attr((string)$i) . '"' . selected($i, $default_qty, false) . '>' . esc_html((string)$i) . '</option>';
     }
-    echo '<div class="casanova-public-page__summary-line">' . esc_html__('Opciones de precio:', 'casanova-portal') . '</div>';
-    foreach ($concept_lines as $line) {
-      echo '<div class="casanova-public-page__summary-line">' . esc_html($line) . '</div>';
-    }
-  } else {
-    echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Importe por persona: %s EUR', 'casanova-portal'), number_format_i18n($unit_total, 2))) . '</div>';
-  }
-  if ($deadline_txt !== '') {
-    echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Fecha límite del depósito: %s', 'casanova-portal'), $deadline_txt)) . '</div>';
-  }
-  echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Personas pendientes de pago inicial: %d de %d', 'casanova-portal'), $main_available_units, $group_units_limit)) . '</div>';
-  echo '</div>';
+    $html .= '</select>';
+    $html .= '</div>';
+    $html .= '</div>';
+    return $html;
+  };
+
+  $render_travelers = function (string $form_id): string {
+    $html = '<div class="cgp-travelers" data-cgp-travelers>';
+    $html .= '<p class="cgp-travelers__title">' . esc_html__('Nombres de los viajeros', 'casanova-portal') . ' <span class="cgp-muted">' . esc_html__('(opcional)', 'casanova-portal') . '</span></p>';
+    $html .= '<div class="cgp-travelers__list" data-cgp-traveler-list></div>';
+    $html .= '<p class="cgp-field__help">' . esc_html__('Solo como referencia para la agencia.', 'casanova-portal') . '</p>';
+    // Campo original: el JS escribe aquí un nombre por línea, igual que antes.
+    $html .= '<textarea class="casanova-public-field__control" name="others_names" rows="4" hidden aria-hidden="true" tabindex="-1"></textarea>';
+    $html .= '</div>';
+    return $html;
+  };
+
+  $render_payer_step = function (string $prefix): string {
+    $html = '<h2 class="cgp-section__title">' . esc_html__('Datos del pagador', 'casanova-portal') . '</h2>';
+    $html .= '<div class="cgp-grid-2">';
+    $html .= casanova_pay_ui_text_field($prefix . '-billing-name', 'billing_name', _x('Nombre', 'datos del pagador', 'casanova-portal'), '', 'text', 'given-name');
+    $html .= casanova_pay_ui_text_field($prefix . '-billing-lastname', 'billing_lastname', __('Apellidos', 'casanova-portal'), '', 'text', 'family-name');
+    $html .= '</div>';
+    $html .= casanova_pay_ui_text_field($prefix . '-billing-email', 'billing_email', __('Email', 'casanova-portal'), '', 'email', 'email');
+    $html .= casanova_pay_ui_dni_field($prefix . '-billing-dni', '', 'tax-id');
+    return $html;
+  };
+
+  $render_summary = function (string $summary_id): string {
+    return '<section class="cgp-card cgp-summary" aria-labelledby="' . esc_attr($summary_id) . '-title">'
+      . '<h3 class="cgp-summary__title" id="' . esc_attr($summary_id) . '-title">' . esc_html__('Resumen', 'casanova-portal') . '</h3>'
+      . '<div id="' . esc_attr($summary_id) . '" class="cgp-summary__lines"></div>'
+      . '</section>';
+  };
+
+  $render_bar = function (string $pay_now_id, string $submit_id, string $submit_label, bool $inline): string {
+    $html = '<div class="cgp-bar' . ($inline ? ' cgp-bar--inline' : ' cgp-bar--fixed') . '" data-cgp-bar>';
+    $html .= '<div class="cgp-bar__inner">';
+    $html .= '<div class="cgp-bar__total"><span>' . esc_html__('Pagas ahora', 'casanova-portal') . '</span><strong class="cgp-num" id="' . esc_attr($pay_now_id) . '" aria-live="polite"></strong></div>';
+    $html .= '<div class="cgp-bar__actions">';
+    $html .= '<button class="cgp-btn cgp-btn--ghost" type="button" data-wizard-prev hidden>' . esc_html__('Atrás', 'casanova-portal') . '</button>';
+    $html .= '<button class="cgp-btn" type="button" data-wizard-next>' . esc_html__('Continuar', 'casanova-portal') . '</button>';
+    $html .= '<button id="' . esc_attr($submit_id) . '" class="cgp-btn casanova-public-button" type="submit" hidden>' . casanova_pay_ui_icon('lock') . '<span class="cgp-btn__label">' . esc_html($submit_label) . '</span></button>';
+    $html .= '</div>';
+    $html .= '</div>';
+    $html .= '</div>';
+    return $html;
+  };
+
+  casanova_pay_ui_document_start(__('Pago del viaje', 'casanova-portal'));
+  echo casanova_pay_ui_header($selector_html);
+  echo '<div class="cgp-main">';
+
+  $meta_parts = [];
+  if ($trip['code'] !== '') $meta_parts[] = sprintf(__('Ref. %s', 'casanova-portal'), $trip['code']);
+  $meta_parts[] = sprintf(__('%1$d de %2$d personas pendientes de pago', 'casanova-portal'), $main_available_units, $group_units_limit);
+  echo casanova_pay_ui_title_block(__('Pago del viaje', 'casanova-portal'), $trip['title'], implode(' · ', $meta_parts));
 
   if ($flash_msg !== '') {
-    $notice_class = 'casanova-public-page__notice casanova-public-page__notice--info';
+    $notice_class = 'cgp-notice cgp-notice--info';
+    $notice_role = 'status';
     if ($flash_type === 'success') {
-      $notice_class = 'casanova-public-page__notice casanova-public-page__notice--success';
+      $notice_class = 'cgp-notice cgp-notice--success';
     } elseif ($flash_type === 'error') {
-      $notice_class = 'casanova-public-page__notice casanova-public-page__notice--error';
+      $notice_class = 'cgp-notice cgp-notice--error';
+      $notice_role = 'alert';
     }
-    echo '<div class="' . esc_attr($notice_class) . '">' . esc_html($flash_msg) . '</div>';
+    echo '<div class="' . esc_attr($notice_class) . '" role="' . esc_attr($notice_role) . '">' . esc_html($flash_msg) . '</div>';
   }
 
   $show_resend_magic_fallback = $unit_rest_preview > 0.01 && $rest_available_units <= 0;
-  if ($show_resend_magic_fallback) {
-  echo '<details class="casanova-public-page__disclosure">';
-  echo '<summary class="casanova-public-page__disclosure-summary">' . esc_html__('Ya pagué el depósito y no veo el pago restante', 'casanova-portal') . '</summary>';
-  echo '<div class="casanova-public-page__disclosure-text">' . esc_html__('Usa el mismo email y documento o pasaporte con el que pagaste el depósito. Si encontramos el depósito, te reenviaremos el enlace para continuar.', 'casanova-portal') . '</div>';
-  echo '<form class="casanova-public-form" method="post" action="' . esc_url($group_page_url) . '">';
-  echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
-  echo '<input type="hidden" name="action" value="resend_magic" />';
-  echo '<div class="casanova-public-form__grid">';
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Email', 'casanova-portal') . '</span>'
-    . '<input class="casanova-public-field__control" type="email" name="resend_email" autocomplete="email" required value="" />'
-    . '</label>';
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Documento / pasaporte', 'casanova-portal') . '</span>'
-    . '<input class="casanova-public-field__control" type="text" name="resend_dni" autocomplete="tax-id" required value="" />'
-    . '</label>';
-  echo '</div>';
-  echo '<div class="casanova-public-page__actions">';
-  echo '<button class="casanova-public-button casanova-public-button--ghost" type="submit">' . esc_html__('Reenviar enlace', 'casanova-portal') . '</button>';
-  echo '</div>';
-  echo '</form>';
-  echo '</details>';
-  }
-
-  echo '<style>
-    .casanova-group-wizard{border:1px solid #d9e5df;border-radius:18px;padding:18px;box-shadow:0 18px 45px rgba(15,23,42,.08)}
-    .casanova-group-step[hidden]{display:none!important}
-    .casanova-group-step-indicator{font-weight:600;margin:-2px 0 18px;color:#fff;background:linear-gradient(135deg,#0b3f35 0%,#13715f 100%);border-radius:14px;padding:14px 16px}
-    .casanova-group-step-title{font-size:1.14rem;font-weight:600;margin:0 0 14px;color:#0f172a}
-    .casanova-group-live-summary{margin:14px 0;padding:14px 16px;border:1px solid #cfe3d9;border-radius:14px;background:#f3faf6;color:#0f3d32;font-weight:700}
-    .casanova-group-live-summary:empty{display:none}
-    .casanova-group-step-actions{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:18px}
-    .casanova-group-step-actions .casanova-public-button{width:auto}
-    .casanova-group-step-actions--final{justify-content:space-between}
-    @media (max-width:640px){.casanova-group-step-actions{flex-direction:column;align-items:stretch}.casanova-group-step-actions .casanova-public-button{width:100%}}
-    .casanova-public-button--loading{pointer-events:none;opacity:.75}
-  </style>';
 
   if ($unit_rest_preview > 0.01 && $rest_available_units > 0) {
     $rest_details_attr = $rest_stage_open ? ' open' : '';
-    echo '<details id="casanova-group-rest" class="casanova-public-page__disclosure"' . $rest_details_attr . '>';
-    echo '<summary class="casanova-public-page__disclosure-summary">' . esc_html__('Quiero pagar el resto del viaje', 'casanova-portal') . '</summary>';
-    echo '<div class="casanova-public-page__disclosure-text">' . esc_html__('Si ya hay depósitos pagados, cada persona puede pagar su parte restante desde aquí.', 'casanova-portal') . '</div>';
+    echo '<details id="casanova-group-rest" class="cgp-disclosure cgp-disclosure--card" data-cgp-disclosure' . $rest_details_attr . '>';
+    echo '<summary class="cgp-disclosure__summary">' . esc_html__('Quiero pagar el resto del viaje', 'casanova-portal') . '</summary>';
+    echo '<div class="cgp-disclosure__body">';
+    echo '<p class="cgp-disclosure__text">' . esc_html__('Si ya hay depósitos pagados, cada persona puede pagar su parte restante desde aquí.', 'casanova-portal') . '</p>';
 
-    if ($rest_available_units > 0) {
-      $rest_options = array_values(array_filter($concept_public, function ($concept) {
-        return (int)($concept['rest_available_units'] ?? 0) > 0;
-      }));
-      $rest_has_choices = count($rest_options) > 1;
+    $rest_options = array_values(array_filter($concept_public, function ($concept) {
+      return (int)($concept['rest_available_units'] ?? 0) > 0;
+    }));
+    $rest_has_choices = count($rest_options) > 1;
 
-      echo '<div class="casanova-public-page__summary">';
-      if ($rest_has_choices) {
-        echo '<div class="casanova-public-page__summary-line">' . esc_html__('Importe restante por persona:', 'casanova-portal') . '</div>';
-        foreach ($rest_options as $concept) {
-          echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(
-            '%s: %s EUR (%d pendientes)',
-            trim((string)($concept['label'] ?? '')),
-            number_format_i18n((float)($concept['unit_rest'] ?? 0), 2),
-            (int)($concept['rest_available_units'] ?? 0)
-          )) . '</div>';
-        }
-      } else {
-        echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Importe restante por persona: %s EUR', 'casanova-portal'), number_format_i18n($unit_rest_preview, 2))) . '</div>';
-      }
-      echo '<div class="casanova-public-page__summary-line">' . esc_html(sprintf(__('Personas con depósito pendiente de resto: %d', 'casanova-portal'), $rest_available_units)) . '</div>';
-      echo '</div>';
+    echo '<form id="casanova-group-rest-form" class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" novalidate>';
+    echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
+    echo '<input type="hidden" name="action" value="pay_rest" />';
+    echo '<div class="casanova-group-wizard cgp-wizard">';
+    echo '<div class="casanova-group-step-indicator cgp-progress" aria-live="polite"></div>';
 
-      echo '<form id="casanova-group-rest-form" class="casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" novalidate>';
-      echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
-      echo '<input type="hidden" name="action" value="pay_rest" />';
-      echo '<div class="casanova-group-wizard">';
-      echo '<div class="casanova-group-step-indicator" aria-live="polite"></div>';
-
-      echo '<div class="casanova-group-step" data-step-title="' . esc_attr__('Opción y personas', 'casanova-portal') . '">';
-      echo '<div class="casanova-group-step-title">' . esc_html__('Elige qué parte quieres pagar', 'casanova-portal') . '</div>';
-      if ($rest_has_choices) {
-        echo '<div class="casanova-public-section-label">' . esc_html__('Indica cuántas personas pagas de cada opción', 'casanova-portal') . '</div>';
-      }
-      $rest_first_option = true;
-      foreach ($rest_options as $concept) {
-        $cid = trim((string)($concept['id'] ?? ''));
-        if ($cid === '') continue;
-        $available = max(1, (int)($concept['rest_available_units'] ?? 0));
-        $field_label = $rest_has_choices
-          ? sprintf('%s - %s EUR (%d pendientes)', trim((string)($concept['label'] ?? '')), number_format_i18n((float)($concept['unit_total'] ?? 0), 2), $available)
-          : __('Personas incluidas en este pago restante', 'casanova-portal');
-        $min_qty = $rest_has_choices ? 0 : 1;
-        $default_qty = $rest_first_option ? 1 : 0;
-
-        echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html($field_label) . '</span>';
-        echo '<select class="casanova-public-field__control" name="rest_concept_qty[' . esc_attr($cid) . ']" data-rest-concept-qty="' . esc_attr($cid) . '" required>';
-        for ($i = $min_qty; $i <= $available; $i++) {
-          echo '<option value="' . esc_attr((string)$i) . '"' . selected($i, $default_qty, false) . '>' . esc_html((string)$i) . '</option>';
-        }
-        echo '</select>';
-        echo '</label>';
-        $rest_first_option = false;
-      }
-      echo '<div id="casanova-group-rest-option-summary" class="casanova-group-live-summary"></div>';
-
-      echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombres de viajeros (opcional)', 'casanova-portal') . '</span>';
-      echo '<textarea class="casanova-public-field__control" name="others_names" rows="4" placeholder="Nombre 1&#10;Nombre 2"></textarea>';
-      echo '<span class="casanova-public-field__hint">' . esc_html__('Solo para referencia de la agencia. 1 nombre por línea.', 'casanova-portal') . '</span>';
-      echo '</label>';
-      echo '<div class="casanova-group-step-actions">';
-      echo '<span></span>';
-      echo '<button class="casanova-public-button" type="button" data-wizard-next>' . esc_html__('Continuar', 'casanova-portal') . '</button>';
-      echo '</div>';
-      echo '</div>';
-
-      echo '<div class="casanova-group-step" data-step-title="' . esc_attr__('Datos del pagador', 'casanova-portal') . '" hidden>';
-      echo '<div class="casanova-group-step-title">' . esc_html__('Datos del pagador', 'casanova-portal') . '</div>';
-      echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombre', 'casanova-portal') . '</span>';
-      echo '<input class="casanova-public-field__control" type="text" name="billing_name" autocomplete="given-name" required value="" />';
-      echo '</label>';
-
-      echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Apellidos', 'casanova-portal') . '</span>';
-      echo '<input class="casanova-public-field__control" type="text" name="billing_lastname" autocomplete="family-name" required value="" />';
-      echo '</label>';
-
-      echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Email', 'casanova-portal') . '</span>';
-      echo '<input class="casanova-public-field__control" type="email" name="billing_email" autocomplete="email" required value="" />';
-      echo '</label>';
-
-      echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Documento de identidad / pasaporte (obligatorio)', 'casanova-portal') . '</span>';
-      echo '<input class="casanova-public-field__control" type="text" name="billing_dni" autocomplete="tax-id" required value="" />';
-      echo '<span class="casanova-public-field__hint">' . esc_html__('DNI/NIE, pasaporte o documento nacional.', 'casanova-portal') . '</span>';
-      echo '</label>';
-      echo '<div class="casanova-group-step-actions">';
-      echo '<button class="casanova-public-button casanova-public-button--ghost" type="button" data-wizard-prev>' . esc_html__('Atrás', 'casanova-portal') . '</button>';
-      echo '<button class="casanova-public-button" type="button" data-wizard-next>' . esc_html__('Continuar', 'casanova-portal') . '</button>';
-      echo '</div>';
-      echo '</div>';
-
-      echo '<div class="casanova-group-step" data-step-title="' . esc_attr__('Método y confirmación', 'casanova-portal') . '" hidden>';
-      echo '<div class="casanova-group-step-title">' . esc_html__('Método de pago y confirmación', 'casanova-portal') . '</div>';
-      if ($usd_payment_enabled) {
-        echo '<div class="casanova-public-section-label">' . esc_html__('Moneda de pago', 'casanova-portal') . '</div>';
-        echo '<div class="casanova-public-form__grid casanova-public-choice-group" id="casanova-rest-currency-wrap">';
-        echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-        echo '<input class="casanova-public-choice__control" type="radio" name="currency" value="EUR" checked />EUR';
-        echo '<span class="casanova-public-choice__hint">' . esc_html__('Pago en euros con las opciones habituales.', 'casanova-portal') . '</span>';
-        echo '</label>';
-        echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-        echo '<input class="casanova-public-choice__control" type="radio" name="currency" value="USD" />USD';
-        echo '<span class="casanova-public-choice__hint">' . esc_html__('Pago con tarjeta.', 'casanova-portal') . '</span>';
-        echo '</label>';
-        echo '</div>';
-      } else {
-        echo '<input type="hidden" name="currency" value="EUR" />';
-      }
-      echo '<div class="casanova-public-section-label" id="casanova-rest-method-label">' . esc_html__('Método de pago', 'casanova-portal') . '</div>';
-      if ($inespay_enabled) {
-        echo '<div class="casanova-public-form__grid casanova-public-choice-group" id="casanova-rest-method-wrap">';
-        echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-        echo '<input class="casanova-public-choice__control" type="radio" name="method" value="card" checked />' . esc_html__('Tarjeta', 'casanova-portal');
-        echo '<span class="casanova-public-choice__hint">' . esc_html__('Pago inmediato y seguro.', 'casanova-portal') . '</span>';
-        echo '</label>';
-        echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-        echo '<input class="casanova-public-choice__control" type="radio" name="method" value="bank_transfer" />' . esc_html__('Transferencia bancaria online', 'casanova-portal');
-        echo '<span class="casanova-public-choice__hint">' . esc_html__('Sin recargo.', 'casanova-portal') . '</span>';
-        echo '</label>';
-        echo '</div>';
-        echo '<div id="casanova-rest-method-note" class="casanova-public-page__method-note casanova-hidden">' . esc_html($transfer_note) . '</div>';
-      } else {
-        echo '<input type="hidden" name="method" value="card" />';
-        echo '<div class="casanova-public-field__hint">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
-      }
-
-      if ($stripe_only) {
-        echo '<input type="hidden" name="card_brand" value="other" />';
-      } else {
-        echo '<div id="casanova-rest-card-brand-wrap">';
-        echo '<div class="casanova-public-section-label">' . esc_html__('Tipo de tarjeta', 'casanova-portal') . '</div>';
-        echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
-        echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-        echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="other" checked />' . esc_html__('Otra tarjeta', 'casanova-portal');
-        echo '<span class="casanova-public-choice__hint">' . esc_html__('Visa, Mastercard y similares.', 'casanova-portal') . '</span>';
-        echo '</label>';
-        echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-        echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="amex" />' . esc_html__('American Express (AMEX)', 'casanova-portal');
-        echo '<span class="casanova-public-choice__hint">' . esc_html__('Selecciona esta opción si vas a pagar con AMEX.', 'casanova-portal') . '</span>';
-        echo '</label>';
-        echo '</div>';
-        echo '</div>';
-      }
-
-      echo '<div id="casanova-group-rest-summary" class="casanova-public-page__summary"></div>';
-      echo '<div class="casanova-group-step-actions casanova-group-step-actions--final">';
-      echo '<button class="casanova-public-button casanova-public-button--ghost" type="button" data-wizard-prev>' . esc_html__('Atrás', 'casanova-portal') . '</button>';
-      echo '<button id="casanova-group-rest-button" class="casanova-public-button" type="submit">'
-        . esc_html(sprintf(__('Pagar resto %s %s', 'casanova-portal'), number_format_i18n($unit_rest_preview, 2), $euro_symbol))
-        . '</button>';
-      echo '</div>';
-      echo '</div>';
-      echo '</div>';
-      echo '</form>';
-    } else {
-      echo '<div class="casanova-public-page__notice">' . esc_html__('Todavía no hay depósitos registrados con pago restante pendiente para este enlace.', 'casanova-portal') . '</div>';
+    echo '<div class="casanova-group-step" data-step-title="' . esc_attr__('Opción y personas', 'casanova-portal') . '">';
+    echo '<h2 class="cgp-section__title">' . esc_html__('¿Cuántas personas pagan el resto?', 'casanova-portal') . '</h2>';
+    echo '<div class="cgp-card cgp-qty">';
+    $rest_first_option = true;
+    foreach ($rest_options as $concept) {
+      $cid = trim((string)($concept['id'] ?? ''));
+      if ($cid === '') continue;
+      $available = max(1, (int)($concept['rest_available_units'] ?? 0));
+      $min_qty = $rest_has_choices ? 0 : 1;
+      $default_qty = $rest_first_option ? 1 : 0;
+      $price_line = sprintf(__('%s restante por persona', 'casanova-portal'), casanova_pay_ui_money((float)($concept['unit_rest'] ?? 0)))
+        . ' · ' . sprintf(__('%d pendientes', 'casanova-portal'), (int)($concept['rest_available_units'] ?? 0));
+      echo $render_qty_row($concept, 'rest_concept_qty[' . $cid . ']', 'data-rest-concept-qty', $min_qty, $available, $default_qty, $price_line);
+      $rest_first_option = false;
     }
+    echo '</div>';
+    if ($rest_has_choices) {
+      echo '<p class="cgp-field__help">' . esc_html__('Puedes combinar opciones en un mismo pago.', 'casanova-portal') . '</p>';
+    }
+    echo $render_travelers('casanova-group-rest-form');
+    echo '</div>';
+
+    echo '<div class="casanova-group-step" data-step-title="' . esc_attr__('Datos del pagador', 'casanova-portal') . '" hidden>';
+    echo $render_payer_step('cgp-rest');
+    echo '</div>';
+
+    echo '<div class="casanova-group-step" data-step-title="' . esc_attr__('Método y confirmación', 'casanova-portal') . '" hidden>';
+    echo '<h2 class="cgp-section__title" id="casanova-rest-method-label">' . esc_html__('Método de pago', 'casanova-portal') . '</h2>';
+    echo casanova_pay_ui_method_block([
+      'prefix' => 'casanova-rest',
+      'currency_mode' => $usd_payment_enabled ? 'choice' : 'eur',
+      'currency_checked' => 'EUR',
+      'inespay' => $inespay_enabled,
+      'method_checked' => 'card',
+      'stripe_only' => $stripe_only,
+      'card_brand_checked' => 'other',
+    ]);
+    echo '</div>';
+    echo '</div>';
+
+    echo $render_summary('casanova-group-rest-summary');
+    echo $render_bar('cgp-rest-pay-now', 'casanova-group-rest-button', sprintf(__('Pagar resto %s', 'casanova-portal'), casanova_pay_ui_money($unit_rest_preview)), true);
+    echo '</form>';
+    echo '</div>';
     echo '</details>';
   }
 
   $wrap_main_payment_form = $rest_stage_open && $rest_available_units > 0;
   if ($wrap_main_payment_form) {
-    echo '<details class="casanova-public-page__disclosure">';
-    echo '<summary class="casanova-public-page__disclosure-summary">' . esc_html__('Necesito hacer otro pago: depósito o total', 'casanova-portal') . '</summary>';
-    echo '<div class="casanova-public-page__disclosure-text">' . esc_html__('Usa esta opción solo si todavía no has pagado el depósito o si quieres pagar el viaje completo.', 'casanova-portal') . '</div>';
+    echo '<details class="cgp-disclosure cgp-disclosure--card" data-cgp-disclosure>';
+    echo '<summary class="cgp-disclosure__summary">' . esc_html__('Necesito hacer otro pago: depósito o total', 'casanova-portal') . '</summary>';
+    echo '<div class="cgp-disclosure__body">';
+    echo '<p class="cgp-disclosure__text">' . esc_html__('Usa esta opción solo si todavía no has pagado el depósito o si quieres pagar el viaje completo.', 'casanova-portal') . '</p>';
   }
 
   if ($main_available_units > 0) {
-  $main_step_order = $deposit_allowed ? 'option,mode,payer,method' : 'option,payer,method';
-  echo '<form id="casanova-group-pay-form" class="casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" novalidate data-step-order="' . esc_attr($main_step_order) . '">';
-  echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
-  echo '<input type="hidden" name="action" value="pay" />';
-  if (!$deposit_allowed) {
-    echo '<input type="hidden" name="mode" value="full" />';
-  }
-
-  echo '<div class="casanova-group-wizard">';
-  echo '<div class="casanova-group-step-indicator" aria-live="polite"></div>';
-
-  echo '<div class="casanova-group-step" data-step-key="payer" data-step-title="' . esc_attr__('Datos del pagador', 'casanova-portal') . '" hidden>';
-  echo '<div class="casanova-group-step-title">' . esc_html__('Datos del pagador', 'casanova-portal') . '</div>';
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombre', 'casanova-portal') . '</span>';
-  echo '<input class="casanova-public-field__control" type="text" name="billing_name" autocomplete="given-name" required value="" />';
-  echo '</label>';
-
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Apellidos', 'casanova-portal') . '</span>';
-  echo '<input class="casanova-public-field__control" type="text" name="billing_lastname" autocomplete="family-name" required value="" />';
-  echo '</label>';
-
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Email', 'casanova-portal') . '</span>';
-  echo '<input class="casanova-public-field__control" type="email" name="billing_email" autocomplete="email" required value="" />';
-  echo '</label>';
-
-
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Documento de identidad / pasaporte (obligatorio)', 'casanova-portal') . '</span>';
-  echo '<input class="casanova-public-field__control" type="text" name="billing_dni" autocomplete="tax-id" required value="" />';
-  echo '<span class="casanova-public-field__hint">' . esc_html__('DNI/NIE, pasaporte o documento nacional.', 'casanova-portal') . '</span>';
-  echo '</label>';
-  echo '<div class="casanova-group-step-actions">';
-  echo '<button class="casanova-public-button casanova-public-button--ghost" type="button" data-wizard-prev>' . esc_html__('Atrás', 'casanova-portal') . '</button>';
-  echo '<button class="casanova-public-button" type="button" data-wizard-next>' . esc_html__('Continuar', 'casanova-portal') . '</button>';
-  echo '</div>';
-  echo '</div>';
-
-  echo '<div class="casanova-group-step" data-step-key="method" data-step-title="' . esc_attr__('Método y confirmación', 'casanova-portal') . '" hidden>';
-  echo '<div class="casanova-group-step-title">' . esc_html__('Método de pago', 'casanova-portal') . '</div>';
-
-  if ($usd_payment_enabled) {
-    echo '<div class="casanova-public-section-label">' . esc_html__('Moneda de pago', 'casanova-portal') . '</div>';
-    echo '<div class="casanova-public-form__grid casanova-public-choice-group" id="casanova-currency-wrap">';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="currency" value="EUR" checked />EUR';
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Pago en euros con las opciones habituales.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="currency" value="USD" />USD';
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Pago con tarjeta.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '</div>';
-  } else {
-    echo '<input type="hidden" name="currency" value="EUR" />';
-  }
-  echo '<div class="casanova-public-section-label" id="casanova-method-label">' . esc_html__('Método de pago', 'casanova-portal') . '</div>';
-  if ($inespay_enabled) {
-    echo '<div class="casanova-public-form__grid casanova-public-choice-group" id="casanova-method-wrap">';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="method" value="card" checked />' . esc_html__('Tarjeta', 'casanova-portal');
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Pago inmediato y seguro.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="method" value="bank_transfer" />' . esc_html__('Transferencia bancaria online', 'casanova-portal');
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Sin recargo.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '</div>';
-    echo '<div id="casanova-method-note" class="casanova-public-page__method-note casanova-hidden">' . esc_html($transfer_note) . '</div>';
-  } else {
-    echo '<input type="hidden" name="method" value="card" />';
-    echo '<div class="casanova-public-field__hint">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
-  }
-
-  if ($stripe_only) {
-    echo '<input type="hidden" name="card_brand" value="other" />';
-  } else {
-    echo '<div id="casanova-card-brand-wrap">';
-    echo '<div class="casanova-public-section-label">' . esc_html__('Tipo de tarjeta', 'casanova-portal') . '</div>';
-    echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="other" checked />' . esc_html__('Otra tarjeta', 'casanova-portal');
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Visa, Mastercard y similares.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="amex" />' . esc_html__('American Express (AMEX)', 'casanova-portal');
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Selecciona esta opción si vas a pagar con AMEX.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '</div>';
-    echo '<div class="casanova-public-field__hint">' . esc_html__('Elige con qué tarjeta quieres realizar el pago.', 'casanova-portal') . '</div>';
-    echo '</div>';
-  }
-
-  echo '</div>';
-
-  echo '<div class="casanova-group-step" data-step-key="option" data-step-title="' . esc_attr__('Opción y personas', 'casanova-portal') . '" hidden>';
-  echo '<div class="casanova-group-step-title">' . esc_html__('Elige tu opción y personas incluidas', 'casanova-portal') . '</div>';
-
-  $has_concept_choices = count($concept_public) > 1;
-  if ($has_concept_choices) {
-    echo '<div class="casanova-public-section-label">' . esc_html__('Indica cuántas personas pagas de cada opción', 'casanova-portal') . '</div>';
-  }
-  $first_option = true;
-  foreach ($concept_public as $concept) {
-    $cid = trim((string)($concept['id'] ?? ''));
-    if ($cid === '') continue;
-    $field_label = $has_concept_choices
-      ? trim((string)($concept['label'] ?? '')) . ' - ' . number_format_i18n((float)($concept['unit_total'] ?? 0), 2) . ' EUR'
-      : __('Personas incluidas en este pago', 'casanova-portal');
-    $min_qty = $has_concept_choices ? 0 : 1;
-    $default_qty = $first_option ? 1 : 0;
-
-    echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html($field_label) . '</span>';
-    echo '<select class="casanova-public-field__control" name="concept_qty[' . esc_attr($cid) . ']" data-concept-qty="' . esc_attr($cid) . '" required>';
-    for ($i = $min_qty; $i <= $main_available_units; $i++) {
-      echo '<option value="' . esc_attr((string)$i) . '"' . selected($i, $default_qty, false) . '>' . esc_html((string)$i) . '</option>';
+    $main_step_order = $deposit_allowed ? 'option,mode,payer,method' : 'option,payer,method';
+    $has_concept_choices = count($concept_public) > 1;
+    echo '<form id="casanova-group-pay-form" class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" novalidate data-step-order="' . esc_attr($main_step_order) . '">';
+    echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
+    echo '<input type="hidden" name="action" value="pay" />';
+    if (!$deposit_allowed) {
+      echo '<input type="hidden" name="mode" value="full" />';
     }
-    echo '</select>';
-    echo '</label>';
-    $first_option = false;
-  }
-  if ($has_concept_choices) {
-    echo '<div class="casanova-public-field__hint">' . esc_html__('Puedes combinar varias opciones en un mismo pago.', 'casanova-portal') . '</div>';
-  }
-  echo '<div id="casanova-group-option-summary" class="casanova-group-live-summary"></div>';
 
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombres de viajeros (opcional)', 'casanova-portal') . '</span>';
-  echo '<textarea class="casanova-public-field__control" name="others_names" rows="4" placeholder="Nombre 1&#10;Nombre 2"></textarea>';
-  echo '<span class="casanova-public-field__hint">' . esc_html__('Solo para referencia de la agencia. 1 nombre por línea.', 'casanova-portal') . '</span>';
-  echo '</label>';
+    echo '<div class="casanova-group-wizard cgp-wizard">';
+    echo '<div class="casanova-group-step-indicator cgp-progress" aria-live="polite"></div>';
 
-  echo '<div class="casanova-group-step-actions">';
-  echo '<span></span>';
-  echo '<button class="casanova-public-button" type="button" data-wizard-next>' . esc_html__('Continuar', 'casanova-portal') . '</button>';
-  echo '</div>';
-  echo '</div>';
-
-  if ($deposit_allowed) {
-    echo '<div class="casanova-group-step" data-step-key="mode" data-step-title="' . esc_attr__('Tipo de pago', 'casanova-portal') . '">';
-    echo '<div class="casanova-group-step-title">' . esc_html__('¿Qué quieres pagar?', 'casanova-portal') . '</div>';
-    echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
-    echo '<label class="casanova-public-choice">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="deposit" />' . esc_html__('Pagar depósito', 'casanova-portal') . ' <strong class="casanova-group-mode-amount" data-mode="deposit"></strong>';
-    echo '</label>';
-    echo '<label class="casanova-public-choice">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="full" checked />' . esc_html__('Pagar total', 'casanova-portal') . ' <strong class="casanova-group-mode-amount" data-mode="full"></strong>';
-    echo '</label>';
+    // Paso: opción y personas.
+    echo '<div class="casanova-group-step" data-step-key="option" data-step-title="' . esc_attr__('Opción y personas', 'casanova-portal') . '">';
+    echo '<h2 class="cgp-section__title">' . esc_html__('¿Cuántas personas incluye este pago?', 'casanova-portal') . '</h2>';
+    echo '<div class="cgp-card cgp-qty">';
+    $first_option = true;
+    foreach ($concept_public as $concept) {
+      $cid = trim((string)($concept['id'] ?? ''));
+      if ($cid === '') continue;
+      $min_qty = $has_concept_choices ? 0 : 1;
+      $default_qty = $first_option ? 1 : 0;
+      $price_line = sprintf(__('%s por persona', 'casanova-portal'), casanova_pay_ui_money((float)($concept['unit_total'] ?? 0)));
+      echo $render_qty_row($concept, 'concept_qty[' . $cid . ']', 'data-concept-qty', $min_qty, (int)$main_available_units, $default_qty, $price_line);
+      $first_option = false;
+    }
     echo '</div>';
-    echo '<div class="casanova-group-step-actions">';
-    echo '<button class="casanova-public-button casanova-public-button--ghost" type="button" data-wizard-prev>' . esc_html__('Atrás', 'casanova-portal') . '</button>';
-    echo '<button class="casanova-public-button" type="button" data-wizard-next>' . esc_html__('Continuar', 'casanova-portal') . '</button>';
+    echo '<p class="cgp-field__help" id="cgp-group-remaining" aria-live="polite"></p>';
+    echo $render_travelers('casanova-group-pay-form');
+    echo '</div>';
+
+    // Paso: qué pagar (mismos name/value: mode=deposit|full).
+    if ($deposit_allowed) {
+      echo '<div class="casanova-group-step" data-step-key="mode" data-step-title="' . esc_attr__('Tipo de pago', 'casanova-portal') . '" hidden>';
+      echo '<h2 class="cgp-section__title" id="cgp-group-mode-title">' . esc_html__('¿Qué quieres pagar?', 'casanova-portal') . '</h2>';
+      echo '<div class="cgp-options" role="radiogroup" aria-labelledby="cgp-group-mode-title">';
+      echo '<div class="cgp-option" data-cgp-option>';
+      echo '<label class="cgp-option__head"><input class="cgp-radio" type="radio" name="mode" value="deposit" />';
+      echo '<span class="cgp-option__text"><span class="cgp-option__row"><span class="cgp-option__title">' . esc_html__('Depósito', 'casanova-portal') . '</span>';
+      echo '<strong class="cgp-option__amount casanova-group-mode-amount" data-mode="deposit"></strong></span>';
+      echo '<span class="cgp-option__hint" data-cgp-deposit-remaining></span>';
+      if ($deadline_label !== '') {
+        echo '<span class="cgp-option__hint">' . esc_html(sprintf(__('Vence el %s', 'casanova-portal'), $deadline_label)) . '</span>';
+      }
+      echo '</span></label>';
+      echo '</div>';
+      echo '<div class="cgp-option is-checked" data-cgp-option>';
+      echo '<label class="cgp-option__head"><input class="cgp-radio" type="radio" name="mode" value="full" checked />';
+      echo '<span class="cgp-option__text"><span class="cgp-option__row"><span class="cgp-option__title">' . esc_html__('Importe total', 'casanova-portal') . '</span>';
+      echo '<strong class="cgp-option__amount casanova-group-mode-amount" data-mode="full"></strong></span>';
+      echo '<span class="cgp-option__hint">' . esc_html__('Estas personas quedan totalmente pagadas', 'casanova-portal') . '</span>';
+      echo '</span></label>';
+      echo '</div>';
+      echo '</div>';
+      echo '</div>';
+    }
+
+    // Paso: datos del pagador.
+    echo '<div class="casanova-group-step" data-step-key="payer" data-step-title="' . esc_attr__('Datos del pagador', 'casanova-portal') . '" hidden>';
+    echo $render_payer_step('cgp-group');
+    echo '</div>';
+
+    // Paso: método de pago (mismos name/value: currency, method, card_brand).
+    echo '<div class="casanova-group-step" data-step-key="method" data-step-title="' . esc_attr__('Método y confirmación', 'casanova-portal') . '" hidden>';
+    echo '<h2 class="cgp-section__title" id="casanova-method-label">' . esc_html__('Método de pago', 'casanova-portal') . '</h2>';
+    echo casanova_pay_ui_method_block([
+      'prefix' => 'casanova',
+      'currency_mode' => $usd_payment_enabled ? 'choice' : 'eur',
+      'currency_checked' => 'EUR',
+      'inespay' => $inespay_enabled,
+      'method_checked' => 'card',
+      'stripe_only' => $stripe_only,
+      'card_brand_checked' => 'other',
+    ]);
     echo '</div>';
     echo '</div>';
-  }
 
-  echo '<div class="casanova-group-step" data-step-key="method" hidden>';
-  echo '<div id="casanova-group-summary" class="casanova-public-page__summary"></div>';
-  echo '<div class="casanova-group-step-actions casanova-group-step-actions--final">';
-  echo '<button class="casanova-public-button casanova-public-button--ghost" type="button" data-wizard-prev>' . esc_html__('Atrás', 'casanova-portal') . '</button>';
-  echo '<button id="casanova-group-pay-button" class="casanova-public-button" type="submit">'
-    . esc_html(sprintf(__('Pagar %s %s', 'casanova-portal'), number_format_i18n($default_amount, 2), $euro_symbol))
-    . '</button>';
-  echo '</div>';
-  echo '</div>';
-  echo '</div>';
-
-  echo '</form>';
+    echo $render_summary('casanova-group-summary');
+    echo $render_bar('cgp-group-pay-now', 'casanova-group-pay-button', sprintf(__('Pagar %s', 'casanova-portal'), casanova_pay_ui_money($default_amount)), false);
+    echo '</form>';
   } else {
-    echo '<div class="casanova-public-page__notice">' . esc_html__('Este enlace ya tiene cubiertas todas las personas del grupo.', 'casanova-portal') . '</div>';
+    echo '<div class="cgp-notice cgp-notice--info" role="status">' . esc_html__('Este enlace ya tiene cubiertas todas las personas del grupo.', 'casanova-portal') . '</div>';
   }
   if ($wrap_main_payment_form) {
+    echo '</div>';
     echo '</details>';
   }
-  echo '<p class="casanova-public-page__footer">' . esc_html__('Si tienes dudas, contacta con la agencia antes de pagar.', 'casanova-portal') . '</p>';
+
+  if ($show_resend_magic_fallback) {
+    echo '<details class="cgp-disclosure">';
+    echo '<summary class="cgp-disclosure__summary">' . esc_html__('¿Ya pagaste el depósito y no ves el pago restante?', 'casanova-portal') . '</summary>';
+    echo '<div class="cgp-disclosure__body">';
+    echo '<p class="cgp-disclosure__text">' . esc_html__('Usa el mismo email y documento o pasaporte con el que pagaste el depósito. Si encontramos el depósito, te reenviaremos el enlace para continuar.', 'casanova-portal') . '</p>';
+    echo '<form class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '">';
+    echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
+    echo '<input type="hidden" name="action" value="resend_magic" />';
+    echo '<div class="cgp-field"><label class="cgp-field__label" for="cgp-resend-email">' . esc_html__('Email', 'casanova-portal') . '</label>'
+      . '<input class="cgp-input casanova-public-field__control" id="cgp-resend-email" type="email" name="resend_email" autocomplete="email" required value="" /></div>';
+    echo '<div class="cgp-field"><label class="cgp-field__label" for="cgp-resend-dni">' . esc_html__('Documento de identidad o pasaporte', 'casanova-portal') . '</label>'
+      . '<input class="cgp-input casanova-public-field__control" id="cgp-resend-dni" type="text" name="resend_dni" autocomplete="tax-id" required value="" /></div>';
+    echo '<button class="cgp-btn cgp-btn--ghost cgp-btn--block" type="submit">' . esc_html__('Reenviar enlace', 'casanova-portal') . '</button>';
+    echo '</form>';
+    echo '</div>';
+    echo '</details>';
+  }
+
+  echo casanova_pay_ui_footer();
+  echo '</div>';
+
+  $cgp_i18n = [
+    'step' => __('Paso %1$s de %2$s', 'casanova-portal'),
+    'remaining' => __('Quedan %1$s de %2$s personas por incluir.', 'casanova-portal'),
+    'combine' => __('Puedes combinar opciones en un mismo pago.', 'casanova-portal'),
+    'traveler' => __('Viajero %s', 'casanova-portal'),
+    'fullName' => __('Nombre y apellidos', 'casanova-portal'),
+    'person' => __('Persona', 'casanova-portal'),
+    'people' => __('Personas', 'casanova-portal'),
+    'total' => __('Total de estas personas', 'casanova-portal'),
+    'depositRemaining' => __('Quedará pendiente %s', 'casanova-portal'),
+    'pay' => __('Pagar %s', 'casanova-portal'),
+    'payRest' => __('Pagar resto %s', 'casanova-portal'),
+    'processing' => __('Procesando, redirigiendo al pago...', 'casanova-portal'),
+  ];
+
   echo '<script>
     (function(){
+      ' . casanova_pay_ui_js_money() . '
+      ' . casanova_pay_ui_js_options() . '
       const mainAvailableUnits = ' . wp_json_encode((int)$main_available_units) . ';
       const concepts = ' . wp_json_encode($concept_public) . ';
-      const locale = ' . wp_json_encode($public_locale_tag) . ';
       const minUnitsMessage = ' . wp_json_encode($js_min_units_message) . ';
       const maxUnitsTemplate = ' . wp_json_encode($js_max_units_template) . ';
-      const amountTemplate = ' . wp_json_encode($js_summary_amount_template) . ';
-      const restAmountTemplate = ' . wp_json_encode($js_rest_amount_template) . ';
-      const peopleLabel = ' . wp_json_encode($js_people_label) . ';
-      const depositLabel = ' . wp_json_encode($js_deposit_label) . ';
-      const totalLabel = ' . wp_json_encode($js_total_label) . ';
-      const payLabel = ' . wp_json_encode($js_pay_label) . ';
-      const payRestLabel = ' . wp_json_encode($js_pay_rest_label) . ';
-      const processingLabel = ' . wp_json_encode(__('Procesando, redirigiendo al pago...', 'casanova-portal')) . ';
+      const T = ' . wp_json_encode($cgp_i18n) . ';
+      const usdEnabled = ' . wp_json_encode((bool)$usd_payment_enabled) . ';
+      const usdRate = ' . wp_json_encode((float)$usd_rate) . ';
+      const usdGrossUp = ' . wp_json_encode((float)$usd_gross_up) . ';
+
+      function tpl(str, a, b){
+        return String(str).replace("%1$s", String(a)).replace("%2$s", String(b)).replace("%s", String(a));
+      }
+
       function casanovaPaySubmitLoading(formEl, btnId){
         if (!formEl) return;
         formEl.addEventListener("submit", function(ev){
           if (ev.defaultPrevented) return;
           var b = document.getElementById(btnId);
-          if (b){ b.textContent = processingLabel; b.classList.add("casanova-public-button--loading"); b.setAttribute("aria-busy", "true"); }
+          if (b){
+            var label = b.querySelector(".cgp-btn__label");
+            if (label) { label.textContent = T.processing; } else { b.textContent = T.processing; }
+            b.classList.add("casanova-public-button--loading");
+            b.setAttribute("aria-busy", "true");
+          }
         });
-      }
-      const usdEnabled = ' . wp_json_encode((bool)$usd_payment_enabled) . ';
-      const usdRate = ' . wp_json_encode((float)$usd_rate) . ';
-      const usdGrossUp = ' . wp_json_encode((float)$usd_gross_up) . ';
-
-      function fmt(n){
-        if (!isFinite(n)) n = 0;
-        try {
-          return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
-        } catch (e) {
-          return String(Math.round(n * 100) / 100);
-        }
       }
 
       function usdAmount(eurAmount){
@@ -1584,17 +1422,8 @@ function casanova_handle_group_pay_request(string $token): void {
         return Math.ceil(((eur * usdRate) / (1 - usdGrossUp)) * 100) / 100;
       }
 
-      function fmtUsd(n){
-        if (!isFinite(n)) n = 0;
-        try {
-          return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n) + " USD";
-        } catch (e) {
-          return "$" + (Math.round(n * 100) / 100).toFixed(2) + " USD";
-        }
-      }
-
       function displayAmount(eurAmount, currency){
-        return currency === "USD" ? fmtUsd(usdAmount(eurAmount)) : fmt(eurAmount) + " EUR";
+        return currency === "USD" ? cgpMoney(usdAmount(eurAmount), "USD") : cgpMoney(eurAmount, "EUR");
       }
 
       function escapeHtml(value){
@@ -1631,15 +1460,6 @@ function casanova_handle_group_pay_request(string $token): void {
         return Math.round(total * 100) / 100;
       }
 
-      function cartLineSummaries(cart, field, currency){
-        return cart.lines.map(function(line){
-          const amount = Math.round(Number(line.concept[field] || 0) * line.units * 100) / 100;
-          const label = String(line.concept.label || "");
-          const prefix = label !== "" ? (label + " x" + String(line.units)) : (peopleLabel + ": " + String(line.units));
-          return prefix + " - " + displayAmount(amount, currency);
-        });
-      }
-
       function setCartValidity(selects, cart, maxUnits){
         if (!selects.length) return true;
         let message = "";
@@ -1652,11 +1472,133 @@ function casanova_handle_group_pay_request(string $token): void {
         return message === "";
       }
 
+      function conceptName(concept, units){
+        if (String(concept.id) === "default") return units === 1 ? T.person : T.people;
+        return String(concept.label || "");
+      }
+
+      // Resumen: una línea por opción y el total de estas personas.
+      function renderSummary(el, cart, field, currency){
+        if (!el) return;
+        let html = "";
+        if (!cart.lines.length) {
+          html += "<p class=\"cgp-summary__empty\">" + escapeHtml(minUnitsMessage) + "</p>";
+        }
+        cart.lines.forEach(function(line){
+          const amount = Math.round(Number(line.concept[field] || 0) * line.units * 100) / 100;
+          html += "<div class=\"cgp-summary__line\"><span>" + escapeHtml(String(line.units) + " × " + conceptName(line.concept, line.units)) + "</span><span class=\"cgp-num\">" + escapeHtml(displayAmount(amount, currency)) + "</span></div>";
+        });
+        html += "<div class=\"cgp-summary__line cgp-summary__line--total\"><span>" + escapeHtml(T.total) + "</span><strong class=\"cgp-num\">" + escapeHtml(displayAmount(cartAmount(cart, field), currency)) + "</strong></div>";
+        el.innerHTML = html;
+      }
+
+      // Control − número +: escribe en el select original (el que se envía) y respeta
+      // su rango de opciones y el máximo total de personas del enlace.
+      function initSteppers(selects, maxTotal){
+        function total(){
+          return selects.reduce(function(sum, s){ const v = parseInt(s.value || "0", 10); return sum + (isFinite(v) ? v : 0); }, 0);
+        }
+        function bounds(select){
+          const opts = select.options;
+          return { min: parseInt(opts[0].value, 10), max: parseInt(opts[opts.length - 1].value, 10) };
+        }
+        selects.forEach(function(select){
+          const row = select.closest("[data-cgp-qty-row]");
+          if (!row) return;
+          row.addEventListener("click", function(event){
+            const btn = event.target.closest("[data-cgp-step]");
+            if (!btn || btn.disabled) return;
+            const delta = parseInt(btn.getAttribute("data-cgp-step"), 10);
+            const b = bounds(select);
+            const current = parseInt(select.value || "0", 10);
+            let next = current + delta;
+            if (next < b.min || next > b.max) return;
+            if (delta > 0 && maxTotal > 0 && total() >= maxTotal) return;
+            select.value = String(next);
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+          });
+        });
+        return function refresh(){
+          const sum = total();
+          selects.forEach(function(select){
+            const row = select.closest("[data-cgp-qty-row]");
+            if (!row) return;
+            const b = bounds(select);
+            const v = parseInt(select.value || "0", 10);
+            const minus = row.querySelector("[data-cgp-step=\"-1\"]");
+            const plus = row.querySelector("[data-cgp-step=\"1\"]");
+            const out = row.querySelector(".cgp-stepper__value");
+            if (minus) minus.disabled = v <= b.min;
+            if (plus) plus.disabled = v >= b.max || (maxTotal > 0 && sum >= maxTotal);
+            if (out) out.textContent = String(v);
+          });
+        };
+      }
+
+      // Un campo por persona; el textarea original recibe un nombre por línea.
+      function initTravelers(form){
+        const box = form.querySelector("[data-cgp-travelers]");
+        const list = form.querySelector("[data-cgp-traveler-list]");
+        const textarea = form.querySelector("textarea[name=others_names]");
+        if (!box || !list || !textarea) return function(){};
+        const values = {};
+        let signature = null;
+        function compose(){
+          const names = [];
+          Array.prototype.forEach.call(list.querySelectorAll("input[data-key]"), function(input){
+            values[input.getAttribute("data-key")] = input.value;
+            const v = input.value.trim();
+            if (v !== "") names.push(v);
+          });
+          textarea.value = names.join("\n");
+        }
+        list.addEventListener("input", compose);
+        return function render(cart){
+          const sig = cart.lines.map(function(l){ return String(l.concept.id) + ":" + String(l.units); }).join("|");
+          if (sig === signature) return;
+          signature = sig;
+          Array.prototype.forEach.call(list.querySelectorAll("input[data-key]"), function(input){
+            values[input.getAttribute("data-key")] = input.value;
+          });
+          list.innerHTML = "";
+          let n = 0;
+          cart.lines.forEach(function(line){
+            for (let k = 0; k < line.units; k++) {
+              n++;
+              const key = String(line.concept.id) + ":" + String(k);
+              const id = form.id + "-traveler-" + String(n);
+              const field = document.createElement("div");
+              field.className = "cgp-field cgp-field--compact";
+              const label = document.createElement("label");
+              label.className = "cgp-field__label cgp-field__label--sub";
+              label.setAttribute("for", id);
+              label.textContent = tpl(T.traveler, n) + (String(line.concept.id) !== "default" && line.concept.label ? " · " + line.concept.label : "");
+              const input = document.createElement("input");
+              input.className = "cgp-input";
+              input.type = "text";
+              input.id = id;
+              input.autocomplete = "off";
+              input.placeholder = T.fullName;
+              input.setAttribute("data-key", key);
+              input.value = values[key] || "";
+              field.appendChild(label);
+              field.appendChild(input);
+              list.appendChild(field);
+            }
+          });
+          box.hidden = n === 0;
+          compose();
+        };
+      }
+
       function initWizard(form){
         if (!form) return;
         const steps = Array.prototype.slice.call(form.querySelectorAll(".casanova-group-step"));
         if (!steps.length) return;
         const indicator = form.querySelector(".casanova-group-step-indicator");
+        const prevButtons = Array.prototype.slice.call(form.querySelectorAll("[data-wizard-prev]"));
+        const nextButtons = Array.prototype.slice.call(form.querySelectorAll("[data-wizard-next]"));
+        const submitButtons = Array.prototype.slice.call(form.querySelectorAll("button[type=submit]"));
         steps.forEach(function(step, index){
           if (!step.getAttribute("data-step-key")) step.setAttribute("data-step-key", "step-" + String(index));
         });
@@ -1677,6 +1619,7 @@ function casanova_handle_group_pay_request(string $token): void {
         });
 
         let current = 0;
+        let started = false;
         function activeSteps(key){
           return steps.filter(function(step){ return step.getAttribute("data-step-key") === key; });
         }
@@ -1697,13 +1640,33 @@ function casanova_handle_group_pay_request(string $token): void {
         function show(index){
           current = Math.max(0, Math.min(index, order.length - 1));
           const key = order[current];
+          const last = current === order.length - 1;
           steps.forEach(function(step){
             step.hidden = step.getAttribute("data-step-key") !== key;
           });
           if (indicator) {
             const title = titles[key] || "";
-            indicator.textContent = "Paso " + String(current + 1) + " de " + String(order.length) + (title ? ": " + title : "");
+            let segments = "";
+            for (let i = 0; i < order.length; i++) {
+              segments += "<span class=\"cgp-progress__seg" + (i <= current ? " is-done" : "") + "\"></span>";
+            }
+            indicator.innerHTML = "<div class=\"cgp-progress__bar\" aria-hidden=\"true\">" + segments + "</div>"
+              + "<p class=\"cgp-progress__text\">" + escapeHtml(tpl(T.step, current + 1, order.length))
+              + (title ? " · <strong>" + escapeHtml(title) + "</strong>" : "") + "</p>";
           }
+          prevButtons.forEach(function(b){ b.hidden = current === 0; });
+          nextButtons.forEach(function(b){ b.hidden = last; });
+          submitButtons.forEach(function(b){ b.hidden = !last; });
+          if (started) {
+            const top = form.getBoundingClientRect().top + window.pageYOffset - 16;
+            if (window.pageYOffset > top) window.scrollTo(0, top);
+            const heading = activeSteps(key)[0] ? activeSteps(key)[0].querySelector("h2") : null;
+            if (heading) {
+              heading.setAttribute("tabindex", "-1");
+              try { heading.focus({ preventScroll: true }); } catch (e) { heading.focus(); }
+            }
+          }
+          started = true;
         }
         function validateCurrent(){
           const invalid = invalidFieldForKey(order[current]);
@@ -1738,64 +1701,49 @@ function casanova_handle_group_pay_request(string $token): void {
         show(0);
       }
 
+      function getChecked(form, name, fallback){
+        const input = form.querySelector("input[name=" + name + "]:checked");
+        return input ? input.value : fallback;
+      }
+
+      function setNextEnabled(form, enabled){
+        Array.prototype.forEach.call(form.querySelectorAll("[data-wizard-next]"), function(b){ b.disabled = !enabled; });
+      }
+
+      // La barra fija solo existe si su formulario está visible (puede ir dentro de un
+      // desplegable cerrado); el contenido deja hueco debajo solo en ese caso.
+      function syncBarSpace(){
+        const main = document.querySelector(".cgp-main");
+        if (!main) return;
+        const bars = document.querySelectorAll(".cgp-bar--fixed");
+        let visible = false;
+        Array.prototype.forEach.call(bars, function(bar){ if (bar.getClientRects().length) visible = true; });
+        main.classList.toggle("cgp-has-bar", visible);
+      }
+
       function init(){
         const restForm = document.getElementById("casanova-group-rest-form");
         if (restForm) {
           const restQtySelects = Array.prototype.slice.call(restForm.querySelectorAll("[data-rest-concept-qty]"));
-          const restMethodInputs = restForm.querySelectorAll("input[name=method]");
-          const restCurrencyInputs = restForm.querySelectorAll("input[name=currency]");
-          const restMethodWrap = document.getElementById("casanova-rest-method-wrap");
-          const restMethodLabel = document.getElementById("casanova-rest-method-label");
-          const restMethodNote = document.getElementById("casanova-rest-method-note");
-          const restCardBrandWrap = document.getElementById("casanova-rest-card-brand-wrap");
           const restSummary = document.getElementById("casanova-group-rest-summary");
-          const restOptionSummary = document.getElementById("casanova-group-rest-option-summary");
+          const restPayNow = document.getElementById("cgp-rest-pay-now");
           const restBtn = document.getElementById("casanova-group-rest-button");
-
-          function getRestMethod(){
-            let m = "card";
-            Array.prototype.forEach.call(restMethodInputs, function(i){ if (i.checked) m = i.value; });
-            return m;
-          }
-
-          function getRestCurrency(){
-            let c = "EUR";
-            Array.prototype.forEach.call(restCurrencyInputs, function(i){ if (i.checked) c = i.value; });
-            return c === "USD" ? "USD" : "EUR";
-          }
+          const restBtnLabel = restBtn ? restBtn.querySelector(".cgp-btn__label") : null;
+          const refreshRestSteppers = initSteppers(restQtySelects, 0);
+          const renderRestTravelers = initTravelers(restForm);
 
           function updateRest(){
             const cart = readCart(restQtySelects, "data-rest-concept-qty");
-            setCartValidity(restQtySelects, cart, 0);
-            const units = cart.units;
-            const currency = getRestCurrency();
-            let method = getRestMethod();
-            if (currency === "USD") {
-              Array.prototype.forEach.call(restMethodInputs, function(i){ if (i.value === "card") i.checked = true; });
-              method = "card";
-            }
+            const valid = setCartValidity(restQtySelects, cart, 0);
+            const currency = getChecked(restForm, "currency", "EUR") === "USD" ? "USD" : "EUR";
+            cgpSyncOptions(restForm, currency);
+            refreshRestSteppers();
+            renderRestTravelers(cart);
             const amount = cartAmount(cart, "unit_rest");
-            if (restMethodNote) restMethodNote.classList.toggle("casanova-hidden", currency === "USD" || method !== "bank_transfer");
-            if (restMethodWrap) restMethodWrap.classList.toggle("casanova-hidden", currency === "USD");
-            if (restMethodLabel) restMethodLabel.classList.toggle("casanova-hidden", currency === "USD");
-            if (restCardBrandWrap) restCardBrandWrap.classList.toggle("casanova-hidden", currency === "USD" || method !== "card");
-            const singleRest = cart.lines.length === 1 ? cart.lines[0] : null;
-            const lines = [
-              singleRest ? restAmountTemplate.replace("__AMOUNT__", fmt(Number(singleRest.concept.unit_rest || 0))) : "",
-              (singleRest && singleRest.concept.label) ? "Opción: " + singleRest.concept.label : ""
-            ].concat(
-              cart.lines.length > 1 ? cartLineSummaries(cart, "unit_rest", currency) : [],
-              [
-                peopleLabel + ": " + String(units),
-                totalLabel + ": " + displayAmount(amount, currency)
-              ]
-            ).filter(Boolean);
-            const renderedSummary = lines.map(function(line){
-                return "<div class=\"casanova-public-page__summary-line\">" + escapeHtml(line) + "</div>";
-              }).join("");
-            if (restSummary) restSummary.innerHTML = renderedSummary;
-            if (restOptionSummary) restOptionSummary.innerHTML = renderedSummary;
-            if (restBtn) restBtn.textContent = payRestLabel + " " + displayAmount(amount, currency);
+            renderSummary(restSummary, cart, "unit_rest", currency);
+            if (restPayNow) restPayNow.textContent = displayAmount(amount, currency);
+            if (restBtnLabel) restBtnLabel.textContent = tpl(T.payRest, displayAmount(amount, currency));
+            setNextEnabled(restForm, valid);
           }
 
           restForm.addEventListener("change", updateRest);
@@ -1805,88 +1753,61 @@ function casanova_handle_group_pay_request(string $token): void {
           casanovaPaySubmitLoading(restForm, "casanova-group-rest-button");
         }
 
+        Array.prototype.forEach.call(document.querySelectorAll("[data-cgp-disclosure]"), function(d){
+          d.addEventListener("toggle", syncBarSpace);
+        });
+
         const form = document.getElementById("casanova-group-pay-form");
-        if (!form) return;
-        initWizard(form);
-        casanovaPaySubmitLoading(form, "casanova-group-pay-button");
-        const qtySelects = Array.prototype.slice.call(form.querySelectorAll("[data-concept-qty]"));
-        const modeInputs = form.querySelectorAll("input[name=mode]");
-        const methodInputs = form.querySelectorAll("input[name=method]");
-        const currencyInputs = form.querySelectorAll("input[name=currency]");
-        const methodWrap = document.getElementById("casanova-method-wrap");
-        const methodLabel = document.getElementById("casanova-method-label");
-        const methodNote = document.getElementById("casanova-method-note");
-        const cardBrandWrap = document.getElementById("casanova-card-brand-wrap");
-        const summary = document.getElementById("casanova-group-summary");
-        const optionSummary = document.getElementById("casanova-group-option-summary");
-        const btn = document.getElementById("casanova-group-pay-button");
-        const modeAmountDeposit = form.querySelector(".casanova-group-mode-amount[data-mode=deposit]");
-        const modeAmountFull = form.querySelector(".casanova-group-mode-amount[data-mode=full]");
+        if (form) {
+          initWizard(form);
+          casanovaPaySubmitLoading(form, "casanova-group-pay-button");
+          const qtySelects = Array.prototype.slice.call(form.querySelectorAll("[data-concept-qty]"));
+          const summary = document.getElementById("casanova-group-summary");
+          const payNow = document.getElementById("cgp-group-pay-now");
+          const remaining = document.getElementById("cgp-group-remaining");
+          const btn = document.getElementById("casanova-group-pay-button");
+          const btnLabel = btn ? btn.querySelector(".cgp-btn__label") : null;
+          const modeAmountDeposit = form.querySelector(".casanova-group-mode-amount[data-mode=deposit]");
+          const modeAmountFull = form.querySelector(".casanova-group-mode-amount[data-mode=full]");
+          const depositRemaining = form.querySelector("[data-cgp-deposit-remaining]");
+          const refreshSteppers = initSteppers(qtySelects, mainAvailableUnits);
+          const renderTravelers = initTravelers(form);
+          const multiConcept = qtySelects.length > 1;
 
-        function getMode(){
-          let m = "full";
-          Array.prototype.forEach.call(modeInputs, function(i){ if (i.checked) m = i.value; });
-          return m;
-        }
-
-        function getMethod(){
-          let m = "card";
-          Array.prototype.forEach.call(methodInputs, function(i){ if (i.checked) m = i.value; });
-          return m;
-        }
-
-        function getCurrency(){
-          let c = "EUR";
-          Array.prototype.forEach.call(currencyInputs, function(i){ if (i.checked) c = i.value; });
-          return c === "USD" ? "USD" : "EUR";
-        }
-
-        function update(){
-          const cart = readCart(qtySelects, "data-concept-qty");
-          setCartValidity(qtySelects, cart, mainAvailableUnits);
-          const units = cart.units;
-          const mode = getMode();
-          const currency = getCurrency();
-          let method = getMethod();
-          if (currency === "USD") {
-            Array.prototype.forEach.call(methodInputs, function(i){ if (i.value === "card") i.checked = true; });
-            method = "card";
+          function update(){
+            const cart = readCart(qtySelects, "data-concept-qty");
+            const valid = setCartValidity(qtySelects, cart, mainAvailableUnits);
+            const units = cart.units;
+            const mode = getChecked(form, "mode", "full");
+            const currency = getChecked(form, "currency", "EUR") === "USD" ? "USD" : "EUR";
+            cgpSyncOptions(form, currency);
+            refreshSteppers();
+            renderTravelers(cart);
+            const total = cartAmount(cart, "unit_total");
+            const dep = cartAmount(cart, "unit_deposit");
+            const depositEffective = (dep > 0.009 && dep + 0.01 < total);
+            const isDeposit = (mode === "deposit" && depositEffective);
+            const amount = isDeposit ? dep : total;
+            renderSummary(summary, cart, "unit_total", currency);
+            if (payNow) payNow.textContent = displayAmount(amount, currency);
+            if (btnLabel) btnLabel.textContent = tpl(T.pay, displayAmount(amount, currency));
+            if (modeAmountFull) modeAmountFull.textContent = displayAmount(total, currency);
+            if (modeAmountDeposit) modeAmountDeposit.textContent = depositEffective ? displayAmount(dep, currency) : "";
+            if (depositRemaining) {
+              depositRemaining.textContent = depositEffective ? tpl(T.depositRemaining, displayAmount(Math.round((total - dep) * 100) / 100, currency)) : "";
+            }
+            if (remaining) {
+              const left = Math.max(0, mainAvailableUnits - units);
+              remaining.textContent = (multiConcept ? T.combine + " " : "") + tpl(T.remaining, left, mainAvailableUnits);
+            }
+            setNextEnabled(form, valid);
           }
-          const total = cartAmount(cart, "unit_total");
-          const dep = cartAmount(cart, "unit_deposit");
-          const isDeposit = (mode === "deposit" && dep > 0.009 && dep + 0.01 < total);
-          const amount = isDeposit ? dep : total;
-          if (methodNote) methodNote.classList.toggle("casanova-hidden", currency === "USD" || method !== "bank_transfer");
-          if (methodWrap) methodWrap.classList.toggle("casanova-hidden", currency === "USD");
-          if (methodLabel) methodLabel.classList.toggle("casanova-hidden", currency === "USD");
-          if (cardBrandWrap) cardBrandWrap.classList.toggle("casanova-hidden", currency === "USD" || method !== "card");
-          const single = cart.lines.length === 1 ? cart.lines[0] : null;
-          const lines = [
-            single ? amountTemplate.replace("__AMOUNT__", fmt(Number(single.concept.unit_total || 0))) : "",
-            (single && single.concept.label) ? "Opción: " + single.concept.label : ""
-          ].concat(
-            cart.lines.length > 1 ? cartLineSummaries(cart, "unit_total", currency) : [],
-            [peopleLabel + ": " + String(units)]
-          ).filter(Boolean);
-          if (isDeposit && single) {
-            lines.push(depositLabel + ": " + displayAmount(Number(single.concept.unit_deposit || 0), currency));
-          }
-          lines.push(totalLabel + ": " + displayAmount(amount, currency));
-          const renderedSummary = lines.map(function(line){
-              return "<div class=\"casanova-public-page__summary-line\">" + escapeHtml(line) + "</div>";
-            }).join("");
-          if (summary) summary.innerHTML = renderedSummary;
-          if (optionSummary) optionSummary.innerHTML = renderedSummary;
-          if (btn) btn.textContent = payLabel + " " + displayAmount(amount, currency);
-          if (modeAmountFull) modeAmountFull.textContent = displayAmount(total, currency);
-          if (modeAmountDeposit) {
-            modeAmountDeposit.textContent = (dep > 0.009 && dep + 0.01 < total) ? displayAmount(dep, currency) : "";
-          }
-        }
 
-        form.addEventListener("change", update);
-        form.addEventListener("input", update);
-        update();
+          form.addEventListener("change", update);
+          form.addEventListener("input", update);
+          update();
+        }
+        syncBarSpace();
       }
 
       if (document.readyState === "loading") {
@@ -1897,7 +1818,6 @@ function casanova_handle_group_pay_request(string $token): void {
     })();
   </script>';
 
-  echo '</section>';
   casanova_portal_render_public_document_end();
   exit;
 }

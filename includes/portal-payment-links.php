@@ -601,11 +601,15 @@ function casanova_handle_payment_link_request(string $token): void {
     $deposit_amount = casanova_payments_calc_deposit_amount($deposit_base, $idExpediente);
   }
   $deposit_effective = ($deposit_allowed && ($deposit_amount + 0.01 < $deposit_base));
+  // Hito del plan de cobros del gestor con opción de pagar todo: la elección
+  // "depósito" (= el hito) se respeta aunque el expediente ya tenga cobros.
+  $milestone_choice = false;
   if (!$usd_fixed && !empty($meta_prefill['fixed_amount']) && !empty($meta_prefill['offer_full_payment']) && $authorized + 0.01 < $pending) {
     // Enlace de un hito del plan de cobros del gestor (p.ej. el depósito) con
     // permiso para pagar todo: la opción "depósito" es el importe del hito y la
     // opción "total" es el pendiente real del expediente en GIAV. El % global del
     // portal no interviene.
+    $milestone_choice = true;
     $deposit_allowed = true;
     $deposit_amount = round($authorized, 2);
     $authorized = round($pending, 2);
@@ -719,7 +723,9 @@ function casanova_handle_payment_link_request(string $token): void {
 
     $mode = isset($_POST['mode']) ? strtolower(trim((string)$_POST['mode'])) : 'full';
     if ($mode !== 'deposit' && $mode !== 'full') $mode = 'full';
-    if ($paid_now > 0.01 || !$deposit_effective) {
+    // Con cobros previos solo se admite "depósito" en los hitos del gestor, donde
+    // el depósito es el importe del hito y no un % del pendiente.
+    if (!$deposit_effective || ($paid_now > 0.01 && !$milestone_choice)) {
       $mode = 'full';
     }
 
@@ -737,8 +743,9 @@ function casanova_handle_payment_link_request(string $token): void {
     }
 
     // El minimo de pago parcial no aplica cuando el importe lo fijo el admin
-    // junto al precio en dolares: no es una eleccion del cliente.
-    $is_full = ($amount_to_pay + 0.01 >= $pending) || $usd_fixed;
+    // junto al precio en dolares, ni a los hitos del plan de cobros del gestor
+    // (fixed_amount): no es una eleccion del cliente.
+    $is_full = ($amount_to_pay + 0.01 >= $pending) || $usd_fixed || !empty($meta_prefill['fixed_amount']);
     if (!$is_full && $amount_to_pay < $min_amount) {
       casanova_render_payment_link_error(__('Importe inferior al minimo permitido.', 'casanova-portal'));
       exit;
@@ -1131,22 +1138,13 @@ function casanova_handle_payment_link_request(string $token): void {
     exit;
   }
 
-  $exp_label = '';
-  $exp_codigo = '';
-  if (function_exists('casanova_portal_expediente_meta')) {
-    $meta = casanova_portal_expediente_meta($idCliente, $idExpediente);
-    $exp_label = trim((string)($meta['label'] ?? ''));
-    $exp_codigo = trim((string)($meta['codigo'] ?? ''));
-  }
-  if ($exp_label === '') {
-    $exp_label = sprintf(__('Expediente %s', 'casanova-portal'), $idExpediente);
-  }
+  $trip = casanova_pay_ui_trip_identity($idCliente, $idExpediente, $exp);
 
-  $deadline_txt = '';
+  $deadline_label = '';
   if (function_exists('casanova_payments_min_fecha_limite')) {
     $deadline = casanova_payments_min_fecha_limite($reservas);
     if ($deadline instanceof DateTimeInterface) {
-      $deadline_txt = $deadline->format('d/m/Y');
+      $deadline_label = casanova_pay_ui_date($deadline);
     }
   }
 
@@ -1155,14 +1153,11 @@ function casanova_handle_payment_link_request(string $token): void {
   if ($pref_mode !== 'deposit' && $pref_mode !== 'full') $pref_mode = '';
   $checked_deposit = ($deposit_effective && ($pref_mode === 'deposit' || $pref_mode === ''));
   $checked_full = !$checked_deposit;
-  $transfer_note = __('El pago por transferencia bancaria no tiene recargo y es totalmente seguro. Te llevaremos a una página donde podrás elegir tu banco y autorizar la transferencia desde tu banca online. Al terminar, volverás automáticamente aquí. Compatible con la mayoría de bancos españoles y portugueses.', 'casanova-portal');
   $payment_page_url = casanova_payment_link_url((string)$link->token);
   if (function_exists('casanova_portal_add_public_locale_arg')) {
     $payment_page_url = casanova_portal_add_public_locale_arg($payment_page_url, $public_locale);
   }
-  $selector_html = function_exists('casanova_portal_public_language_selector_html')
-    ? casanova_portal_public_language_selector_html($payment_page_url, $pref_mode !== '' ? ['mode' => $pref_mode] : [])
-    : '';
+  $selector_html = casanova_pay_ui_language_selector($payment_page_url, $pref_mode !== '' ? ['mode' => $pref_mode] : []);
   $usd_quote_authorized = null;
   $usd_quote_deposit = null;
   // Con precio pactado no hay cotizacion que calcular: se muestra el USD tal cual.
@@ -1177,235 +1172,175 @@ function casanova_handle_payment_link_request(string $token): void {
     }
   }
 
-  casanova_portal_render_public_document_start(__('Pago seguro', 'casanova-portal'));
-  echo '<section class="casanova-public-page">';
-  if ($selector_html !== '') {
-    echo '<div class="casanova-public-page__toolbar">' . $selector_html . '</div>';
+  // Importes solo para mostrar: salen de los valores ya calculados arriba.
+  $usd_choice = !$usd_fixed && $usd_payment_enabled;
+  $usd_full_display = null;
+  $usd_deposit_display = null;
+  if ($usd_fixed) {
+    $usd_full_display = $usd_fixed_amount;
+  } elseif ($usd_choice && is_array($usd_quote_authorized)) {
+    $usd_full_display = round((float)$usd_quote_authorized['usd_amount'], 2);
   }
-  echo casanova_portal_public_logo_html();
-  echo '<h2 class="casanova-public-page__title">' . esc_html__('Pago seguro', 'casanova-portal') . '</h2>';
-
-  $codigo_html = '';
-  if ($exp_codigo !== '') {
-    $codigo_html = ' <span class="casanova-public-page__code">(' . esc_html($exp_codigo) . ')</span>';
+  if ($usd_choice && $deposit_effective && !is_wp_error($usd_quote_deposit) && is_array($usd_quote_deposit)) {
+    $usd_deposit_display = round((float)$usd_quote_deposit['usd_amount'], 2);
   }
-  echo '<p class="casanova-public-page__trip">' . wp_kses_post(
-    sprintf(
-      __('Viaje: <strong>%1$s</strong>%2$s', 'casanova-portal'),
-      esc_html($exp_label),
-      $codigo_html
-    )
-  ) . '</p>';
+  $show_usd_initial = $usd_fixed || ($usd_choice && $prefill_currency === 'USD');
+  $amount_text = function (float $eur, $usd) use ($show_usd_initial): string {
+    return ($show_usd_initial && $usd !== null) ? casanova_pay_ui_money((float)$usd, 'USD') : casanova_pay_ui_money($eur, 'EUR');
+  };
+  $amount_attrs = function (float $eur, $usd): string {
+    return ' data-cgp-amount data-eur="' . esc_attr(number_format($eur, 2, '.', '')) . '"'
+      . ($usd !== null ? ' data-usd="' . esc_attr(number_format((float)$usd, 2, '.', '')) . '"' : '');
+  };
+  $covers_whole_trip = ($authorized + 0.01 >= $pending);
+  $initial_eur = $checked_deposit ? $deposit_amount : $authorized;
+  $initial_usd = $checked_deposit ? $usd_deposit_display : $usd_full_display;
+  $initial_text = $amount_text((float)$initial_eur, $initial_usd);
 
-  echo '<div class="casanova-public-page__summary">';
+  casanova_pay_ui_document_start(__('Pago seguro', 'casanova-portal'));
+  echo casanova_pay_ui_header($selector_html);
+  echo '<div class="cgp-main">';
+
+  $trip_dates = casanova_pay_ui_date_range($exp->FechaDesde ?? '', $exp->FechaHasta ?? '');
+  $meta_parts = [];
+  if ($trip['code'] !== '') $meta_parts[] = sprintf(__('Ref. %s', 'casanova-portal'), $trip['code']);
+  if ($trip_dates !== '') $meta_parts[] = $trip_dates;
+  echo casanova_pay_ui_title_block(__('Pago seguro', 'casanova-portal'), $trip['title'], implode(' · ', $meta_parts));
 
   // Con precio pactado en dolares no se enseña el pendiente en euros: seria una
   // cifra distinta a la acordada y solo genera dudas al cliente.
   if (!$usd_fixed) {
-    $pendiente_html = '<strong>' . esc_html(number_format_i18n($pending, 2)) . ' EUR</strong>';
-    echo '<div class="casanova-public-page__summary-line">' . wp_kses_post(
-      sprintf(
-        __('Pendiente total: %s', 'casanova-portal'),
-        $pendiente_html
-      )
-    ) . '</div>';
+    $trip_total = round((float)($calc['total_objetivo'] ?? 0), 2);
+    echo '<section class="cgp-card cgp-balance" aria-label="' . esc_attr__('Saldo del viaje', 'casanova-portal') . '">';
+    if ($covers_whole_trip && $trip_total > 0.01) {
+      $paid_pct = max(0.0, min(100.0, ($paid_now / $trip_total) * 100));
+      echo '<dl class="cgp-balance__grid">';
+      echo '<div><dt>' . esc_html_x('Total del viaje', 'saldo del viaje', 'casanova-portal') . '</dt><dd>' . esc_html(casanova_pay_ui_money($trip_total)) . '</dd></div>';
+      echo '<div><dt>' . esc_html_x('Pagado', 'saldo del viaje', 'casanova-portal') . '</dt><dd>' . esc_html(casanova_pay_ui_money($paid_now)) . '</dd></div>';
+      echo '<div><dt>' . esc_html_x('Pendiente', 'saldo del viaje', 'casanova-portal') . '</dt><dd>' . esc_html(casanova_pay_ui_money($pending)) . '</dd></div>';
+      echo '</dl>';
+      echo '<div class="cgp-meter" role="progressbar" aria-label="' . esc_attr__('Porcentaje pagado del viaje', 'casanova-portal') . '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . esc_attr((string)round($paid_pct)) . '"><span style="width:' . esc_attr(number_format($paid_pct, 2, '.', '')) . '%"></span></div>';
+    } else {
+      echo '<dl class="cgp-balance__grid cgp-balance__grid--single">';
+      echo '<div><dt>' . esc_html_x('Pendiente', 'saldo del viaje', 'casanova-portal') . '</dt><dd>' . esc_html(casanova_pay_ui_money($pending)) . '</dd></div>';
+      echo '</dl>';
+    }
+    echo '</section>';
   }
 
-  if ($deadline_txt !== '') {
-    echo '<div class="casanova-public-page__summary-line">' . esc_html(
-      sprintf(
-        __('Fecha limite deposito: %s', 'casanova-portal'),
-        $deadline_txt
-      )
-    ) . '</div>';
-  }
-
-  echo '</div>';
-
-  echo '<form id="casanova-pay-form" class="casanova-public-form" method="post" action="' . esc_url($payment_page_url) . '">';
+  echo '<form id="casanova-pay-form" class="cgp-form casanova-public-form" method="post" action="' . esc_url($payment_page_url) . '">';
   echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
 
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Nombre', 'casanova-portal') . '</span>';
-  echo '<input class="casanova-public-field__control" type="text" name="billing_name" required value="' . esc_attr($prefill_name) . '" />';
-  echo '</label>';
-
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Apellidos', 'casanova-portal') . '</span>';
-  echo '<input class="casanova-public-field__control" type="text" name="billing_lastname" required value="' . esc_attr($prefill_lastname) . '" />';
-  echo '</label>';
-
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Email (obligatorio)', 'casanova-portal') . '</span>';
-  echo '<input class="casanova-public-field__control" type="email" name="billing_email" autocomplete="email" required value="' . esc_attr($prefill_email) . '" />';
-  echo '</label>';
-
-  echo '<label class="casanova-public-field"><span class="casanova-public-field__label">' . esc_html__('Documento de identidad / pasaporte (obligatorio)', 'casanova-portal') . '</span>';
-  echo '<input class="casanova-public-field__control" type="text" name="billing_dni" required value="' . esc_attr($prefill_dni) . '" />';
-  echo '<span class="casanova-public-field__hint">' . esc_html__('DNI/NIE, pasaporte o documento nacional.', 'casanova-portal') . '</span>';
-  echo '</label>';
-
-  if ($usd_fixed) {
-    // Sin selector: el precio se acordo en dolares y no hay alternativa en euros.
-    echo '<input type="hidden" name="currency" value="USD" />';
-  } elseif ($usd_payment_enabled) {
-    $eur_checked = $prefill_currency === 'USD' ? '' : 'checked';
-    $usd_checked = $prefill_currency === 'USD' ? 'checked' : '';
-    echo '<div class="casanova-public-section-label">' . esc_html__('Moneda de pago', 'casanova-portal') . '</div>';
-    echo '<div class="casanova-public-form__grid casanova-public-choice-group" id="casanova-currency-wrap">';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="currency" value="EUR" ' . $eur_checked . ' />EUR';
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Pago en euros con las opciones habituales.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="currency" value="USD" ' . $usd_checked . ' />USD';
-    $usd_hint = __('Pago con tarjeta.', 'casanova-portal');
-    if (!is_wp_error($usd_quote_authorized) && is_array($usd_quote_authorized)) {
-      $usd_hint .= ' ' . sprintf(__('Total: %s', 'casanova-portal'), casanova_stripe_format_usd((float)$usd_quote_authorized['usd_amount']));
-      if ($deposit_effective && !is_wp_error($usd_quote_deposit) && is_array($usd_quote_deposit)) {
-        $usd_hint .= ' - ' . sprintf(__('Deposito: %s', 'casanova-portal'), casanova_stripe_format_usd((float)$usd_quote_deposit['usd_amount']));
-      }
-    }
-    echo '<span class="casanova-public-choice__hint">' . esc_html($usd_hint) . '</span>';
-    echo '</label>';
-    echo '</div>';
-    echo '<div class="casanova-public-field__hint">' . esc_html__('', 'casanova-portal') . '</div>';
-  } else {
-    echo '<input type="hidden" name="currency" value="EUR" />';
-  }
-
-  $method_label_class = $prefill_currency === 'USD' ? 'casanova-public-section-label casanova-hidden' : 'casanova-public-section-label';
-  echo '<div class="' . esc_attr($method_label_class) . '" id="casanova-method-label">' . esc_html__('Metodo de pago', 'casanova-portal') . '</div>';
-  if ($inespay_enabled) {
-    $card_checked = ($prefill_method === 'bank_transfer') ? '' : 'checked';
-    $bank_checked = ($prefill_method === 'bank_transfer') ? 'checked' : '';
-    $method_wrap_class = $prefill_currency === 'USD' ? 'casanova-hidden' : '';
-    echo '<div id="casanova-method-wrap" class="casanova-public-form__grid casanova-public-choice-group ' . esc_attr($method_wrap_class) . '">';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="method" value="card" ' . $card_checked . ' />' . esc_html__('Tarjeta', 'casanova-portal');
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Pago inmediato y seguro.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="method" value="bank_transfer" ' . $bank_checked . ' />' . esc_html__('Transferencia bancaria online', 'casanova-portal');
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Sin recargo.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '</div>';
-    $note_class = 'casanova-public-page__method-note';
-    if ($prefill_method !== 'bank_transfer') {
-      $note_class .= ' casanova-hidden';
-    }
-    echo '<div id="casanova-method-note" class="' . esc_attr($note_class) . '">' . esc_html($transfer_note) . '</div>';
-  } else {
-    echo '<input type="hidden" name="method" value="card" />';
-    if (!$usd_fixed) {
-      echo '<div class="casanova-public-field__hint">' . esc_html__('Solo tarjeta disponible.', 'casanova-portal') . '</div>';
-    }
-  }
-
-  if ($stripe_only) {
-    echo '<input type="hidden" name="card_brand" value="other" />';
-  } else {
-    $card_brand_wrap_class = (($inespay_enabled && $prefill_method === 'bank_transfer') || $prefill_currency === 'USD') ? 'casanova-hidden' : '';
-    echo '<div id="casanova-card-brand-wrap" class="' . esc_attr($card_brand_wrap_class) . '">';
-    echo '<div class="casanova-public-section-label">' . esc_html__('Tipo de tarjeta', 'casanova-portal') . '</div>';
-    echo '<div class="casanova-public-form__grid casanova-public-choice-group">';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="other" ' . ($prefill_card_brand === 'amex' ? '' : 'checked') . ' />' . esc_html__('Otra tarjeta', 'casanova-portal');
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Visa, Mastercard y similares.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '<label class="casanova-public-choice casanova-public-choice--compact">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="card_brand" value="amex" ' . ($prefill_card_brand === 'amex' ? 'checked' : '') . ' />' . esc_html__('American Express (AMEX)', 'casanova-portal');
-    echo '<span class="casanova-public-choice__hint">' . esc_html__('Selecciona esta opcion si vas a pagar con AMEX.', 'casanova-portal') . '</span>';
-    echo '</label>';
-    echo '</div>';
-    echo '<div class="casanova-public-field__hint">' . esc_html__('Elige el tipo de tarjeta que deseas utilizar.', 'casanova-portal') . '</div>';
-    echo '</div>';
-  }
-
+  // 1. Qué pagar (mismos name/value: mode=deposit|full).
+  echo '<section class="cgp-section" aria-labelledby="cgp-mode-title">';
+  echo '<h2 class="cgp-section__title" id="cgp-mode-title"><span class="cgp-step-num" aria-hidden="true">1</span>' . esc_html__('¿Qué quieres pagar?', 'casanova-portal') . '</h2>';
+  echo '<div class="cgp-options" role="radiogroup" aria-labelledby="cgp-mode-title">';
   if ($deposit_effective) {
-    echo '<label class="casanova-public-choice">';
-    echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="deposit" ' . ($checked_deposit ? 'checked' : '') . ' />';
-    $deposit_amount_html = '<strong>' . esc_html(number_format_i18n($deposit_amount, 2)) . ' EUR</strong>';
-    if ($usd_payment_enabled && !is_wp_error($usd_quote_deposit) && is_array($usd_quote_deposit)) {
-      $usd_class = $prefill_currency === 'USD' ? 'casanova-usd-amount' : 'casanova-usd-amount casanova-hidden';
-      $deposit_amount_html .= ' <span class="' . esc_attr($usd_class) . '">(' . esc_html(casanova_stripe_format_usd((float)$usd_quote_deposit['usd_amount'])) . ')</span>';
+    echo '<div class="cgp-option' . ($checked_deposit ? ' is-checked' : '') . '" data-cgp-option>';
+    echo '<label class="cgp-option__head"><input class="cgp-radio" type="radio" name="mode" value="deposit" ' . ($checked_deposit ? 'checked' : '') . ' />';
+    echo '<span class="cgp-option__text"><span class="cgp-option__row"><span class="cgp-option__title">' . esc_html__('Depósito', 'casanova-portal') . '</span>';
+    echo '<span class="cgp-option__amount"' . $amount_attrs((float)$deposit_amount, $usd_deposit_display) . '>' . esc_html($amount_text((float)$deposit_amount, $usd_deposit_display)) . '</span></span>';
+    if ($deadline_label !== '') {
+      echo '<span class="cgp-option__hint">' . esc_html(sprintf(__('Vence el %s', 'casanova-portal'), $deadline_label)) . '</span>';
     }
-    echo wp_kses_post(
-      sprintf(
-        __('Pagar deposito: %s', 'casanova-portal'),
-        $deposit_amount_html
-      )
-    );
-    echo '</label>';
+    echo '</span></label>';
+    echo '</div>';
   } else {
     echo '<input type="hidden" name="mode" value="full" />';
   }
-
-  echo '<label class="casanova-public-choice">';
-  echo '<input class="casanova-public-choice__control" type="radio" name="mode" value="full" ' . ($checked_full ? 'checked' : '') . ' />';
-  if ($usd_fixed) {
-    $amount_html = '<strong>' . esc_html(casanova_stripe_format_usd($usd_fixed_amount)) . '</strong>';
-  } else {
-    $amount_html = '<strong>' . esc_html(number_format_i18n($authorized, 2)) . ' EUR</strong>';
-  }
-  if (!$usd_fixed && $usd_payment_enabled && !is_wp_error($usd_quote_authorized) && is_array($usd_quote_authorized)) {
-    $usd_class = $prefill_currency === 'USD' ? 'casanova-usd-amount' : 'casanova-usd-amount casanova-hidden';
-    $amount_html .= ' <span class="' . esc_attr($usd_class) . '">(' . esc_html(casanova_stripe_format_usd((float)$usd_quote_authorized['usd_amount'])) . ')</span>';
-  }
-  echo wp_kses_post(
-    sprintf(
-      __('Pagar ahora: %s', 'casanova-portal'),
-      $amount_html
-    )
-  );
-  echo '</label>';
-
-  echo '<div class="casanova-public-page__actions">';
-  echo '<button id="casanova-pay-submit" class="casanova-public-button" type="submit">' . esc_html__('Continuar al pago', 'casanova-portal') . '</button>';
+  echo '<div class="cgp-option' . ($checked_full ? ' is-checked' : '') . '" data-cgp-option>';
+  echo '<label class="cgp-option__head"><input class="cgp-radio" type="radio" name="mode" value="full" ' . ($checked_full ? 'checked' : '') . ' />';
+  echo '<span class="cgp-option__text"><span class="cgp-option__row"><span class="cgp-option__title">' . esc_html__('Importe total', 'casanova-portal') . '</span>';
+  echo '<span class="cgp-option__amount"' . $amount_attrs((float)$authorized, $usd_full_display) . '>' . esc_html($amount_text((float)$authorized, $usd_full_display)) . '</span></span>';
+  echo '<span class="cgp-option__hint">' . esc_html($covers_whole_trip
+    ? __('Tu viaje queda totalmente pagado', 'casanova-portal')
+    : __('Pagas el importe completo de este enlace', 'casanova-portal')) . '</span>';
+  echo '</span></label>';
   echo '</div>';
+  echo '</div>';
+  echo '</section>';
+
+  // 2. Datos del pagador.
+  echo '<section class="cgp-section" aria-labelledby="cgp-details-title">';
+  echo '<h2 class="cgp-section__title" id="cgp-details-title"><span class="cgp-step-num" aria-hidden="true">2</span>' . esc_html__('Tus datos', 'casanova-portal') . '</h2>';
+  echo '<div class="cgp-grid-2">';
+  echo casanova_pay_ui_text_field('cgp-billing-name', 'billing_name', _x('Nombre', 'datos del pagador', 'casanova-portal'), $prefill_name, 'text', 'given-name');
+  echo casanova_pay_ui_text_field('cgp-billing-lastname', 'billing_lastname', __('Apellidos', 'casanova-portal'), $prefill_lastname, 'text', 'family-name');
+  echo '</div>';
+  echo casanova_pay_ui_text_field('cgp-billing-email', 'billing_email', __('Email', 'casanova-portal'), $prefill_email, 'email', 'email');
+  echo casanova_pay_ui_dni_field('cgp-billing-dni', $prefill_dni);
+  echo '</section>';
+
+  // 3. Método de pago (mismos name/value: currency, method, card_brand).
+  echo '<section class="cgp-section" aria-labelledby="casanova-method-label">';
+  echo '<h2 class="cgp-section__title" id="casanova-method-label"><span class="cgp-step-num" aria-hidden="true">3</span>' . esc_html__('Método de pago', 'casanova-portal') . '</h2>';
+  echo casanova_pay_ui_method_block([
+    'prefix' => 'casanova',
+    'currency_mode' => $usd_fixed ? 'fixed_usd' : ($usd_payment_enabled ? 'choice' : 'eur'),
+    'currency_checked' => $prefill_currency,
+    'inespay' => $inespay_enabled,
+    'method_checked' => $prefill_method,
+    'stripe_only' => $stripe_only,
+    'card_brand_checked' => $prefill_card_brand,
+  ]);
+  echo '</section>';
+
+  // Resumen y botón.
+  $outstanding_after = max(0.0, round($pending - (float)$initial_eur, 2));
+  echo '<section class="cgp-card cgp-paycard" aria-label="' . esc_attr__('Resumen del pago', 'casanova-portal') . '">';
+  echo '<div class="cgp-paycard__row"><span class="cgp-paycard__label">' . esc_html__('Pagas ahora', 'casanova-portal') . '</span>';
+  echo '<strong class="cgp-paycard__amount" id="cgp-pay-now" aria-live="polite">' . esc_html($initial_text) . '</strong></div>';
+  if (!$usd_fixed) {
+    echo '<div class="cgp-paycard__row cgp-paycard__row--sub"><span>' . esc_html__('Pendiente tras este pago', 'casanova-portal') . '</span>';
+    echo '<span class="cgp-num" id="cgp-outstanding-after" aria-live="polite">' . esc_html(casanova_pay_ui_money($outstanding_after)) . '</span></div>';
+  }
+  echo '<button id="casanova-pay-submit" class="cgp-btn casanova-public-button" type="submit">' . casanova_pay_ui_icon('lock')
+    . '<span class="cgp-btn__label">' . esc_html(sprintf(__('Pagar %s', 'casanova-portal'), $initial_text)) . '</span></button>';
+  echo '<p class="cgp-paycard__note">' . esc_html__('Completarás el pago en la página segura de nuestro proveedor de pagos.', 'casanova-portal') . '</p>';
+  echo '</section>';
 
   echo '</form>';
-  echo '<style>.casanova-public-button--loading{pointer-events:none;opacity:.75}</style>';
-  echo '<script>(function(){var f=document.getElementById("casanova-pay-form");if(!f)return;f.addEventListener("submit",function(){if(f.dataset.casanovaSubmitting==="1")return;f.dataset.casanovaSubmitting="1";var b=document.getElementById("casanova-pay-submit");if(b){b.textContent=' . wp_json_encode(__('Procesando, redirigiendo al pago...', 'casanova-portal')) . ';b.classList.add("casanova-public-button--loading");b.setAttribute("aria-busy","true");}});})();</script>';
-  // En modo precio fijo no hay selector de moneda ni de metodo, asi que este
-  // script no tendria inputs que observar.
-  if (!$usd_fixed && ($inespay_enabled || $usd_payment_enabled)) {
-    echo '<script>
-      (function(){
-        const note = document.getElementById("casanova-method-note");
-        const methodWrap = document.getElementById("casanova-method-wrap");
-        const methodLabel = document.getElementById("casanova-method-label");
-        const cardBrandWrap = document.getElementById("casanova-card-brand-wrap");
-        const methodInputs = document.querySelectorAll("input[name=method]");
-        const currencyInputs = document.querySelectorAll("input[name=currency]");
-        const usdAmounts = document.querySelectorAll(".casanova-usd-amount");
-        function update(){
-          let method = "card";
-          let currency = "EUR";
-          Array.prototype.forEach.call(methodInputs, function(i){ if (i.checked) method = i.value; });
-          Array.prototype.forEach.call(currencyInputs, function(i){ if (i.checked) currency = i.value; });
-          const usd = currency === "USD";
-          if (usd) {
-            Array.prototype.forEach.call(methodInputs, function(i){ if (i.value === "card") i.checked = true; });
-            method = "card";
-          }
-          if (note) note.classList.toggle("casanova-hidden", usd || method !== "bank_transfer");
-          if (methodWrap) methodWrap.classList.toggle("casanova-hidden", usd);
-          if (methodLabel) methodLabel.classList.toggle("casanova-hidden", usd);
-          if (cardBrandWrap) {
-            cardBrandWrap.classList.toggle("casanova-hidden", usd || method !== "card");
-          }
-          Array.prototype.forEach.call(usdAmounts, function(el){ el.classList.toggle("casanova-hidden", !usd); });
-        }
-        Array.prototype.forEach.call(methodInputs, function(i){ i.addEventListener("change", update); });
-        Array.prototype.forEach.call(currencyInputs, function(i){ i.addEventListener("change", update); });
-        update();
-      })();
-    </script>';
-  }
 
-  echo '<p class="casanova-public-page__footer">'
-    . esc_html__('Si tienes dudas, contacta con la agencia antes de pagar.', 'casanova-portal')
-    . '</p>';
+  echo casanova_pay_ui_footer();
+  echo '</div>';
 
-  echo '</section>';
+  $cgp_amounts = [
+    'pending' => round($pending, 2),
+    'deposit' => $deposit_effective ? ['eur' => round((float)$deposit_amount, 2), 'usd' => $usd_deposit_display] : null,
+    'full' => ['eur' => round((float)$authorized, 2), 'usd' => $usd_full_display],
+    'usdFixed' => (bool)$usd_fixed,
+  ];
+  echo '<script>(function(){'
+    . casanova_pay_ui_js_money()
+    . casanova_pay_ui_js_options()
+    . 'var f = document.getElementById("casanova-pay-form"); if (!f) return;'
+    . 'var data = ' . wp_json_encode($cgp_amounts) . ';'
+    . 'var payTpl = ' . wp_json_encode(__('Pagar %s', 'casanova-portal')) . ';'
+    . 'var payNow = document.getElementById("cgp-pay-now");'
+    . 'var after = document.getElementById("cgp-outstanding-after");'
+    . 'var btn = document.getElementById("casanova-pay-submit");'
+    . 'var btnLabel = btn ? btn.querySelector(".cgp-btn__label") : null;'
+    . 'function currency(){ if (data.usdFixed) return "USD"; var c = f.querySelector("input[name=currency]:checked"); return (c && c.value === "USD") ? "USD" : "EUR"; }'
+    . 'function mode(){ var m = f.querySelector("input[name=mode]:checked"); var v = m ? m.value : "full"; return (v === "deposit" && data.deposit) ? "deposit" : "full"; }'
+    . 'function show(eur, usd, cur){ return (cur === "USD" && usd !== null && usd !== undefined) ? cgpMoney(usd, "USD") : cgpMoney(eur, "EUR"); }'
+    . 'function update(){'
+    .   'if (f.dataset.casanovaSubmitting === "1") return;'
+    .   'var cur = currency(); cgpSyncOptions(f, cur);'
+    .   'var a = data[mode()];'
+    .   'var txt = show(a.eur, a.usd, cur);'
+    .   'if (payNow) payNow.textContent = txt;'
+    .   'if (btnLabel) btnLabel.textContent = payTpl.replace("%s", txt);'
+    .   'if (after) after.textContent = cgpMoney(Math.max(0, Math.round((data.pending - a.eur) * 100) / 100), "EUR");'
+    .   'Array.prototype.forEach.call(f.querySelectorAll("[data-cgp-amount]"), function(el){'
+    .     'var usd = el.hasAttribute("data-usd") ? parseFloat(el.getAttribute("data-usd")) : null;'
+    .     'el.textContent = show(parseFloat(el.getAttribute("data-eur")), usd, cur);'
+    .   '});'
+    . '}'
+    . 'f.addEventListener("change", update);'
+    . 'f.addEventListener("submit", function(){ if (f.dataset.casanovaSubmitting === "1") return; f.dataset.casanovaSubmitting = "1"; if (btn) { if (btnLabel) { btnLabel.textContent = ' . wp_json_encode(__('Procesando, redirigiendo al pago...', 'casanova-portal')) . '; } else { btn.textContent = ' . wp_json_encode(__('Procesando, redirigiendo al pago...', 'casanova-portal')) . '; } btn.classList.add("casanova-public-button--loading"); btn.setAttribute("aria-busy", "true"); } });'
+    . 'update();'
+    . '})();</script>';
+
   casanova_portal_render_public_document_end();
   exit;
 }

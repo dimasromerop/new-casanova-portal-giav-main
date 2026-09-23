@@ -12,6 +12,9 @@ msgstr ""
 "X-Generator: casanova-portal catalog sync\n"
 "X-Domain: casanova-portal\n"
 
+msgid "%1$d de %2$d personas pendientes de pago"
+msgstr ""
+
 msgid "%d adultos"
 msgstr ""
 
@@ -24,10 +27,22 @@ msgstr ""
 msgid "%d Pax"
 msgstr ""
 
+msgid "%d pendientes"
+msgstr ""
+
 msgid "%s años"
 msgstr ""
 
 msgid "%s nuevos"
+msgstr ""
+
+msgid "%s por persona"
+msgstr ""
+
+msgid "%s restante por persona"
+msgstr ""
+
+msgid "(opcional)"
 msgstr ""
 
 msgid "(Opcional, según datos de facturación)"
@@ -102,6 +117,9 @@ msgstr ""
 msgid "Alojamiento en: %s"
 msgstr ""
 
+msgid "American Express se procesa en una pasarela segura aparte."
+msgstr ""
+
 msgid "Apellidos"
 msgstr ""
 
@@ -138,7 +156,13 @@ msgstr ""
 msgid "asistencia Casanova Golf"
 msgstr ""
 
+msgid "Atrás"
+msgstr ""
+
 msgid "Añadir a calendario"
+msgstr ""
+
+msgid "Añadir una persona: %s"
 msgstr ""
 
 msgid "Año"
@@ -240,6 +264,9 @@ msgstr ""
 msgid "Cargando…"
 msgstr ""
 
+msgid "Casanova Golf, S.L. · Madrid · CICMA 2969"
+msgstr ""
+
 msgid "Casanova Portal"
 msgstr ""
 
@@ -291,6 +318,9 @@ msgstr ""
 msgid "Cobro"
 msgstr ""
 
+msgid "Completarás el pago en la página segura de nuestro proveedor de pagos."
+msgstr ""
+
 msgid "Concepto"
 msgstr ""
 
@@ -325,6 +355,9 @@ msgid "Contacto y acceso"
 msgstr ""
 
 msgid "Contenido del portal"
+msgstr ""
+
+msgid "Continuar"
 msgstr ""
 
 msgid "Continuar al pago"
@@ -396,6 +429,13 @@ msgstr ""
 msgid "Dashboard no disponible."
 msgstr ""
 
+msgid "Datos del pagador"
+msgstr ""
+
+msgctxt "datos del pagador"
+msgid "Nombre"
+msgstr ""
+
 msgid "Datos de ubicación"
 msgstr ""
 
@@ -406,6 +446,9 @@ msgid "Debes indicar el DNI/NIF."
 msgstr ""
 
 msgid "Debes indicar email y DNI."
+msgstr ""
+
+msgid "Debes indicar email y documento de identidad o pasaporte."
 msgstr ""
 
 msgid "Debes indicar Nombre y Apellidos."
@@ -483,6 +526,9 @@ msgstr ""
 msgid "DNI"
 msgstr ""
 
+msgid "DNI/NIE, pasaporte o documento nacional"
+msgstr ""
+
 msgid "DNI / NIF"
 msgstr ""
 
@@ -499,6 +545,9 @@ msgid "Documentación disponible"
 msgstr ""
 
 msgid "Documento"
+msgstr ""
+
+msgid "Documento de identidad o pasaporte"
 msgstr ""
 
 msgid "Día %d - %s, %s"
@@ -612,6 +661,9 @@ msgstr ""
 msgid "Enlace para completar tu pago – Expediente %s"
 msgstr ""
 
+msgid "En USD solo se puede pagar con tarjeta."
+msgstr ""
+
 msgid "Enviando…"
 msgstr ""
 
@@ -657,6 +709,9 @@ msgstr ""
 msgid "Estancia por confirmar"
 msgstr ""
 
+msgid "Estas personas quedan totalmente pagadas"
+msgstr ""
+
 msgid "Este bono es válido únicamente si el expediente no tiene pagos pendientes."
 msgstr ""
 
@@ -667,6 +722,9 @@ msgid "Este enlace solo admite %d personas más. Ajusta las cantidades e intént
 msgstr ""
 
 msgid "Este enlace solo admite %s personas más."
+msgstr ""
+
+msgid "Este enlace ya tiene cubiertas todas las personas del grupo."
 msgstr ""
 
 msgid "Este espacio está listo para mostrarte tu próximo viaje de forma clara y tranquila."
@@ -924,6 +982,9 @@ msgstr ""
 msgid "Importe superior al pendiente."
 msgstr ""
 
+msgid "Importe total"
+msgstr ""
+
 msgid "Indica cuántas personas pagas de cada opción"
 msgstr ""
 
@@ -1017,6 +1078,9 @@ msgstr ""
 msgid "Localizador:"
 msgstr ""
 
+msgid "Lo exige la normativa española para emitir tu factura y para el registro oficial de viajeros. Solo lo usamos para estos fines."
+msgstr ""
+
 msgid "Logo"
 msgstr ""
 
@@ -1071,6 +1135,9 @@ msgstr ""
 msgid "Modo solo lectura activo."
 msgstr ""
 
+msgid "Moneda de pago"
+msgstr ""
+
 msgid "Mostrando clientes recientes con portal activo. Usa el buscador para afinar la seleccion o introduce un GIAV ID/DNI exacto para previsualizar clientes sin acceso web."
 msgstr ""
 
@@ -1095,6 +1162,9 @@ msgstr ""
 msgid "Método de pago inválido."
 msgstr ""
 
+msgid "Método y confirmación"
+msgstr ""
+
 msgid "Móvil"
 msgstr ""
 
@@ -1102,6 +1172,9 @@ msgid "Navegación del portal"
 msgstr ""
 
 msgid "Necesitas iniciar sesión para acceder al portal. <a href=\"%s\">Iniciar sesión</a>"
+msgstr ""
+
+msgid "Necesito hacer otro pago: depósito o total"
 msgstr ""
 
 msgid "Nivel"
@@ -1227,7 +1300,13 @@ msgstr ""
 msgid "Nombre, email, usuario, WP ID, GIAV ID o DNI exacto"
 msgstr ""
 
+msgid "Nombres de los viajeros"
+msgstr ""
+
 msgid "Nombres de viajeros (opcional)"
+msgstr ""
+
+msgid "Nombre y apellidos"
 msgstr ""
 
 msgid "Nonce inválido"
@@ -1500,6 +1579,9 @@ msgstr ""
 msgid "Observaciones:"
 msgstr ""
 
+msgid "Opción y personas"
+msgstr ""
+
 msgid "Otros servicios"
 msgstr ""
 
@@ -1507,6 +1589,9 @@ msgid "Otro viaje"
 msgstr ""
 
 msgid "Pagada"
+msgstr ""
+
+msgid "Paga directamente desde tu banco"
 msgstr ""
 
 msgid "Pagado"
@@ -1528,6 +1613,9 @@ msgid "Pagado {amount}"
 msgstr ""
 
 msgid "Pagar"
+msgstr ""
+
+msgid "Pagar %s"
 msgstr ""
 
 msgid "Pagar %s %s"
@@ -1560,10 +1648,19 @@ msgstr ""
 msgid "Pagar pendiente"
 msgstr ""
 
+msgid "Pagar resto %s"
+msgstr ""
+
 msgid "Pagar total"
 msgstr ""
 
 msgid "Pagar total pendiente: %s"
+msgstr ""
+
+msgid "Pagas ahora"
+msgstr ""
+
+msgid "Pagas el importe completo de este enlace"
 msgstr ""
 
 msgid "Pago"
@@ -1656,6 +1753,9 @@ msgstr ""
 msgid "Pasajeros"
 msgstr ""
 
+msgid "Paso %1$s de %2$s"
+msgstr ""
+
 msgid "Pax:"
 msgstr ""
 
@@ -1689,16 +1789,28 @@ msgstr ""
 msgid "Pendiente total: %s"
 msgstr ""
 
+msgid "Pendiente tras este pago"
+msgstr ""
+
 msgid "Pendiente {amount}"
 msgstr ""
 
 msgid "Perfil actualizado."
 msgstr ""
 
+msgid "Persona"
+msgstr ""
+
+msgid "Personas"
+msgstr ""
+
 msgid "Personas incluidas en este pago"
 msgstr ""
 
 msgid "Población"
+msgstr ""
+
+msgid "Porcentaje pagado del viaje"
 msgstr ""
 
 msgid "Por seguridad, el DNI y el email no se pueden modificar desde aquí."
@@ -1717,6 +1829,9 @@ msgid "Previsualizacion de cliente activa. Solo lectura."
 msgstr ""
 
 msgid "Previsualizacion GIAV activa: %s"
+msgstr ""
+
+msgid "Procesando, redirigiendo al pago..."
 msgstr ""
 
 msgid "Programa de fidelización"
@@ -1770,6 +1885,9 @@ msgstr ""
 msgid "Puedes adjuntar como máximo 3 archivos por mensaje."
 msgstr ""
 
+msgid "Puedes combinar opciones en un mismo pago."
+msgstr ""
+
 msgid "Puedes combinar varias opciones en un mismo pago."
 msgstr ""
 
@@ -1794,13 +1912,25 @@ msgstr ""
 msgid "PVP:"
 msgstr ""
 
+msgid "Quedan %1$s de %2$s personas por incluir."
+msgstr ""
+
 msgid "Quedan %s € por abonar"
+msgstr ""
+
+msgid "Quedará pendiente %s"
 msgstr ""
 
 msgid "Quieres acceder a tus documentos y facturas?"
 msgstr ""
 
+msgid "Quiero pagar el resto del viaje"
+msgstr ""
+
 msgid "Quitar"
+msgstr ""
+
+msgid "Quitar una persona: %s"
 msgstr ""
 
 msgid "Qué necesitas hacer ahora"
@@ -1830,6 +1960,12 @@ msgstr ""
 msgid "Reenviar código ({seconds}s)"
 msgstr ""
 
+msgid "Reenviar enlace"
+msgstr ""
+
+msgid "Ref. %s"
+msgstr ""
+
 msgid "Referencia interna #{id}"
 msgstr ""
 
@@ -1854,6 +1990,9 @@ msgstr ""
 msgid "Resumen"
 msgstr ""
 
+msgid "Resumen del pago"
+msgstr ""
+
 msgid "Resumen de pago"
 msgstr ""
 
@@ -1867,6 +2006,21 @@ msgid "Régimen"
 msgstr ""
 
 msgid "Régimen:"
+msgstr ""
+
+msgid "Saldo del viaje"
+msgstr ""
+
+msgctxt "saldo del viaje"
+msgid "Pagado"
+msgstr ""
+
+msgctxt "saldo del viaje"
+msgid "Pendiente"
+msgstr ""
+
+msgctxt "saldo del viaje"
+msgid "Total del viaje"
 msgstr ""
 
 msgid "Salir de vista cliente"
@@ -1992,7 +2146,13 @@ msgstr ""
 msgid "Si tienes dudas, contacta con la agencia antes de pagar."
 msgstr ""
 
+msgid "Si ya hay depósitos pagados, cada persona puede pagar su parte restante desde aquí."
+msgstr ""
+
 msgid "Solicitud no valida."
+msgstr ""
+
+msgid "Solo como referencia para la agencia."
 msgstr ""
 
 msgid "Solo lectura"
@@ -2046,6 +2206,9 @@ msgstr ""
 msgid "Tel."
 msgstr ""
 
+msgid "Te llevaremos a una página donde podrás elegir tu banco y autorizar la transferencia desde tu banca online. Al terminar, volverás automáticamente aquí. Compatible con la mayoría de bancos españoles y portugueses."
+msgstr ""
+
 msgid "Teléfono"
 msgstr ""
 
@@ -2086,6 +2249,9 @@ msgid "Tipo"
 msgstr ""
 
 msgid "Tipo:"
+msgstr ""
+
+msgid "Tipo de pago"
 msgstr ""
 
 msgid "Tipo de pago inválido."
@@ -2134,6 +2300,9 @@ msgid "Total"
 msgstr ""
 
 msgid "Total:"
+msgstr ""
+
+msgid "Total de estas personas"
 msgstr ""
 
 msgid "Total expediente"
@@ -2211,6 +2380,9 @@ msgstr ""
 msgid "Tu próximo viaje está al día. No tienes acciones pendientes ahora mismo."
 msgstr ""
 
+msgid "Tus datos"
+msgstr ""
+
 msgid "Tus Mulligans"
 msgstr ""
 
@@ -2235,6 +2407,9 @@ msgstr ""
 msgid "Tu viaje incluye"
 msgstr ""
 
+msgid "Tu viaje queda totalmente pagado"
+msgstr ""
+
 msgid "Tú"
 msgstr ""
 
@@ -2256,7 +2431,16 @@ msgstr ""
 msgid "Usa el mismo email y DNI/NIF con el que pagaste el depósito y te reenviamos el enlace del pago restante."
 msgstr ""
 
+msgid "Usa el mismo email y documento o pasaporte con el que pagaste el depósito. Si encontramos el depósito, te reenviaremos el enlace para continuar."
+msgstr ""
+
+msgid "Usa esta opción solo si todavía no has pagado el depósito o si quieres pagar el viaje completo."
+msgstr ""
+
 msgid "Usuario"
+msgstr ""
+
+msgid "Vence el %s"
 msgstr ""
 
 msgid "Ver"
@@ -2328,6 +2512,9 @@ msgstr ""
 msgid "Viaje pagado"
 msgstr ""
 
+msgid "Viajero %s"
+msgstr ""
+
 msgid "Viajes"
 msgstr ""
 
@@ -2335,6 +2522,12 @@ msgid "Viajes >"
 msgstr ""
 
 msgid "Vincula tu cuenta"
+msgstr ""
+
+msgid "Visa, Mastercard o American Express"
+msgstr ""
+
+msgid "Visa, Mastercard y otras"
 msgstr ""
 
 msgid "Vista cliente"
@@ -2433,10 +2626,28 @@ msgstr ""
 msgid "· {label}: {value}"
 msgstr ""
 
+msgid "¿Con qué tarjeta vas a pagar?"
+msgstr ""
+
+msgid "¿Cuántas personas incluye este pago?"
+msgstr ""
+
+msgid "¿Cuántas personas pagan el resto?"
+msgstr ""
+
+msgid "¿Dudas antes de pagar?"
+msgstr ""
+
 msgid "¿No tienes acceso a ese email? Escríbenos y lo solucionamos."
 msgstr ""
 
+msgid "¿Qué quieres pagar?"
+msgstr ""
+
 msgid "¿Ya pagaste el depósito? Reenviar enlace para pagar el resto"
+msgstr ""
+
+msgid "¿Ya pagaste el depósito y no ves el pago restante?"
 msgstr ""
 
 msgid "Última actualización hace %s"
