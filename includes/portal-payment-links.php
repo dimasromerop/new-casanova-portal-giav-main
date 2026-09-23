@@ -310,7 +310,7 @@ function casanova_payment_link_sync_after_cobro(object $intent, int $payment_lin
     $ok = casanova_payment_link_mark_paid($payment_link_id, $giav_payment_id, $billing_dni);
     if ($ok && in_array($payment_link_scope, ['slot_base', 'group_base'], true) && function_exists('casanova_payment_links_send_or_create_rest_magic')) {
       $link = function_exists('casanova_payment_link_get') ? casanova_payment_link_get($payment_link_id) : null;
-      if ($link) {
+      if ($link && casanova_payment_links_auto_rest_magic_enabled($link, $intent)) {
         casanova_payment_links_send_or_create_rest_magic($link, $intent);
       }
     }
@@ -601,9 +601,21 @@ function casanova_handle_payment_link_request(string $token): void {
     $deposit_amount = casanova_payments_calc_deposit_amount($deposit_base, $idExpediente);
   }
   $deposit_effective = ($deposit_allowed && ($deposit_amount + 0.01 < $deposit_base));
-  if ($usd_fixed) {
+  if (!$usd_fixed && !empty($meta_prefill['fixed_amount']) && !empty($meta_prefill['offer_full_payment']) && $authorized + 0.01 < $pending) {
+    // Enlace de un hito del plan de cobros del gestor (p.ej. el depósito) con
+    // permiso para pagar todo: la opción "depósito" es el importe del hito y la
+    // opción "total" es el pendiente real del expediente en GIAV. El % global del
+    // portal no interviene.
+    $deposit_allowed = true;
+    $deposit_amount = round($authorized, 2);
+    $authorized = round($pending, 2);
+    $deposit_base = $authorized;
+    $deposit_effective = true;
+  } elseif ($usd_fixed || !empty($meta_prefill['fixed_amount'])) {
     // El precio en dolares se pacto para el importe completo del enlace; un
     // deposito obligaria a repartir esa cifra y dejaria de ser el precio dado.
+    // Lo mismo para enlaces con importe fijado desde el plan de cobros del
+    // gestor (fixed_amount): el importe autorizado ya es el hito a pagar.
     $deposit_allowed = false;
     $deposit_amount = 0.0;
     $deposit_effective = false;
@@ -1471,6 +1483,19 @@ function casanova_render_payment_link_error(string $message, string $retry_url =
  * Tras registrar un cobro de un depósito (scope slot_base|group_base, mode=deposit),
  * genera un magic link one-shot para pagar el resto y lo envía al email capturado.
  */
+/**
+ * ¿Debe el portal enviar por sí solo el "magic link" del resto tras un depósito?
+ * Enlaces gestionados desde otro sistema (p.ej. el gestor de propuestas,
+ * metadata.managed_by = 'gestor') llevan su propio plan de cobros: ahí es ese
+ * sistema quien decide cuándo y cuánto reclamar del resto, no este automatismo.
+ * El reenvío manual (casanova_payment_links_resend_rest_magic) no pasa por aquí.
+ */
+function casanova_payment_links_auto_rest_magic_enabled($link, $intent = null): bool {
+  $meta = casanova_payment_links_read_metadata($link);
+  $enabled = empty($meta['managed_by']) || (string)$meta['managed_by'] === 'portal';
+  return (bool) apply_filters('casanova_payment_links_auto_rest_magic_enabled', $enabled, $link, $meta, $intent);
+}
+
 function casanova_maybe_send_magic_resto_link(int $intent_id): void {
   if ($intent_id <= 0) return;
   if (!function_exists('casanova_payment_intent_get')) return;
@@ -1493,6 +1518,8 @@ function casanova_maybe_send_magic_resto_link(int $intent_id): void {
   if (!function_exists('casanova_payment_link_get')) return;
   $link = casanova_payment_link_get($payment_link_id);
   if (!$link) return;
+
+  if (!casanova_payment_links_auto_rest_magic_enabled($link, $intent)) return;
 
   if (function_exists('casanova_payment_links_send_or_create_rest_magic')) {
     casanova_payment_links_send_or_create_rest_magic($link, $intent);
@@ -1668,11 +1695,11 @@ function casanova_payment_links_deposit_amounts($link, array $meta, $intent = nu
       ? round((float)($intent->amount ?? 0), 2)
       : round((float)($link->amount_authorized ?? 0), 2);
 
-    return [
+    return casanova_payment_links_filter_deposit_amounts([
       'total_due' => round($deposit_total + max(0.0, $remaining), 2),
       'deposit_total' => $deposit_total,
       'remaining' => round(max(0.0, $remaining), 2),
-    ];
+    ], $link, $meta, $intent);
   }
 
   $total_due = (float)($meta['total_due'] ?? 0);
@@ -1690,10 +1717,33 @@ function casanova_payment_links_deposit_amounts($link, array $meta, $intent = nu
     }
   }
 
-  return [
+  return casanova_payment_links_filter_deposit_amounts([
     'total_due' => round($total_due, 2),
     'deposit_total' => round($deposit_total, 2),
     'remaining' => round(max(0.0, $total_due - $deposit_total), 2),
+  ], $link, $meta, $intent);
+}
+
+/**
+ * Punto de extensión: otro sistema (p.ej. el gestor de propuestas con su libro
+ * por pagador) puede corregir total_due / deposit_total / remaining de un
+ * depósito. Los importes de los enlaces de grupo quedan congelados en metadata
+ * al pagar; si el precio de ese pagador cambia después, el filtro es la única
+ * forma de que el enlace del resto refleje el pendiente real.
+ * Se re-normaliza el resultado para que remaining nunca sea negativo.
+ */
+function casanova_payment_links_filter_deposit_amounts(array $amounts, $link, array $meta, $intent = null): array {
+  $filtered = apply_filters('casanova_payment_links_deposit_amounts', $amounts, $link, $meta, $intent);
+  if (!is_array($filtered)) return $amounts;
+  $total_due = round((float)($filtered['total_due'] ?? $amounts['total_due']), 2);
+  $deposit_total = round((float)($filtered['deposit_total'] ?? $amounts['deposit_total']), 2);
+  $remaining = array_key_exists('remaining', $filtered)
+    ? round(max(0.0, (float)$filtered['remaining']), 2)
+    : round(max(0.0, $total_due - $deposit_total), 2);
+  return [
+    'total_due' => $total_due,
+    'deposit_total' => $deposit_total,
+    'remaining' => $remaining,
   ];
 }
 

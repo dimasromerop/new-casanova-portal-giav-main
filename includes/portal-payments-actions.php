@@ -72,6 +72,18 @@ if (!function_exists('casanova_payments_calc_deposit_amount')) {
     if ($amt < $min) $amt = $min;
     if ($amt > $total_pend) $amt = $total_pend;
 
+    /**
+     * Permite que otro sistema (p.ej. el plan de cobros del gestor de propuestas)
+     * decida el depósito de un expediente en lugar del % global/override.
+     *
+     * @param float $amt        Depósito calculado con el % configurado.
+     * @param float $total_pend Base sobre la que se calcula.
+     * @param int   $idExpediente
+     */
+    $amt = (float) apply_filters('casanova_payments_deposit_amount', round($amt, 2), $total_pend, $idExpediente);
+    if ($amt < 0) $amt = 0.0;
+    if ($amt > $total_pend) $amt = $total_pend;
+
     return round($amt, 2);
   }
 }

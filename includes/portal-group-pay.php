@@ -555,12 +555,17 @@ function casanova_handle_group_pay_request(string $token): void {
   $main_available_units = max(0, $group_units_limit - $base_units_used);
 
   $deposit_allowed = function_exists('casanova_payments_is_deposit_allowed') ? casanova_payments_is_deposit_allowed($reservas) : false;
+  $group_meta = casanova_group_pay_token_metadata($group);
+  if (!empty($group_meta['fixed_amount'])) {
+    // Token creado desde un hito del plan de cobros (gestor): el importe por
+    // persona ya ES la cuota a pagar; ofrecer "depósito" volvería a fraccionarla.
+    $deposit_allowed = false;
+  }
   $inespay_enabled = false;
   if (class_exists('Casanova_Inespay_Service')) {
     $cfg = Casanova_Inespay_Service::config();
     $inespay_enabled = !is_wp_error($cfg);
   }
-  $group_meta = casanova_group_pay_token_metadata($group);
   $stripe_only = !empty($group_meta['stripe_only']);
   $offer_usd_payment = !empty($group_meta['offer_usd_payment']) || $stripe_only;
   $disable_bank_transfer = !empty($group_meta['disable_bank_transfer']) || $offer_usd_payment;

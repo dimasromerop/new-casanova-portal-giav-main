@@ -842,6 +842,164 @@ if (!function_exists('casanova_manual_payment_import_save_log')) {
   }
 }
 
+if (!function_exists('casanova_manual_payment_import_prepare')) {
+  /**
+   * Parsea un archivo de cobros (xlsx/csv), construye la previsualización y la
+   * deja en un transient de 30 min ligado al usuario actual. Sin $_FILES ni
+   * redirecciones: lo usan el formulario de admin y otros plugins.
+   *
+   * $context: source_filename (se rellena con $filename si falta), default_expediente,
+   *           id_forma_pago, id_oficina.
+   *
+   * @return array{token:string,preview:array}|WP_Error
+   */
+  function casanova_manual_payment_import_prepare(string $path, string $filename, array $context) {
+    $filename = sanitize_file_name($filename !== '' ? $filename : 'pagos.xlsx');
+    $raw_rows = casanova_manual_payment_import_parse_file($path, $filename);
+    if (is_wp_error($raw_rows)) {
+      return $raw_rows;
+    }
+
+    $context['source_filename'] = (string) ($context['source_filename'] ?? $filename);
+    $preview = casanova_manual_payment_import_build_preview((array) $raw_rows, $context);
+    if (is_wp_error($preview)) {
+      return $preview;
+    }
+
+    $token = wp_generate_password(24, false, false);
+    set_transient(casanova_manual_payment_import_transient_key($token), $preview, 30 * MINUTE_IN_SECONDS);
+
+    return ['token' => $token, 'preview' => $preview];
+  }
+}
+
+if (!function_exists('casanova_manual_payment_import_commit')) {
+  /**
+   * Registra en GIAV (Cobro_POST) las filas seleccionadas de una previsualización
+   * y deja auditoría por fila. Borra el transient al terminar.
+   *
+   * @param string   $batch_token   Token devuelto por _prepare().
+   * @param int[]    $selected_ids  preview_id de las filas a importar.
+   * @return array{registered:int,failed:int,skipped:int,results:array}|WP_Error  'expired' si el token no existe.
+   */
+  function casanova_manual_payment_import_commit(string $batch_token, array $selected_ids) {
+    $batch_token = preg_replace('/[^a-zA-Z0-9]/', '', $batch_token);
+    if ($batch_token === '') {
+      return new WP_Error('expired', 'La previsualización ha caducado.');
+    }
+
+    $preview = get_transient(casanova_manual_payment_import_transient_key($batch_token));
+    if (!is_array($preview)) {
+      return new WP_Error('expired', 'La previsualización ha caducado.');
+    }
+
+    $selected = [];
+    foreach ($selected_ids as $id) {
+      $selected[(int) $id] = true;
+    }
+
+    $registered = 0;
+    $failed = 0;
+    $skipped = 0;
+    $results = [];
+    $rows = is_array($preview['rows'] ?? null) ? $preview['rows'] : [];
+
+    foreach ($rows as $row) {
+      $preview_id = (int) ($row['preview_id'] ?? -1);
+      if (!isset($selected[$preview_id])) {
+        continue;
+      }
+
+      if (empty($row['importable'])) {
+        $skipped++;
+        $msg = (string) ($row['message'] ?? 'Fila no importable.');
+        casanova_manual_payment_import_save_log($row, $batch_token, 'skipped', 0, $msg);
+        $results[$preview_id] = ['status' => 'skipped', 'error' => $msg];
+        continue;
+      }
+
+      if (casanova_manual_payment_import_existing_local_status((string) ($row['row_hash'] ?? '')) === 'registered') {
+        $skipped++;
+        casanova_manual_payment_import_save_log($row, $batch_token, 'skipped', 0, 'Ya fue importado anteriormente.');
+        $results[$preview_id] = ['status' => 'skipped', 'error' => 'Ya fue importado anteriormente.'];
+        continue;
+      }
+
+      casanova_manual_payment_import_save_log($row, $batch_token, 'processing', 0, '');
+
+      if (!function_exists('casanova_payments_record_cobro')) {
+        $failed++;
+        casanova_manual_payment_import_save_log($row, $batch_token, 'failed', 0, 'No esta disponible el helper Cobro_POST.');
+        $results[$preview_id] = ['status' => 'failed', 'error' => 'No esta disponible el helper Cobro_POST.'];
+        continue;
+      }
+
+      $documento = trim((string) ($row['referencia'] ?? ''));
+      if ($documento === '') {
+        $doc_parts = array_filter([
+          'Importacion manual',
+          (string) ($row['banco'] ?? ''),
+          (string) ($row['fecha'] ?? ''),
+        ]);
+        $documento = implode(' - ', $doc_parts);
+      }
+
+      $notas = 'Importacion manual de cobro.';
+      $notas .= ' Archivo: ' . (string) ($row['source_filename'] ?? '');
+      $notas .= ' Fila: ' . (string) ($row['row_number'] ?? '');
+      if (!empty($row['banco'])) $notas .= ' Banco: ' . (string) $row['banco'] . '.';
+      if (!empty($row['forma_pago'])) $notas .= ' Forma: ' . (string) $row['forma_pago'] . '.';
+
+      $intent = (object) [
+        'id' => 0,
+        'id_expediente' => (int) ($row['id_expediente'] ?? 0),
+        'id_cliente' => (int) ($row['id_cliente'] ?? 0),
+        'amount' => (float) ($row['importe'] ?? 0),
+        'currency' => 'EUR',
+        'payload' => null,
+      ];
+
+      $result = casanova_payments_record_cobro($intent, [
+        'billing_dni' => (string) ($row['dni'] ?? ''),
+        'id_forma_pago' => (int) ($row['id_forma_pago'] ?? 0),
+        'id_oficina' => (int) ($row['id_oficina'] ?? 0),
+        'concepto' => (string) ($row['concepto'] ?? ''),
+        'documento' => $documento,
+        'payer_name' => (string) (($row['pagador'] ?? '') ?: 'Importacion manual'),
+        'fecha_cobro' => (string) ($row['fecha'] ?? ''),
+        'notas_internas' => $notas,
+        'create_payer_if_missing' => false,
+      ], 'MANUAL_IMPORT');
+
+      $giav_cobro = is_array($result['giav_cobro'] ?? null) ? $result['giav_cobro'] : [];
+      $cobro_id = (int) ($giav_cobro['cobro_id'] ?? 0);
+      if (!empty($result['inserted']) && $cobro_id > 0) {
+        $registered++;
+        casanova_manual_payment_import_save_log($row, $batch_token, 'registered', $cobro_id, '');
+        $results[$preview_id] = ['status' => 'registered', 'giav_cobro_id' => $cobro_id];
+        continue;
+      }
+
+      $failed++;
+      $error = (string) ($giav_cobro['error'] ?? 'GIAV no confirmo el cobro.');
+      casanova_manual_payment_import_save_log($row, $batch_token, 'failed', 0, $error);
+      $results[$preview_id] = ['status' => 'failed', 'error' => $error];
+    }
+
+    delete_transient(casanova_manual_payment_import_transient_key($batch_token));
+    if ($registered > 0 && function_exists('casanova_cache_buster_bump')) {
+      casanova_cache_buster_bump();
+    }
+
+    return [
+      'registered' => $registered,
+      'failed' => $failed,
+      'skipped' => $skipped,
+      'results' => $results,
+    ];
+  }
+}
+
 add_action('admin_post_casanova_manual_payment_import_preview', function (): void {
   if (!current_user_can('manage_options')) {
     wp_die(__('No autorizado.', 'casanova-portal'), 403);
@@ -853,33 +1011,24 @@ add_action('admin_post_casanova_manual_payment_import_preview', function (): voi
     exit;
   }
 
-  $filename = sanitize_file_name((string) ($_FILES['payments_file']['name'] ?? 'pagos.xlsx'));
-  $raw_rows = casanova_manual_payment_import_parse_file((string) $_FILES['payments_file']['tmp_name'], $filename);
-  if (is_wp_error($raw_rows)) {
+  $prepared = casanova_manual_payment_import_prepare(
+    (string) $_FILES['payments_file']['tmp_name'],
+    (string) ($_FILES['payments_file']['name'] ?? 'pagos.xlsx'),
+    [
+      'default_expediente' => sanitize_text_field((string) ($_POST['default_expediente'] ?? '')),
+      'id_forma_pago' => absint($_POST['id_forma_pago'] ?? 0),
+      'id_oficina' => absint($_POST['id_oficina'] ?? 0),
+    ]
+  );
+
+  if (is_wp_error($prepared)) {
     wp_safe_redirect(casanova_manual_payment_import_admin_url([
-      'manual_import_error' => $raw_rows->get_error_code(),
+      'manual_import_error' => $prepared->get_error_code(),
     ]));
     exit;
   }
 
-  $preview = casanova_manual_payment_import_build_preview((array) $raw_rows, [
-    'source_filename' => $filename,
-    'default_expediente' => sanitize_text_field((string) ($_POST['default_expediente'] ?? '')),
-    'id_forma_pago' => absint($_POST['id_forma_pago'] ?? 0),
-    'id_oficina' => absint($_POST['id_oficina'] ?? 0),
-  ]);
-
-  if (is_wp_error($preview)) {
-    wp_safe_redirect(casanova_manual_payment_import_admin_url([
-      'manual_import_error' => $preview->get_error_code(),
-    ]));
-    exit;
-  }
-
-  $token = wp_generate_password(24, false, false);
-  set_transient(casanova_manual_payment_import_transient_key($token), $preview, 30 * MINUTE_IN_SECONDS);
-
-  wp_safe_redirect(casanova_manual_payment_import_admin_url(['import_token' => $token]));
+  wp_safe_redirect(casanova_manual_payment_import_admin_url(['import_token' => $prepared['token']]));
   exit;
 });
 
@@ -896,110 +1045,24 @@ add_action('admin_post_casanova_manual_payment_import_confirm', function (): voi
 
   check_admin_referer('casanova_manual_payment_import_confirm_' . $token);
 
-  $preview = get_transient(casanova_manual_payment_import_transient_key($token));
-  if (!is_array($preview)) {
-    wp_safe_redirect(casanova_manual_payment_import_admin_url(['manual_import_error' => 'expired']));
-    exit;
-  }
-
   $selected = [];
   if (!empty($_POST['row_ids']) && is_array($_POST['row_ids'])) {
     foreach ($_POST['row_ids'] as $id) {
-      $selected[(int) $id] = true;
+      $selected[] = (int) $id;
     }
   }
 
-  $registered = 0;
-  $failed = 0;
-  $skipped = 0;
-  $rows = is_array($preview['rows'] ?? null) ? $preview['rows'] : [];
-
-  foreach ($rows as $row) {
-    $preview_id = (int) ($row['preview_id'] ?? -1);
-    if (!isset($selected[$preview_id])) {
-      continue;
-    }
-
-    if (empty($row['importable'])) {
-      $skipped++;
-      casanova_manual_payment_import_save_log($row, $token, 'skipped', 0, (string) ($row['message'] ?? 'Fila no importable.'));
-      continue;
-    }
-
-    if (casanova_manual_payment_import_existing_local_status((string) ($row['row_hash'] ?? '')) === 'registered') {
-      $skipped++;
-      casanova_manual_payment_import_save_log($row, $token, 'skipped', 0, 'Ya fue importado anteriormente.');
-      continue;
-    }
-
-    casanova_manual_payment_import_save_log($row, $token, 'processing', 0, '');
-
-    if (!function_exists('casanova_payments_record_cobro')) {
-      $failed++;
-      casanova_manual_payment_import_save_log($row, $token, 'failed', 0, 'No esta disponible el helper Cobro_POST.');
-      continue;
-    }
-
-    $documento = trim((string) ($row['referencia'] ?? ''));
-    if ($documento === '') {
-      $doc_parts = array_filter([
-        'Importacion manual',
-        (string) ($row['banco'] ?? ''),
-        (string) ($row['fecha'] ?? ''),
-      ]);
-      $documento = implode(' - ', $doc_parts);
-    }
-
-    $notas = 'Importacion manual de cobro.';
-    $notas .= ' Archivo: ' . (string) ($row['source_filename'] ?? '');
-    $notas .= ' Fila: ' . (string) ($row['row_number'] ?? '');
-    if (!empty($row['banco'])) $notas .= ' Banco: ' . (string) $row['banco'] . '.';
-    if (!empty($row['forma_pago'])) $notas .= ' Forma: ' . (string) $row['forma_pago'] . '.';
-
-    $intent = (object) [
-      'id' => 0,
-      'id_expediente' => (int) ($row['id_expediente'] ?? 0),
-      'id_cliente' => (int) ($row['id_cliente'] ?? 0),
-      'amount' => (float) ($row['importe'] ?? 0),
-      'currency' => 'EUR',
-      'payload' => null,
-    ];
-
-    $result = casanova_payments_record_cobro($intent, [
-      'billing_dni' => (string) ($row['dni'] ?? ''),
-      'id_forma_pago' => (int) ($row['id_forma_pago'] ?? 0),
-      'id_oficina' => (int) ($row['id_oficina'] ?? 0),
-      'concepto' => (string) ($row['concepto'] ?? ''),
-      'documento' => $documento,
-      'payer_name' => (string) (($row['pagador'] ?? '') ?: 'Importacion manual'),
-      'fecha_cobro' => (string) ($row['fecha'] ?? ''),
-      'notas_internas' => $notas,
-      'create_payer_if_missing' => false,
-    ], 'MANUAL_IMPORT');
-
-    $giav_cobro = is_array($result['giav_cobro'] ?? null) ? $result['giav_cobro'] : [];
-    $cobro_id = (int) ($giav_cobro['cobro_id'] ?? 0);
-    if (!empty($result['inserted']) && $cobro_id > 0) {
-      $registered++;
-      casanova_manual_payment_import_save_log($row, $token, 'registered', $cobro_id, '');
-      continue;
-    }
-
-    $failed++;
-    $error = (string) ($giav_cobro['error'] ?? 'GIAV no confirmo el cobro.');
-    casanova_manual_payment_import_save_log($row, $token, 'failed', 0, $error);
-  }
-
-  delete_transient(casanova_manual_payment_import_transient_key($token));
-  if ($registered > 0 && function_exists('casanova_cache_buster_bump')) {
-    casanova_cache_buster_bump();
+  $outcome = casanova_manual_payment_import_commit($token, $selected);
+  if (is_wp_error($outcome)) {
+    wp_safe_redirect(casanova_manual_payment_import_admin_url(['manual_import_error' => $outcome->get_error_code()]));
+    exit;
   }
 
   wp_safe_redirect(casanova_manual_payment_import_admin_url([
     'manual_import_done' => '1',
-    'registered' => $registered,
-    'failed' => $failed,
-    'skipped' => $skipped,
+    'registered' => (int) $outcome['registered'],
+    'failed' => (int) $outcome['failed'],
+    'skipped' => (int) $outcome['skipped'],
   ]));
   exit;
 });

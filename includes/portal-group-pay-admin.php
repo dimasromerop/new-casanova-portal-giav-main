@@ -27,14 +27,15 @@ function casanova_group_pay_admin_amount(string $raw): float {
   return round(max(0.0, (float)$raw), 2);
 }
 
-function casanova_group_pay_admin_collect_concepts(): array {
-  $labels = isset($_POST['group_concept_label']) && is_array($_POST['group_concept_label'])
-    ? $_POST['group_concept_label']
-    : [];
-  $amounts = isset($_POST['group_concept_amount']) && is_array($_POST['group_concept_amount'])
-    ? $_POST['group_concept_amount']
-    : [];
-
+/**
+ * Normaliza listas paralelas de etiquetas e importes (tal y como llegan de un
+ * formulario o de otro plugin) a conceptos [{id,label,unit_total}] con ids
+ * únicos. Sin dependencia de $_POST.
+ *
+ * @param array $labels   string[]
+ * @param array $amounts  string[]|float[]
+ */
+function casanova_group_pay_normalize_concepts(array $labels, array $amounts): array {
   $concepts = [];
   $seen = [];
   $max = max(count($labels), count($amounts));
@@ -65,6 +66,142 @@ function casanova_group_pay_admin_collect_concepts(): array {
   return $concepts;
 }
 
+function casanova_group_pay_admin_collect_concepts(): array {
+  $labels = isset($_POST['group_concept_label']) && is_array($_POST['group_concept_label'])
+    ? $_POST['group_concept_label']
+    : [];
+  $amounts = isset($_POST['group_concept_amount']) && is_array($_POST['group_concept_amount'])
+    ? $_POST['group_concept_amount']
+    : [];
+
+  return casanova_group_pay_normalize_concepts($labels, $amounts);
+}
+
+if (!function_exists('casanova_group_pay_service_create_token')) {
+  /**
+   * Crea un token reusable de pago de grupo con las mismas reglas que el
+   * formulario de wp-admin, sin depender de $_POST ni de redirecciones. Lo usan
+   * el formulario de admin y otros plugins (gestor de propuestas).
+   *
+   * $input:
+   *  - expediente_ref  string  ID interno o código visible (se resuelve en GIAV), o
+   *  - id_expediente   int     ID interno ya resuelto
+   *  - id_reserva_pq   int     Reserva paquete (opcional)
+   *  - units           int     Nº de unidades/personas previstas (opcional)
+   *  - unit_total      float|string  Importe por unidad. Si vacío, se toma del primer concepto.
+   *  - concepts        array   [{id?,label,unit_total}] ya normalizados, o
+   *  - concept_labels + concept_amounts  listas paralelas a normalizar
+   *  - stripe_only, offer_usd_payment, disable_bank_transfer  bool
+   *  - expires_at      string|null
+   *  - metadata        array   Claves extra que se fusionan en metadata (p.ej. managed_by, proposal_id)
+   *
+   * @return object|WP_Error  Token creado. Códigos de error = 'group_error' del admin:
+   *                          expediente, expediente_lookup, expediente_ambiguous, unit_total, missing, create.
+   */
+  function casanova_group_pay_service_create_token(array $input) {
+    $idReservaPQ = isset($input['id_reserva_pq']) ? absint($input['id_reserva_pq']) : 0;
+    $group_units = isset($input['units']) ? absint($input['units']) : 0;
+    $unit_total = casanova_group_pay_admin_amount((string)($input['unit_total'] ?? ''));
+    $stripe_only = !empty($input['stripe_only']);
+    $offer_usd_payment = !empty($input['offer_usd_payment']) || $stripe_only;
+    $disable_bank_transfer = !empty($input['disable_bank_transfer']);
+    $expires_at = null;
+    if (!empty($input['expires_at'])) {
+      $expires_at = function_exists('casanova_payment_links_parse_expires_at')
+        ? casanova_payment_links_parse_expires_at($input['expires_at'])
+        : null;
+    }
+
+    $concepts = [];
+    if (!empty($input['concepts']) && is_array($input['concepts'])) {
+      $labels = [];
+      $amounts = [];
+      foreach ($input['concepts'] as $c) {
+        $labels[] = (string)($c['label'] ?? '');
+        $amounts[] = (string)($c['unit_total'] ?? '');
+      }
+      $concepts = casanova_group_pay_normalize_concepts($labels, $amounts);
+    } elseif (!empty($input['concept_labels']) || !empty($input['concept_amounts'])) {
+      $concepts = casanova_group_pay_normalize_concepts(
+        is_array($input['concept_labels'] ?? null) ? $input['concept_labels'] : [],
+        is_array($input['concept_amounts'] ?? null) ? $input['concept_amounts'] : []
+      );
+    }
+
+    $idExpediente = isset($input['id_expediente']) ? (int)$input['id_expediente'] : 0;
+    if ($idExpediente <= 0) {
+      if (!function_exists('casanova_payment_links_resolve_expediente_reference')) {
+        return new WP_Error('expediente', __('No se pudo resolver el expediente.', 'casanova-portal'));
+      }
+      $resolved = casanova_payment_links_resolve_expediente_reference(trim((string)($input['expediente_ref'] ?? '')));
+      if (is_wp_error($resolved)) {
+        $code = match ($resolved->get_error_code()) {
+          'payment_link_ambiguous_expediente' => 'expediente_ambiguous',
+          'payment_link_expediente_not_found',
+          'payment_link_missing_expediente_lookup' => 'expediente_lookup',
+          default => 'expediente',
+        };
+        return new WP_Error($code, $resolved->get_error_message());
+      }
+      $idExpediente = (int)($resolved['id'] ?? 0);
+      if ($idExpediente <= 0) {
+        return new WP_Error('expediente_lookup', __('No se pudo resolver el expediente.', 'casanova-portal'));
+      }
+    }
+
+    if ($unit_total <= 0.0 && !empty($concepts)) {
+      $unit_total = (float)($concepts[0]['unit_total'] ?? 0);
+    }
+    if ($unit_total <= 0.0) {
+      return new WP_Error('unit_total', __('Indica el importe por unidad.', 'casanova-portal'));
+    }
+
+    if (!function_exists('casanova_group_tokens_create')) {
+      return new WP_Error('missing', __('Tokens de grupo no disponibles.', 'casanova-portal'));
+    }
+
+    $metadata = [];
+    if (!empty($concepts)) {
+      $metadata['concepts'] = $concepts;
+      $metadata['concepts_enabled'] = true;
+    }
+    if ($group_units > 0) {
+      $metadata['group_units'] = $group_units;
+      $metadata['group_units_source'] = 'manual';
+    }
+    if ($offer_usd_payment) {
+      $metadata['offer_usd_payment'] = true;
+    }
+    if ($stripe_only) {
+      $metadata['stripe_only'] = true;
+    }
+    if ($disable_bank_transfer) {
+      $metadata['disable_bank_transfer'] = true;
+    }
+    if (!empty($input['metadata']) && is_array($input['metadata'])) {
+      $metadata = array_merge($metadata, $input['metadata']);
+    }
+
+    $token = casanova_group_tokens_create([
+      'id_expediente' => $idExpediente,
+      'id_reserva_pq' => ($idReservaPQ > 0 ? $idReservaPQ : null),
+      'unit_total' => $unit_total,
+      'status' => 'active',
+      'expires_at' => $expires_at,
+      'metadata' => !empty($metadata) ? $metadata : null,
+    ]);
+
+    if (is_wp_error($token)) {
+      return new WP_Error('create', $token->get_error_message());
+    }
+    if (!$token) {
+      return new WP_Error('create', __('No se pudo crear el token.', 'casanova-portal'));
+    }
+
+    return $token;
+  }
+}
+
 add_action('admin_post_casanova_create_group_token', function () {
   if (!current_user_can('manage_options')) {
     wp_die(__('No autorizado.', 'casanova-portal'), 403);
@@ -72,97 +209,24 @@ add_action('admin_post_casanova_create_group_token', function () {
 
   check_admin_referer('casanova_create_group_token');
 
-  $expediente_ref = isset($_POST['group_id_expediente']) ? sanitize_text_field((string) $_POST['group_id_expediente']) : '';
-  $idExpediente = 0;
-  $idReservaPQ = isset($_POST['group_id_reserva_pq']) ? absint($_POST['group_id_reserva_pq']) : 0;
-  $group_units = isset($_POST['group_units']) ? absint($_POST['group_units']) : 0;
-  $unit_total_raw = isset($_POST['group_unit_total']) ? (string)$_POST['group_unit_total'] : '';
-  $unit_total = casanova_group_pay_admin_amount($unit_total_raw);
-  $concepts = casanova_group_pay_admin_collect_concepts();
-  $stripe_only = !empty($_POST['group_stripe_only']);
-  $offer_usd_payment = !empty($_POST['group_offer_usd_payment']) || $stripe_only;
-  $disable_bank_transfer = !empty($_POST['group_disable_bank_transfer']);
-  $expires_at = null;
-  $exp_raw = isset($_POST['group_expires_at']) ? sanitize_text_field((string)$_POST['group_expires_at']) : '';
-  if ($exp_raw !== '') {
-    try {
-      $dt = new DateTimeImmutable($exp_raw, wp_timezone());
-      $expires_at = $dt->setTime(23, 59, 59)->format('Y-m-d H:i:s');
-    } catch (Throwable $e) {
-      $expires_at = null;
-    }
-  }
-
   $base = function_exists('casanova_payment_links_admin_base_url')
     ? casanova_payment_links_admin_base_url()
     : admin_url('admin.php?page=casanova-payments-links');
-  if (!function_exists('casanova_payment_links_resolve_expediente_reference')) {
-    wp_safe_redirect(add_query_arg(['group_error' => 'expediente'], $base));
-    exit;
-  }
 
-  $resolved_expediente = casanova_payment_links_resolve_expediente_reference($expediente_ref);
-  if (is_wp_error($resolved_expediente)) {
-    $error_code = match ($resolved_expediente->get_error_code()) {
-      'payment_link_ambiguous_expediente' => 'expediente_ambiguous',
-      'payment_link_expediente_not_found',
-      'payment_link_missing_expediente_lookup' => 'expediente_lookup',
-      default => 'expediente',
-    };
-    wp_safe_redirect(add_query_arg(['group_error' => $error_code], $base));
-    exit;
-  }
-
-  $idExpediente = (int) ($resolved_expediente['id'] ?? 0);
-  if ($idExpediente <= 0) {
-    wp_safe_redirect(add_query_arg(['group_error' => 'expediente_lookup'], $base));
-    exit;
-  }
-
-  if ($unit_total <= 0.0 && !empty($concepts)) {
-    $unit_total = (float)($concepts[0]['unit_total'] ?? 0);
-  }
-
-  if ($unit_total <= 0.0) {
-    wp_safe_redirect(add_query_arg(['group_error' => 'unit_total'], $base));
-    exit;
-  }
-
-  if (!function_exists('casanova_group_tokens_create')) {
-    wp_safe_redirect(add_query_arg(['group_error' => 'missing'], $base));
-    exit;
-  }
-
-  $metadata = [];
-  if (!empty($concepts)) {
-    $metadata['concepts'] = $concepts;
-    $metadata['concepts_enabled'] = true;
-  }
-  if ($group_units > 0) {
-    $metadata['group_units'] = $group_units;
-    $metadata['group_units_source'] = 'manual';
-  }
-  if ($offer_usd_payment) {
-    $metadata['offer_usd_payment'] = true;
-  }
-  if ($stripe_only) {
-    $metadata['stripe_only'] = true;
-  }
-  if ($disable_bank_transfer) {
-    $metadata['disable_bank_transfer'] = true;
-  }
-
-  $token = casanova_group_tokens_create([
-    'id_expediente' => $idExpediente,
-    'id_reserva_pq' => ($idReservaPQ > 0 ? $idReservaPQ : null),
-    'unit_total' => $unit_total,
-    'status' => 'active',
-    'expires_at' => $expires_at,
-    'metadata' => !empty($metadata) ? $metadata : null,
+  $token = casanova_group_pay_service_create_token([
+    'expediente_ref' => isset($_POST['group_id_expediente']) ? sanitize_text_field((string) $_POST['group_id_expediente']) : '',
+    'id_reserva_pq' => isset($_POST['group_id_reserva_pq']) ? absint($_POST['group_id_reserva_pq']) : 0,
+    'units' => isset($_POST['group_units']) ? absint($_POST['group_units']) : 0,
+    'unit_total' => isset($_POST['group_unit_total']) ? (string)$_POST['group_unit_total'] : '',
+    'concepts' => casanova_group_pay_admin_collect_concepts(),
+    'stripe_only' => !empty($_POST['group_stripe_only']),
+    'offer_usd_payment' => !empty($_POST['group_offer_usd_payment']),
+    'disable_bank_transfer' => !empty($_POST['group_disable_bank_transfer']),
+    'expires_at' => isset($_POST['group_expires_at']) ? sanitize_text_field((string)$_POST['group_expires_at']) : '',
   ]);
 
   if (is_wp_error($token)) {
-    wp_safe_redirect(add_query_arg(['group_error' => 'create'], $base));
+    wp_safe_redirect(add_query_arg(['group_error' => $token->get_error_code()], $base));
     exit;
   }
 
