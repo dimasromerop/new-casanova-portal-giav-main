@@ -180,7 +180,7 @@ class Casanova_Payments_Controller {
 
       if (!function_exists('casanova_stripe_is_available') || !casanova_stripe_is_available() || !function_exists('casanova_stripe_usd_quote') || !function_exists('casanova_stripe_create_checkout_session')) {
         return self::error_response(
-          esc_html__('Stripe USD no esta configurado.', 'casanova-portal'),
+          esc_html__('Pago en USD no disponible.', 'casanova-portal'),
           'stripe_unavailable',
           500
         );
@@ -188,7 +188,7 @@ class Casanova_Payments_Controller {
 
       if (!function_exists('casanova_payment_intent_create') || !function_exists('casanova_payment_intent_update')) {
         return self::error_response(
-          esc_html__('No se pudo inicializar el pago (intents).', 'casanova-portal'),
+          esc_html__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'),
           'intent_missing',
           500
         );
@@ -197,7 +197,7 @@ class Casanova_Payments_Controller {
       $quote = casanova_stripe_usd_quote($amount);
       if (is_wp_error($quote)) {
         return self::error_response(
-          $quote->get_error_message(),
+          esc_html__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'),
           'stripe_quote_unavailable',
           500
         );
@@ -248,7 +248,7 @@ class Casanova_Payments_Controller {
       ]);
       if (is_wp_error($intent)) {
         return self::error_response(
-          $intent->get_error_message(),
+          esc_html__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'),
           'intent_create_failed',
           500
         );
@@ -305,7 +305,7 @@ class Casanova_Payments_Controller {
         ]);
 
         return self::error_response(
-          esc_html__('Stripe no devolvio un enlace de pago.', 'casanova-portal'),
+          esc_html__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'),
           'stripe_missing_link',
           502
         );
@@ -349,14 +349,14 @@ class Casanova_Payments_Controller {
     if ($method === 'aplazame') {
       if (!class_exists('Casanova_Aplazame_Service')) {
         return self::error_response(
-          esc_html__('Aplazame no está disponible en el servidor.', 'casanova-portal'),
+          esc_html__('Aplazame no está disponible en este momento.', 'casanova-portal'),
           'aplazame_missing',
           500
         );
       }
       if (!function_exists('casanova_payment_intent_create')) {
         return self::error_response(
-          esc_html__('No se pudo inicializar el pago (intents).', 'casanova-portal'),
+          esc_html__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'),
           'intent_missing',
           500
         );
@@ -365,7 +365,7 @@ class Casanova_Payments_Controller {
       $public_cfg = Casanova_Aplazame_Service::public_checkout_config();
       if (is_wp_error($public_cfg)) {
         return self::error_response(
-          esc_html__('Aplazame no está configurado todavía.', 'casanova-portal'),
+          esc_html__('Aplazame no está disponible en este momento.', 'casanova-portal'),
           'aplazame_config_missing',
           500
         );
@@ -376,7 +376,7 @@ class Casanova_Payments_Controller {
         : (int) get_option('casanova_giav_idformapago_aplazame', 0);
       if ($aplazame_giav_method_id <= 0) {
         return self::error_response(
-          esc_html__('Falta configurar la forma de pago de Aplazame en GIAV.', 'casanova-portal'),
+          esc_html__('Aplazame no está disponible en este momento.', 'casanova-portal'),
           'aplazame_giav_missing',
           500
         );
@@ -428,12 +428,12 @@ class Casanova_Payments_Controller {
           ]),
         ]);
 
-        $status = in_array($checkout_payload->get_error_code(), ['aplazame_missing_email', 'aplazame_missing_address'], true)
-          ? 400
-          : 500;
+        // Solo los errores de datos que el cliente puede corregir llegan tal cual; el resto es interno.
+        $client_fixable = in_array($checkout_payload->get_error_code(), ['aplazame_missing_email', 'aplazame_missing_address'], true);
+        $status = $client_fixable ? 400 : 500;
 
         return self::error_response(
-          $checkout_payload->get_error_message(),
+          $client_fixable ? $checkout_payload->get_error_message() : esc_html__('No se pudo iniciar Aplazame.', 'casanova-portal'),
           'aplazame_payload_invalid',
           $status
         );
@@ -454,7 +454,7 @@ class Casanova_Payments_Controller {
         ]);
 
         return self::error_response(
-          $checkout->get_error_message() ?: esc_html__('No se pudo iniciar Aplazame.', 'casanova-portal'),
+          esc_html__('No se pudo iniciar Aplazame.', 'casanova-portal'),
           'aplazame_init_failed',
           502
         );
@@ -493,14 +493,14 @@ class Casanova_Payments_Controller {
     // 4) Transferencia (Inespay): iniciamos orden y devolvemos su portal URL.
     if (!class_exists('Casanova_Inespay_Service')) {
       return self::error_response(
-        esc_html__('Inespay no está disponible en el servidor.', 'casanova-portal'),
+        esc_html__('El pago por transferencia no está disponible en este momento. Prueba con tarjeta o contacta con la agencia.', 'casanova-portal'),
         'inespay_missing',
         500
       );
     }
     if (!function_exists('casanova_payment_intent_create')) {
       return self::error_response(
-        esc_html__('No se pudo inicializar el pago (intents).', 'casanova-portal'),
+        esc_html__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'),
         'intent_missing',
         500
       );
@@ -643,7 +643,7 @@ class Casanova_Payments_Controller {
         ]),
       ]);
       return self::error_response(
-        esc_html__('Inespay no devolvió un enlace de pago.', 'casanova-portal'),
+        esc_html__('No se pudo iniciar el pago por transferencia.', 'casanova-portal'),
         'inespay_missing_link',
         502
       );

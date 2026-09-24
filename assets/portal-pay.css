@@ -349,3 +349,30 @@ details[open] > .cgp-disclosure__summary::before { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* Aviso de depósito antes del paso "Tipo de pago" */
+.cgp-bar__alt { margin: -6px 0 10px; text-align: right; color: var(--cgp-muted); font-size: 14px; }
+.cgp-summary__note {
+  margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
+  background: var(--cgp-brand-soft); color: #1f4a1d; font-size: 14px; line-height: 1.45;
+}
+.cgp-qty__deposit { color: var(--cgp-brand); font-size: 14px; font-weight: 500; }
+
+/* Ya consta un pago de esta persona (token del gestor): elegir "pagar el resto" o continuar. */
+.cgp-prior-payer {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.cgp-prior-payer .cgp-card__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.cgp-prior-payer .cgp-form {
+  margin: 0;
+}
+
+/* Enlace personal dentro de un grupo: "Tu parte pendiente" + "Pendiente del grupo". */
+.cgp-balance__grid--pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cgp-balance__note { margin: 10px 0 0; font-size: 13px; line-height: 1.45; color: var(--cgp-muted, #5f6359); }

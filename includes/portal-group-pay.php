@@ -446,6 +446,44 @@ function casanova_group_pay_rest_status(int $idExpediente, int $group_id, int $i
   return $out;
 }
 
+/**
+ * Tokens del gestor de propuestas: ¿quien esta pagando ya consta como pagador con cobros
+ * (p. ej. pago su deposito por transferencia o con otro enlace)? El gestor responde por
+ * documento o email. Devuelve los datos para ofrecerle "pagar el resto" en vez de un
+ * segundo deposito, o null si no aplica. Solo lectura: no crea ni cambia nada.
+ */
+function casanova_group_pay_prior_payer_prompt(int $idExpediente, int $group_id): ?array {
+  if (!has_filter('casanova_group_pay_managed_prior_payer')) return null;
+
+  $email = trim(sanitize_email(isset($_POST['billing_email']) ? (string)wp_unslash($_POST['billing_email']) : ''));
+  $dni = strtoupper(preg_replace('/\s+/', '', sanitize_text_field(isset($_POST['billing_dni']) ? (string)wp_unslash($_POST['billing_dni']) : '')));
+  if ($email === '' || !is_email($email) || $dni === '') return null; // la validacion normal lo explicara
+
+  // Misma cuota que "pedir mi enlace": la comprobación revela si esos datos ya pagaron, así
+  // que no puede usarse para probar emails o documentos en bucle. Agotada, se sigue el
+  // flujo normal (el pago no se bloquea, solo se deja de avisar).
+  $ip = isset($_SERVER['REMOTE_ADDR']) ? (string)$_SERVER['REMOTE_ADDR'] : '';
+  $throttle_key = 'cgp_prior_' . md5($ip . '|' . $group_id);
+  $throttle_count = (int)get_transient($throttle_key);
+  if ($throttle_count >= 5) return null;
+  set_transient($throttle_key, $throttle_count + 1, 15 * MINUTE_IN_SECONDS);
+
+  $prior = apply_filters('casanova_group_pay_managed_prior_payer', null, [
+    'id_expediente' => $idExpediente,
+    'group_token_id' => $group_id,
+    'email' => $email,
+    'dni' => $dni,
+  ]);
+  if (!is_array($prior) || empty($prior['has_paid'])) return null;
+
+  return [
+    'email' => $email,
+    'dni' => $dni,
+    'has_pending' => !empty($prior['has_pending']),
+    'exact' => !empty($prior['exact']),
+  ];
+}
+
 function casanova_handle_group_pay_request(string $token): void {
   $token = sanitize_text_field($token);
   if (function_exists('casanova_pay_send_nocache_headers')) {
@@ -487,7 +525,7 @@ function casanova_handle_group_pay_request(string $token): void {
   }
 
   if (!function_exists('casanova_giav_expediente_get')) {
-    casanova_render_payment_link_error(__('Sistema GIAV no disponible.', 'casanova-portal'));
+    casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'));
     exit;
   }
 
@@ -510,7 +548,7 @@ function casanova_handle_group_pay_request(string $token): void {
 
   $ctx = casanova_group_context_from_reservas($idExpediente, $idCliente, $idReservaPQ ?: null);
   if (is_wp_error($ctx)) {
-    casanova_render_payment_link_error($ctx->get_error_message());
+    casanova_render_payment_link_error(__('No se pudo calcular el pago.', 'casanova-portal'));
     exit;
   }
 
@@ -547,6 +585,26 @@ function casanova_handle_group_pay_request(string $token): void {
   $configured_units = casanova_group_pay_token_configured_units($group);
   $allow_related_group_links = ($configured_units <= 0 || $numPax <= 0 || $group_units_limit >= $numPax);
   $base_units_status = casanova_group_pay_base_units_status($idExpediente, (int)$group->id, $idReservaPQ, $allow_related_group_links);
+  // Tokens del gestor: plazas ya pagadas por otra via (transferencia, enlace personal,
+  // otro token) y asignadas a un pagador en el gestor. Cuentan como usadas y, si les
+  // queda pendiente, habilitan "Quiero pagar el resto" (enlace personal por email + DNI).
+  $group_meta_units = casanova_group_pay_token_metadata($group);
+  if ((string)($group_meta_units['managed_by'] ?? '') === 'gestor') {
+    $external_units = apply_filters('casanova_group_pay_external_units', null, [
+      'id_expediente' => $idExpediente,
+      'group_token_id' => (int)$group->id,
+      'id_reserva_pq' => $idReservaPQ,
+      'group_units' => $group_units_limit,
+    ]);
+    if (is_array($external_units)) {
+      $ext_deposit = max(0, (int)($external_units['deposit_units'] ?? 0));
+      $ext_full = max(0, (int)($external_units['full_units'] ?? 0));
+      $base_units_status['base_units'] = (int)$base_units_status['base_units'] + $ext_deposit + $ext_full;
+      $base_units_status['deposit_units'] = (int)$base_units_status['deposit_units'] + $ext_deposit;
+      $base_units_status['full_units'] = (int)$base_units_status['full_units'] + $ext_full;
+      $base_units_status['external_units'] = $ext_deposit + $ext_full;
+    }
+  }
   $base_units_used = max(
     0,
     (int)($base_units_status['base_units'] ?? 0),
@@ -561,6 +619,11 @@ function casanova_handle_group_pay_request(string $token): void {
     // persona ya ES la cuota a pagar; ofrecer "depósito" volvería a fraccionarla.
     $deposit_allowed = false;
   }
+  // Token del gestor de propuestas: cada pagador tiene su propio libro (extras,
+  // descuentos, cambios de precio). El resto no se paga con el formulario anónimo
+  // por opciones, sino con el enlace personal que envía el gestor.
+  $managed_rest = (string)($group_meta['managed_by'] ?? '') === 'gestor'
+    && has_filter('casanova_group_pay_managed_rest_request');
   $inespay_enabled = false;
   if (class_exists('Casanova_Inespay_Service')) {
     $cfg = Casanova_Inespay_Service::config();
@@ -599,6 +662,7 @@ function casanova_handle_group_pay_request(string $token): void {
 
   $flash_msg = '';
   $flash_type = 'info';
+  $prior_payer_prompt = null;
 
   if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $nonce = isset($_POST['_wpnonce']) ? (string)$_POST['_wpnonce'] : '';
@@ -642,6 +706,53 @@ function casanova_handle_group_pay_request(string $token): void {
       }
 
       // Continuamos para renderizar la página con el mensaje.
+    } elseif ($action === 'request_rest_link' && $managed_rest) {
+      $email_raw = isset($_POST['resend_email']) ? (string)$_POST['resend_email'] : '';
+      $request_email = trim(sanitize_email($email_raw));
+      $dni_raw = isset($_POST['resend_dni']) ? (string)$_POST['resend_dni'] : '';
+      $request_dni = strtoupper(preg_replace('/\s+/', '', sanitize_text_field($dni_raw)));
+
+      // Límite de solicitudes por IP y token: cada una puede enviar un email.
+      $ip = isset($_SERVER['REMOTE_ADDR']) ? (string)$_SERVER['REMOTE_ADDR'] : '';
+      $throttle_key = 'cgp_rest_req_' . md5($ip . '|' . (int)$group->id);
+      $throttle_count = (int)get_transient($throttle_key);
+
+      if ($request_email === '' || !is_email($request_email) || $request_dni === '') {
+        $flash_msg = __('Debes indicar email y documento de identidad o pasaporte.', 'casanova-portal');
+        $flash_type = 'error';
+      } elseif ($throttle_count >= 5) {
+        $flash_msg = __('Has hecho demasiadas solicitudes. Inténtalo de nuevo en unos minutos.', 'casanova-portal');
+        $flash_type = 'error';
+      } else {
+        set_transient($throttle_key, $throttle_count + 1, 15 * MINUTE_IN_SECONDS);
+        /**
+         * El gestor de propuestas localiza al pagador por documento + email y, si
+         * tiene pendiente, le envía por email su enlace personal con el importe real.
+         * El resultado solo se registra: al cliente se le responde siempre lo mismo
+         * para no revelar si esos datos existen.
+         */
+        $result = apply_filters('casanova_group_pay_managed_rest_request', null, [
+          'id_expediente' => $idExpediente,
+          'group_token_id' => (int)$group->id,
+          'email' => $request_email,
+          'dni' => $request_dni,
+          'locale' => $public_locale,
+        ]);
+        if (function_exists('casanova_log')) {
+          casanova_log('group_pay', 'managed_rest_request', [
+            'group_token_id' => (int)$group->id,
+            'id_expediente' => $idExpediente,
+            'status' => is_array($result) ? (string)($result['status'] ?? '') : (is_wp_error($result) ? $result->get_error_code() : 'no_handler'),
+          ]);
+        }
+        $flash_msg = __('Si encontramos un pago pendiente con esos datos, te hemos enviado por email tu enlace personal para completarlo.', 'casanova-portal');
+        $flash_type = 'success';
+      }
+
+      // Continuamos para renderizar la página con el mensaje.
+    } elseif ($action === 'pay_rest' && $managed_rest) {
+      casanova_render_payment_link_error(__('Para pagar el resto usa tu enlace personal. Puedes pedirlo desde la página de pago del grupo con tu email y tu documento.', 'casanova-portal'));
+      exit;
     } elseif ($action === 'pay_rest') {
       // Cada persona puede pagar el resto de varios conceptos a la vez (jugador + no jugador).
       $rest_quantities = casanova_group_pay_quantities_from_request($group_concepts, 'rest_concept_qty', $_POST, 'rest_concept_id', 'rest_units');
@@ -827,7 +938,7 @@ function casanova_handle_group_pay_request(string $token): void {
       ]);
 
       if (is_wp_error($link)) {
-        casanova_render_payment_link_error($link->get_error_message());
+        casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
         exit;
       }
 
@@ -837,6 +948,13 @@ function casanova_handle_group_pay_request(string $token): void {
       }
       wp_safe_redirect($url);
       exit;
+    } elseif (
+      $managed_rest
+      && empty($_POST['confirm_additional_payment'])
+      && ($prior_payer_prompt = casanova_group_pay_prior_payer_prompt($idExpediente, (int)$group->id)) !== null
+    ) {
+      // Ya consta un pago de esta persona: no se crea nada y se le ofrece pagar su resto
+      // o, si paga por otras personas, continuar igualmente. Seguimos renderizando la pagina.
     } else {
       if ($main_available_units <= 0) {
         casanova_render_payment_link_error(__('Ya no quedan personas pendientes para este enlace de grupo.', 'casanova-portal'));
@@ -1019,7 +1137,7 @@ function casanova_handle_group_pay_request(string $token): void {
     ]);
 
     if (is_wp_error($link)) {
-      casanova_render_payment_link_error($link->get_error_message());
+      casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
       exit;
     }
 
@@ -1077,7 +1195,8 @@ function casanova_handle_group_pay_request(string $token): void {
   if ($unit_rest_preview <= 0.0 && !empty($concept_public)) {
     $unit_rest_preview = round((float)($concept_public[0]['unit_rest'] ?? 0), 2);
   }
-  $rest_stage_open = isset($_GET['stage']) && sanitize_key((string)$_GET['stage']) === 'rest';
+  $rest_stage_open = (isset($_GET['stage']) && sanitize_key((string)$_GET['stage']) === 'rest')
+    || (is_array($prior_payer_prompt) && !empty($prior_payer_prompt['has_pending']) && empty($prior_payer_prompt['exact']));
 
   $default_amount = $deposit_allowed && $unit_deposit_preview > 0.009 && $unit_deposit_preview + 0.01 < $unit_total
     ? $unit_deposit_preview
@@ -1102,11 +1221,13 @@ function casanova_handle_group_pay_request(string $token): void {
   };
 
   // Fila "− número +" que controla un select existente (queda oculto y es el que se envía).
-  $render_qty_row = function (array $concept, string $select_name, string $data_attr, int $min_qty, int $max_qty, int $default_qty, string $price_line) use ($concept_display_label): string {
+  $render_qty_row = function (array $concept, string $select_name, string $data_attr, int $min_qty, int $max_qty, int $default_qty, string $price_line, string $extra_line = '') use ($concept_display_label): string {
     $cid = trim((string)($concept['id'] ?? ''));
     $label = $concept_display_label($concept);
     $html = '<div class="cgp-qty__row" data-cgp-qty-row>';
-    $html .= '<div class="cgp-qty__info"><span class="cgp-qty__name">' . esc_html($label) . '</span><span class="cgp-qty__price">' . esc_html($price_line) . '</span></div>';
+    $html .= '<div class="cgp-qty__info"><span class="cgp-qty__name">' . esc_html($label) . '</span><span class="cgp-qty__price">' . esc_html($price_line) . '</span>'
+      . ($extra_line !== '' ? '<span class="cgp-qty__deposit">' . esc_html($extra_line) . '</span>' : '')
+      . '</div>';
     $html .= '<div class="cgp-stepper">';
     $html .= '<button type="button" class="cgp-stepper__btn" data-cgp-step="-1" aria-label="' . esc_attr(sprintf(__('Quitar una persona: %s', 'casanova-portal'), $label)) . '">' . casanova_pay_ui_icon('minus') . '</button>';
     $html .= '<output class="cgp-stepper__value" aria-live="polite" aria-label="' . esc_attr($label) . '">' . esc_html((string)$default_qty) . '</output>';
@@ -1154,6 +1275,7 @@ function casanova_handle_group_pay_request(string $token): void {
     $html = '<div class="cgp-bar' . ($inline ? ' cgp-bar--inline' : ' cgp-bar--fixed') . '" data-cgp-bar>';
     $html .= '<div class="cgp-bar__inner">';
     $html .= '<div class="cgp-bar__total"><span>' . esc_html__('Pagas ahora', 'casanova-portal') . '</span><strong class="cgp-num" id="' . esc_attr($pay_now_id) . '" aria-live="polite"></strong></div>';
+    $html .= '<p class="cgp-bar__alt" data-cgp-bar-alt hidden></p>';
     $html .= '<div class="cgp-bar__actions">';
     $html .= '<button class="cgp-btn cgp-btn--ghost" type="button" data-wizard-prev hidden>' . esc_html__('Atrás', 'casanova-portal') . '</button>';
     $html .= '<button class="cgp-btn" type="button" data-wizard-next>' . esc_html__('Continuar', 'casanova-portal') . '</button>';
@@ -1185,11 +1307,77 @@ function casanova_handle_group_pay_request(string $token): void {
     echo '<div class="' . esc_attr($notice_class) . '" role="' . esc_attr($notice_role) . '">' . esc_html($flash_msg) . '</div>';
   }
 
-  $show_resend_magic_fallback = $unit_rest_preview > 0.01 && $rest_available_units <= 0;
+  if (is_array($prior_payer_prompt)) {
+    echo '<div class="cgp-card cgp-prior-payer" role="alert">';
+    echo '<h2 class="cgp-card__title">' . esc_html__('Ya tenemos un pago tuyo para este viaje', 'casanova-portal') . '</h2>';
+    if (!empty($prior_payer_prompt['has_pending']) && empty($prior_payer_prompt['exact'])) {
+      // Solo coincide el email o el documento: el enlace del resto exige los dos.
+      echo '<p class="cgp-disclosure__text">' . esc_html__('Ya consta un pago con alguno de estos datos. Si eres tú y quieres pagar lo que te queda, pide tu enlace en "Quiero pagar el resto del viaje" con el email y el documento que usaste en tu primer pago.', 'casanova-portal') . '</p>';
+    } elseif (!empty($prior_payer_prompt['has_pending'])) {
+      echo '<p class="cgp-disclosure__text">' . esc_html__('Con esos datos ya consta un pago en este viaje. Para pagar lo que te queda no hace falta volver a pagar un depósito: te enviamos por email tu enlace personal con tu importe pendiente actualizado.', 'casanova-portal') . '</p>';
+      echo '<form class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '">';
+      echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
+      echo '<input type="hidden" name="action" value="request_rest_link" />';
+      echo '<input type="hidden" name="resend_email" value="' . esc_attr((string)$prior_payer_prompt['email']) . '" />';
+      echo '<input type="hidden" name="resend_dni" value="' . esc_attr((string)$prior_payer_prompt['dni']) . '" />';
+      echo '<button class="cgp-btn cgp-btn--block" type="submit">' . esc_html__('Enviarme mi enlace para pagar el resto', 'casanova-portal') . '</button>';
+      echo '</form>';
+    } else {
+      echo '<p class="cgp-disclosure__text">' . esc_html__('Con esos datos ya consta tu pago en este viaje.', 'casanova-portal') . '</p>';
+    }
+    // Same submission again, confirmed: the payer is paying for other people.
+    echo '<form class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '">';
+    echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
+    echo '<input type="hidden" name="confirm_additional_payment" value="1" />';
+    foreach ((array)wp_unslash($_POST) as $post_key => $post_value) {
+      $post_key = (string)$post_key;
+      if ($post_key === '_wpnonce' || $post_key === 'confirm_additional_payment') continue;
+      if (is_array($post_value)) {
+        foreach ($post_value as $sub_key => $sub_value) {
+          if (is_array($sub_value)) continue;
+          echo '<input type="hidden" name="' . esc_attr($post_key . '[' . $sub_key . ']') . '" value="' . esc_attr((string)$sub_value) . '" />';
+        }
+        continue;
+      }
+      echo '<input type="hidden" name="' . esc_attr($post_key) . '" value="' . esc_attr((string)$post_value) . '" />';
+    }
+    echo '<button class="cgp-btn cgp-btn--ghost cgp-btn--block" type="submit">' . esc_html__('Es un pago por otras personas: continuar', 'casanova-portal') . '</button>';
+    echo '</form>';
+    echo '</div>';
+  }
 
-  if ($unit_rest_preview > 0.01 && $rest_available_units > 0) {
+  // Tokens del gestor: el resto se pide con email + documento (enlace personal).
+  // Resto de tokens: formulario por opciones, como siempre.
+  $show_managed_rest = $managed_rest && (
+    $rest_stage_open
+    || $rest_available_units > 0
+    || (int)($base_units_status['deposit_units'] ?? 0) > 0
+  );
+  $show_anonymous_rest = !$managed_rest && $unit_rest_preview > 0.01 && $rest_available_units > 0;
+  $show_resend_magic_fallback = !$managed_rest && $unit_rest_preview > 0.01 && $rest_available_units <= 0;
+
+  if ($show_managed_rest) {
     $rest_details_attr = $rest_stage_open ? ' open' : '';
-    echo '<details id="casanova-group-rest" class="cgp-disclosure cgp-disclosure--card" data-cgp-disclosure' . $rest_details_attr . '>';
+    echo '<details id="casanova-group-rest" class="cgp-disclosure cgp-disclosure--card" data-cgp-flow' . $rest_details_attr . '>';
+    echo '<summary class="cgp-disclosure__summary">' . esc_html__('Quiero pagar el resto del viaje', 'casanova-portal') . '</summary>';
+    echo '<div class="cgp-disclosure__body">';
+    echo '<p class="cgp-disclosure__text">' . esc_html__('Te enviaremos por email tu enlace personal con tu importe pendiente actualizado. Indica el email y el documento que usaste al pagar el depósito.', 'casanova-portal') . '</p>';
+    echo '<form class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" autocomplete="off">';
+    echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
+    echo '<input type="hidden" name="action" value="request_rest_link" />';
+    echo '<div class="cgp-field"><label class="cgp-field__label" for="cgp-rest-email">' . esc_html__('Email', 'casanova-portal') . '</label>'
+      . '<input class="cgp-input casanova-public-field__control" id="cgp-rest-email" type="email" name="resend_email" autocomplete="email" required value="" /></div>';
+    echo '<div class="cgp-field"><label class="cgp-field__label" for="cgp-rest-dni">' . esc_html__('Documento de identidad o pasaporte', 'casanova-portal') . '</label>'
+      . '<input class="cgp-input casanova-public-field__control" id="cgp-rest-dni" type="text" name="resend_dni" required value="" /></div>';
+    echo '<button class="cgp-btn cgp-btn--block" type="submit">' . esc_html__('Enviarme mi enlace', 'casanova-portal') . '</button>';
+    echo '</form>';
+    echo '</div>';
+    echo '</details>';
+  }
+
+  if ($show_anonymous_rest) {
+    $rest_details_attr = $rest_stage_open ? ' open' : '';
+    echo '<details id="casanova-group-rest" class="cgp-disclosure cgp-disclosure--card" data-cgp-flow' . $rest_details_attr . '>';
     echo '<summary class="cgp-disclosure__summary">' . esc_html__('Quiero pagar el resto del viaje', 'casanova-portal') . '</summary>';
     echo '<div class="cgp-disclosure__body">';
     echo '<p class="cgp-disclosure__text">' . esc_html__('Si ya hay depósitos pagados, cada persona puede pagar su parte restante desde aquí.', 'casanova-portal') . '</p>';
@@ -1199,7 +1387,7 @@ function casanova_handle_group_pay_request(string $token): void {
     }));
     $rest_has_choices = count($rest_options) > 1;
 
-    echo '<form id="casanova-group-rest-form" class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" novalidate>';
+    echo '<form id="casanova-group-rest-form" class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" novalidate autocomplete="off">';
     echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
     echo '<input type="hidden" name="action" value="pay_rest" />';
     echo '<div class="casanova-group-wizard cgp-wizard">';
@@ -1246,15 +1434,15 @@ function casanova_handle_group_pay_request(string $token): void {
     echo '</div>';
 
     echo $render_summary('casanova-group-rest-summary');
-    echo $render_bar('cgp-rest-pay-now', 'casanova-group-rest-button', sprintf(__('Pagar resto %s', 'casanova-portal'), casanova_pay_ui_money($unit_rest_preview)), true);
+    echo $render_bar('cgp-rest-pay-now', 'casanova-group-rest-button', sprintf(__('Pagar resto %s', 'casanova-portal'), casanova_pay_ui_money($unit_rest_preview)), false);
     echo '</form>';
     echo '</div>';
     echo '</details>';
   }
 
-  $wrap_main_payment_form = $rest_stage_open && $rest_available_units > 0;
+  $wrap_main_payment_form = $rest_stage_open && ($show_managed_rest || $show_anonymous_rest);
   if ($wrap_main_payment_form) {
-    echo '<details class="cgp-disclosure cgp-disclosure--card" data-cgp-disclosure>';
+    echo '<details class="cgp-disclosure cgp-disclosure--card" data-cgp-flow>';
     echo '<summary class="cgp-disclosure__summary">' . esc_html__('Necesito hacer otro pago: depósito o total', 'casanova-portal') . '</summary>';
     echo '<div class="cgp-disclosure__body">';
     echo '<p class="cgp-disclosure__text">' . esc_html__('Usa esta opción solo si todavía no has pagado el depósito o si quieres pagar el viaje completo.', 'casanova-portal') . '</p>';
@@ -1263,7 +1451,9 @@ function casanova_handle_group_pay_request(string $token): void {
   if ($main_available_units > 0) {
     $main_step_order = $deposit_allowed ? 'option,mode,payer,method' : 'option,payer,method';
     $has_concept_choices = count($concept_public) > 1;
-    echo '<form id="casanova-group-pay-form" class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" novalidate data-step-order="' . esc_attr($main_step_order) . '">';
+    // Fuera de un desplegable, el flujo principal se oculta mientras está abierto el del resto.
+    $main_flow_attr = $wrap_main_payment_form ? '' : ' data-cgp-main-flow';
+    echo '<form id="casanova-group-pay-form" class="cgp-form casanova-public-form" method="post" action="' . esc_url($group_page_url) . '" novalidate autocomplete="off" data-step-order="' . esc_attr($main_step_order) . '"' . $main_flow_attr . '>';
     echo '<input type="hidden" name="_wpnonce" value="' . esc_attr($nonce) . '" />';
     echo '<input type="hidden" name="action" value="pay" />';
     if (!$deposit_allowed) {
@@ -1283,8 +1473,14 @@ function casanova_handle_group_pay_request(string $token): void {
       if ($cid === '') continue;
       $min_qty = $has_concept_choices ? 0 : 1;
       $default_qty = $first_option ? 1 : 0;
-      $price_line = sprintf(__('%s por persona', 'casanova-portal'), casanova_pay_ui_money((float)($concept['unit_total'] ?? 0)));
-      echo $render_qty_row($concept, 'concept_qty[' . $cid . ']', 'data-concept-qty', $min_qty, (int)$main_available_units, $default_qty, $price_line);
+      $c_total = (float)($concept['unit_total'] ?? 0);
+      $c_deposit = (float)($concept['unit_deposit'] ?? 0);
+      $price_line = sprintf(__('%s por persona', 'casanova-portal'), casanova_pay_ui_money($c_total));
+      // Si hay depósito, se anuncia ya aquí; se elige en el paso "Tipo de pago".
+      $deposit_line = ($deposit_allowed && $c_deposit > 0.009 && $c_deposit + 0.01 < $c_total)
+        ? sprintf(__('Depósito: %s', 'casanova-portal'), casanova_pay_ui_money($c_deposit))
+        : '';
+      echo $render_qty_row($concept, 'concept_qty[' . $cid . ']', 'data-concept-qty', $min_qty, (int)$main_available_units, $default_qty, $price_line, $deposit_line);
       $first_option = false;
     }
     echo '</div>';
@@ -1383,6 +1579,9 @@ function casanova_handle_group_pay_request(string $token): void {
     'pay' => __('Pagar %s', 'casanova-portal'),
     'payRest' => __('Pagar resto %s', 'casanova-portal'),
     'processing' => __('Procesando, redirigiendo al pago...', 'casanova-portal'),
+    'orDeposit' => __('o solo el depósito: %s', 'casanova-portal'),
+    'orTotal' => __('o el importe total: %s', 'casanova-portal'),
+    'depositNote' => __('Puedes pagar solo el depósito (%s). Lo eliges en el siguiente paso.', 'casanova-portal'),
   ];
 
   echo '<script>
@@ -1654,6 +1853,9 @@ function casanova_handle_group_pay_request(string $token): void {
               + "<p class=\"cgp-progress__text\">" + escapeHtml(tpl(T.step, current + 1, order.length))
               + (title ? " · <strong>" + escapeHtml(title) + "</strong>" : "") + "</p>";
           }
+          const modeIndex = order.indexOf("mode");
+          form.setAttribute("data-cgp-before-mode", (modeIndex > current) ? "1" : "0");
+          if (started) form.dispatchEvent(new Event("cgp:step"));
           prevButtons.forEach(function(b){ b.hidden = current === 0; });
           nextButtons.forEach(function(b){ b.hidden = last; });
           submitButtons.forEach(function(b){ b.hidden = !last; });
@@ -1712,12 +1914,27 @@ function casanova_handle_group_pay_request(string $token): void {
 
       // La barra fija solo existe si su formulario está visible (puede ir dentro de un
       // desplegable cerrado); el contenido deja hueco debajo solo en ese caso.
+      // Depósito/total y "pagar el resto" son flujos excluyentes: solo uno a la vista,
+      // así la barra fija siempre corresponde a lo que el cliente está pagando.
+      function syncFlows(opened){
+        const flows = Array.prototype.slice.call(document.querySelectorAll("details[data-cgp-flow]"));
+        if (opened && opened.open) {
+          flows.forEach(function(d){ if (d !== opened && d.open) d.open = false; });
+        }
+        const rest = document.getElementById("casanova-group-rest");
+        const mainFlow = document.querySelector("[data-cgp-main-flow]");
+        if (mainFlow) mainFlow.hidden = !!(rest && rest.open);
+        syncBarSpace();
+      }
+
       function syncBarSpace(){
         const main = document.querySelector(".cgp-main");
         if (!main) return;
         const bars = document.querySelectorAll(".cgp-bar--fixed");
         let visible = false;
-        Array.prototype.forEach.call(bars, function(bar){ if (bar.getClientRects().length) visible = true; });
+        Array.prototype.forEach.call(bars, function(bar){
+          if (!bar.closest("details:not([open])") && !bar.closest("[hidden]")) visible = true;
+        });
         main.classList.toggle("cgp-has-bar", visible);
       }
 
@@ -1753,8 +1970,8 @@ function casanova_handle_group_pay_request(string $token): void {
           casanovaPaySubmitLoading(restForm, "casanova-group-rest-button");
         }
 
-        Array.prototype.forEach.call(document.querySelectorAll("[data-cgp-disclosure]"), function(d){
-          d.addEventListener("toggle", syncBarSpace);
+        Array.prototype.forEach.call(document.querySelectorAll("details[data-cgp-flow]"), function(d){
+          d.addEventListener("toggle", function(){ syncFlows(d); });
         });
 
         const form = document.getElementById("casanova-group-pay-form");
@@ -1770,6 +1987,7 @@ function casanova_handle_group_pay_request(string $token): void {
           const modeAmountDeposit = form.querySelector(".casanova-group-mode-amount[data-mode=deposit]");
           const modeAmountFull = form.querySelector(".casanova-group-mode-amount[data-mode=full]");
           const depositRemaining = form.querySelector("[data-cgp-deposit-remaining]");
+          const barAlt = form.querySelector("[data-cgp-bar-alt]");
           const refreshSteppers = initSteppers(qtySelects, mainAvailableUnits);
           const renderTravelers = initTravelers(form);
           const multiConcept = qtySelects.length > 1;
@@ -1789,6 +2007,19 @@ function casanova_handle_group_pay_request(string $token): void {
             const isDeposit = (mode === "deposit" && depositEffective);
             const amount = isDeposit ? dep : total;
             renderSummary(summary, cart, "unit_total", currency);
+            // Antes del paso "Tipo de pago" el cliente aún no ha elegido: se le avisa
+            // de que puede pagar solo el depósito.
+            const announceDeposit = depositEffective && form.getAttribute("data-cgp-before-mode") === "1";
+            if (summary && announceDeposit && !isDeposit) {
+              summary.insertAdjacentHTML("beforeend", "<p class=\"cgp-summary__note\">" + escapeHtml(tpl(T.depositNote, displayAmount(dep, currency))) + "</p>");
+            }
+            if (barAlt) {
+              barAlt.hidden = !announceDeposit;
+              // Siempre la otra opción: con "depósito" ya elegido, se recuerda el total.
+              barAlt.textContent = !announceDeposit ? "" : (isDeposit
+                ? tpl(T.orTotal, displayAmount(total, currency))
+                : tpl(T.orDeposit, displayAmount(dep, currency)));
+            }
             if (payNow) payNow.textContent = displayAmount(amount, currency);
             if (btnLabel) btnLabel.textContent = tpl(T.pay, displayAmount(amount, currency));
             if (modeAmountFull) modeAmountFull.textContent = displayAmount(total, currency);
@@ -1805,9 +2036,10 @@ function casanova_handle_group_pay_request(string $token): void {
 
           form.addEventListener("change", update);
           form.addEventListener("input", update);
+          form.addEventListener("cgp:step", update);
           update();
         }
-        syncBarSpace();
+        syncFlows(null);
       }
 
       if (document.readyState === "loading") {

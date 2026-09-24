@@ -162,7 +162,7 @@ if (stripos($raw, '/Fichero.aspx') === 0 || stripos($raw, 'Fichero.aspx') !== fa
 
   $host = casanova_giav_base_host();
   if (!$host) {
-    wp_die('No se pudo resolver el host de GIAV.');
+    wp_die(esc_html__('No se pudo generar el PDF.', 'casanova-portal'));
   }
 
   // Si viene relativo, lo hacemos absoluto
@@ -183,7 +183,7 @@ if (stripos($raw, '/Fichero.aspx') === 0 || stripos($raw, 'Fichero.aspx') !== fa
     } else {
       error_log('[CASANOVA] Error descargando Fichero.aspx: ' . $dl->get_error_message());
     }
-    wp_die('No se pudo descargar el PDF desde GIAV.');
+    wp_die(esc_html__('No se pudo generar el PDF.', 'casanova-portal'));
   }
 
   $bin = (string)$dl['body'];
@@ -200,7 +200,7 @@ if (stripos($raw, '/Fichero.aspx') === 0 || stripos($raw, 'Fichero.aspx') !== fa
   $bin = base64_decode($raw, true);
   if ($bin === false) $bin = base64_decode($raw, false);
   if (!$bin) {
-    wp_die(esc_html__('GIAV no ha devuelto un PDF válido.', 'casanova-portal'));
+    wp_die(esc_html__('No se pudo generar el PDF.', 'casanova-portal'));
   }
 
   $content_type = 'application/pdf';
@@ -219,7 +219,7 @@ if ($pos === false) {
   } else {
     error_log('[CASANOVA] Descarga factura: contenido no PDF.');
   }
-  wp_die(esc_html__('GIAV no ha devuelto un PDF válido.', 'casanova-portal'));
+  wp_die(esc_html__('No se pudo generar el PDF.', 'casanova-portal'));
 }
 if ($pos > 0) $bin = substr($bin, $pos);
 

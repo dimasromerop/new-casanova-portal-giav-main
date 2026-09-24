@@ -308,7 +308,7 @@ return [
   'Rondas de golf por confirmar' => __('Rondas de golf por confirmar', 'casanova-portal'),
   'Rooming' => __('Rooming', 'casanova-portal'),
   'Saldar deuda completa' => __('Saldar deuda completa', 'casanova-portal'),
-  'Se cobrara con tarjeta en USD mediante Stripe. En GIAV se registrara el importe original en EUR.' => __('Se cobrara con tarjeta en USD mediante Stripe. En GIAV se registrara el importe original en EUR.', 'casanova-portal'),
+  'Se cobrará con tarjeta en USD mediante Stripe.' => __('Se cobrará con tarjeta en USD mediante Stripe.', 'casanova-portal'),
   'Se completará cuando quede confirmado' => __('Se completará cuando quede confirmado', 'casanova-portal'),
   'Secciones del viaje' => __('Secciones del viaje', 'casanova-portal'),
   'Segmentos:' => __('Segmentos:', 'casanova-portal'),

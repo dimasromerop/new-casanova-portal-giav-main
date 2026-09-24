@@ -40,20 +40,39 @@ if (!function_exists('casanova_payments_min_fecha_limite')) {
  */
 if (!function_exists('casanova_payments_is_deposit_allowed')) {
   function casanova_payments_is_deposit_allowed(array $reservas): bool {
+    $allowed = true;
     $min = casanova_payments_min_fecha_limite($reservas);
-    if ($min === null) return true;
+    if ($min !== null) {
+      try {
+        // Ahora mismo, con hora real (WP timezone)
+        $now = new DateTimeImmutable(current_time('Y-m-d H:i:s'), wp_timezone());
 
-    try {
-      // Ahora mismo, con hora real (WP timezone)
-      $now = new DateTimeImmutable(current_time('Y-m-d H:i:s'), wp_timezone());
-
-      // Permitimos todo el día de la fecha límite (hasta justo antes del día siguiente)
-      $deadline_end = $min->modify('+1 day');
-    } catch (Throwable $e) {
-      return true; // fail-open
+        // Permitimos todo el día de la fecha límite (hasta justo antes del día siguiente)
+        $deadline_end = $min->modify('+1 day');
+        $allowed = ($now < $deadline_end);
+      } catch (Throwable $e) {
+        $allowed = true; // fail-open
+      }
     }
 
-    return ($now < $deadline_end);
+    $idExpediente = 0;
+    foreach ($reservas as $r) {
+      if (is_object($r) && (int)($r->IdExpediente ?? 0) > 0) {
+        $idExpediente = (int)$r->IdExpediente;
+        break;
+      }
+    }
+
+    /**
+     * Otro sistema puede cerrar el depósito antes (nunca abrirlo si la fecha límite de
+     * GIAV ya pasó): p.ej. el plan de cobros del gestor, cuyo hito "Depósito" vencido
+     * obliga a pagar el total.
+     *
+     * @param bool  $allowed
+     * @param array $reservas
+     * @param int   $idExpediente
+     */
+    return $allowed && (bool) apply_filters('casanova_payments_deposit_allowed', $allowed, $reservas, $idExpediente);
   }
 }
 

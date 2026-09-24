@@ -177,7 +177,11 @@ class Casanova_Profile_Controller {
     }
 
     $r = casanova_giav_cliente_update_direccion($idCliente, $addr);
-    if (is_wp_error($r)) return $r;
+    if (is_wp_error($r)) {
+      // El detalle es técnico (GIAV/config): al log, y al cliente un mensaje genérico.
+      error_log('[CASANOVA] Update address error: ' . $r->get_error_code() . ' ' . $r->get_error_message());
+      return new WP_Error($r->get_error_code(), __('No se pudo actualizar la dirección.', 'casanova-portal'), ['status' => 500]);
+    }
 
     // Devolvemos datos frescos
     return self::get_profile($request);

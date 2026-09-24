@@ -514,7 +514,7 @@ function casanova_handle_payment_link_request(string $token): void {
   }
 
   if (!function_exists('casanova_giav_expediente_get')) {
-    casanova_render_payment_link_error(__('Sistema GIAV no disponible.', 'casanova-portal'));
+    casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'));
     exit;
   }
 
@@ -569,6 +569,23 @@ function casanova_handle_payment_link_request(string $token): void {
   if ($authorized > $pending) {
     $authorized = $pending;
   }
+
+  // Enlace de un pagador dentro de un grupo (plan de cobros del gestor): el pendiente del
+  // expediente es el de TODO el grupo; este enlace nunca puede autorizar más que la parte
+  // de esta persona (dos enlaces vivos no deben poder cobrarle dos veces).
+  $party_summary = apply_filters('casanova_payment_link_party_summary', null, $link, $meta_prefill);
+  $is_group_party = is_array($party_summary) && !empty($party_summary['group']);
+  $party_pending = $is_group_party ? max(0.0, round((float)($party_summary['pending'] ?? 0), 2)) : 0.0;
+  if ($is_group_party) {
+    if ($party_pending <= 0.01) {
+      casanova_render_payment_link_error(__('No hay pagos pendientes.', 'casanova-portal'));
+      exit;
+    }
+    if ($authorized > $party_pending) {
+      $authorized = $party_pending;
+    }
+  }
+  $pending_basis = $is_group_party ? $party_pending : $pending;
 
   // Deposito para links individuales y depositos de grupo ya calculados.
   $deposit_allowed = false;
@@ -856,7 +873,7 @@ function casanova_handle_payment_link_request(string $token): void {
           $quote = casanova_stripe_usd_quote($amount_to_pay);
         }
         if (is_wp_error($quote)) {
-          casanova_render_payment_link_error($quote->get_error_message());
+          casanova_render_payment_link_error(__('El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia.', 'casanova-portal'));
           exit;
         }
         $payload_base['stripe_quote'] = $quote;
@@ -877,12 +894,12 @@ function casanova_handle_payment_link_request(string $token): void {
       ]);
 
       if (is_wp_error($intent)) {
-        casanova_render_payment_link_error($intent->get_error_message());
+        casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
         exit;
       }
 
       if (!is_object($intent) || empty($intent->id) || empty($intent->token)) {
-        casanova_render_payment_link_error(__('Intent invalido.', 'casanova-portal'));
+        casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
         exit;
       }
 
@@ -954,12 +971,12 @@ function casanova_handle_payment_link_request(string $token): void {
       ]);
 
     if (is_wp_error($intent)) {
-      casanova_render_payment_link_error($intent->get_error_message());
+      casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
       exit;
     }
 
     if (!is_object($intent) || empty($intent->id) || empty($intent->token)) {
-      casanova_render_payment_link_error(__('Intent invalido.', 'casanova-portal'));
+      casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
       exit;
     }
 
@@ -1075,12 +1092,12 @@ function casanova_handle_payment_link_request(string $token): void {
     ]);
 
     if (is_wp_error($intent)) {
-      casanova_render_payment_link_error($intent->get_error_message());
+      casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
       exit;
     }
 
     if (!is_object($intent) || empty($intent->id) || empty($intent->token)) {
-      casanova_render_payment_link_error(__('Intent invalido.', 'casanova-portal'));
+      casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
       exit;
     }
 
@@ -1108,7 +1125,7 @@ function casanova_handle_payment_link_request(string $token): void {
       'payment_link_token' => (string)($link->token ?? ''),
     ]);
     if (is_wp_error($redsys_redirect)) {
-      casanova_render_payment_link_error($redsys_redirect->get_error_message());
+      casanova_render_payment_link_error(__('No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia.', 'casanova-portal'));
       exit;
     }
 
@@ -1193,6 +1210,8 @@ function casanova_handle_payment_link_request(string $token): void {
       . ($usd !== null ? ' data-usd="' . esc_attr(number_format((float)$usd, 2, '.', '')) . '"' : '');
   };
   $covers_whole_trip = ($authorized + 0.01 >= $pending);
+  // ($party_summary / $is_group_party / $party_pending / $pending_basis se calculan arriba,
+  // junto al tope del importe autorizado.)
   $initial_eur = $checked_deposit ? $deposit_amount : $authorized;
   $initial_usd = $checked_deposit ? $usd_deposit_display : $usd_full_display;
   $initial_text = $amount_text((float)$initial_eur, $initial_usd);
@@ -1212,7 +1231,13 @@ function casanova_handle_payment_link_request(string $token): void {
   if (!$usd_fixed) {
     $trip_total = round((float)($calc['total_objetivo'] ?? 0), 2);
     echo '<section class="cgp-card cgp-balance" aria-label="' . esc_attr__('Saldo del viaje', 'casanova-portal') . '">';
-    if ($covers_whole_trip && $trip_total > 0.01) {
+    if ($is_group_party) {
+      echo '<dl class="cgp-balance__grid cgp-balance__grid--pair">';
+      echo '<div><dt>' . esc_html__('Tu parte pendiente', 'casanova-portal') . '</dt><dd>' . esc_html(casanova_pay_ui_money($party_pending)) . '</dd></div>';
+      echo '<div><dt>' . esc_html__('Pendiente del grupo', 'casanova-portal') . '</dt><dd>' . esc_html(casanova_pay_ui_money($pending)) . '</dd></div>';
+      echo '</dl>';
+      echo '<p class="cgp-balance__note">' . esc_html__('El pendiente del grupo incluye lo que les queda por pagar al resto de viajeros. Tú solo pagas tu parte.', 'casanova-portal') . '</p>';
+    } elseif ($covers_whole_trip && $trip_total > 0.01) {
       $paid_pct = max(0.0, min(100.0, ($paid_now / $trip_total) * 100));
       echo '<dl class="cgp-balance__grid">';
       echo '<div><dt>' . esc_html_x('Total del viaje', 'saldo del viaje', 'casanova-portal') . '</dt><dd>' . esc_html(casanova_pay_ui_money($trip_total)) . '</dd></div>';
@@ -1286,12 +1311,12 @@ function casanova_handle_payment_link_request(string $token): void {
   echo '</section>';
 
   // Resumen y botón.
-  $outstanding_after = max(0.0, round($pending - (float)$initial_eur, 2));
+  $outstanding_after = max(0.0, round($pending_basis - (float)$initial_eur, 2));
   echo '<section class="cgp-card cgp-paycard" aria-label="' . esc_attr__('Resumen del pago', 'casanova-portal') . '">';
   echo '<div class="cgp-paycard__row"><span class="cgp-paycard__label">' . esc_html__('Pagas ahora', 'casanova-portal') . '</span>';
   echo '<strong class="cgp-paycard__amount" id="cgp-pay-now" aria-live="polite">' . esc_html($initial_text) . '</strong></div>';
   if (!$usd_fixed) {
-    echo '<div class="cgp-paycard__row cgp-paycard__row--sub"><span>' . esc_html__('Pendiente tras este pago', 'casanova-portal') . '</span>';
+    echo '<div class="cgp-paycard__row cgp-paycard__row--sub"><span>' . ($is_group_party ? esc_html__('Tu parte pendiente tras este pago', 'casanova-portal') : esc_html__('Pendiente tras este pago', 'casanova-portal')) . '</span>';
     echo '<span class="cgp-num" id="cgp-outstanding-after" aria-live="polite">' . esc_html(casanova_pay_ui_money($outstanding_after)) . '</span></div>';
   }
   echo '<button id="casanova-pay-submit" class="cgp-btn casanova-public-button" type="submit">' . casanova_pay_ui_icon('lock')
@@ -1305,7 +1330,7 @@ function casanova_handle_payment_link_request(string $token): void {
   echo '</div>';
 
   $cgp_amounts = [
-    'pending' => round($pending, 2),
+    'pending' => round($pending_basis, 2),
     'deposit' => $deposit_effective ? ['eur' => round((float)$deposit_amount, 2), 'usd' => $usd_deposit_display] : null,
     'full' => ['eur' => round((float)$authorized, 2), 'usd' => $usd_full_display],
     'usdFixed' => (bool)$usd_fixed,
@@ -1428,6 +1453,19 @@ function casanova_render_payment_link_error(string $message, string $retry_url =
 function casanova_payment_links_auto_rest_magic_enabled($link, $intent = null): bool {
   $meta = casanova_payment_links_read_metadata($link);
   $enabled = empty($meta['managed_by']) || (string)$meta['managed_by'] === 'portal';
+  // Pago hecho desde un token de grupo del gestor: el enlace aún no lleva managed_by
+  // (el gestor lo marca después, al oír casanova_payment_cobro_recorded), pero el token
+  // sí. El gestor ya envía el enlace personal del resto con el importe real; el magic
+  // link llevaría a la página del token, que pediría otra vez email y documento.
+  if ($enabled && (int)($meta['group_token_id'] ?? 0) > 0 && function_exists('casanova_group_token_get_by_id')) {
+    $group_token = casanova_group_token_get_by_id((int)$meta['group_token_id']);
+    if ($group_token && function_exists('casanova_group_pay_token_metadata')) {
+      $token_meta = casanova_group_pay_token_metadata($group_token);
+      if ((string)($token_meta['managed_by'] ?? '') === 'gestor') {
+        $enabled = false;
+      }
+    }
+  }
   return (bool) apply_filters('casanova_payment_links_auto_rest_magic_enabled', $enabled, $link, $meta, $intent);
 }
 

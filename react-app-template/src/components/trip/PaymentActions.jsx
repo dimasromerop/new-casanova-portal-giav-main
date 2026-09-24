@@ -271,7 +271,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
   })();
   const transferNote = tt("El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.");
   const aplazameNote = tt("Aplazame te permite fraccionar el pago del viaje. Al continuar se abrira su checkout seguro para completar la financiacion en cuotas.");
-  const usdNote = tt("Se cobrara con tarjeta en USD mediante Stripe. En GIAV se registrara el importe original en EUR.");
+  const usdNote = tt("Se cobrará con tarjeta en USD mediante Stripe.");
 
   // Resolved amount and label for CTA
   const resolvedType = payType || (balanceAllowed ? "balance" : "deposit");

@@ -52,7 +52,7 @@ function casanova_portal_linking_missing_identifier_message(string $identifier_t
   $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
 
   if ($identifier_type === 'giav_id') {
-    return __('Introduce tu ID de GIAV.', 'casanova-portal');
+    return __('Introduce tu ID de Usuario.', 'casanova-portal');
   }
 
   return __('Introduce tu DNI.', 'casanova-portal');
@@ -62,7 +62,7 @@ function casanova_portal_linking_invalid_identifier_message(string $identifier_t
   $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
 
   if ($identifier_type === 'giav_id') {
-    return __('Introduce un ID de GIAV válido.', 'casanova-portal');
+    return __('Introduce un ID de Usuario válido.', 'casanova-portal');
   }
 
   return __('DNI inválido.', 'casanova-portal');
@@ -72,7 +72,7 @@ function casanova_portal_linking_not_found_message(string $identifier_type): str
   $identifier_type = casanova_portal_linking_normalize_identifier_type($identifier_type);
 
   if ($identifier_type === 'giav_id') {
-    return __('No encontramos ningún cliente con ese ID de GIAV. Si ya has viajado con nosotros, escríbenos y lo revisamos.', 'casanova-portal');
+    return __('No encontramos ningún cliente con ese ID de Usuario. Si ya has viajado con nosotros, escríbenos y lo revisamos.', 'casanova-portal');
   }
 
   return __('No encontramos ninguna reserva asociada a ese DNI. Si ya has viajado con nosotros, escríbenos y lo revisamos.', 'casanova-portal');

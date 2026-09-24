@@ -129,10 +129,7 @@ msgstr ""
 msgid "Aplazame no esta configurado correctamente."
 msgstr ""
 
-msgid "Aplazame no está configurado todavía."
-msgstr ""
-
-msgid "Aplazame no está disponible en el servidor."
+msgid "Aplazame no está disponible en este momento."
 msgstr ""
 
 msgid "Aplazame requiere direccion completa. Actualiza calle, codigo postal, poblacion y provincia en tu perfil antes de continuar."
@@ -324,6 +321,12 @@ msgstr ""
 msgid "Concepto"
 msgstr ""
 
+msgid "Con esos datos ya consta tu pago en este viaje."
+msgstr ""
+
+msgid "Con esos datos ya consta un pago en este viaje. Para pagar lo que te queda no hace falta volver a pagar un depósito: te enviamos por email tu enlace personal con tu importe pendiente actualizado."
+msgstr ""
+
 msgid "Config Redsys incompleta"
 msgstr ""
 
@@ -481,6 +484,9 @@ msgstr ""
 msgid "Depósito (Redsys %s)"
 msgstr ""
 
+msgid "Depósito: %s"
+msgstr ""
+
 msgid "Depósito no disponible"
 msgstr ""
 
@@ -610,6 +616,15 @@ msgstr ""
 msgid "El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses."
 msgstr ""
 
+msgid "El pago por transferencia no está disponible en este momento. Prueba con tarjeta o contacta con la agencia."
+msgstr ""
+
+msgid "El pendiente del grupo incluye lo que les queda por pagar al resto de viajeros. Tú solo pagas tu parte."
+msgstr ""
+
+msgid "El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia."
+msgstr ""
+
 msgid "El usuario seleccionado no tiene portal de cliente."
 msgstr ""
 
@@ -671,6 +686,12 @@ msgid "Enviar código"
 msgstr ""
 
 msgid "Enviar enlace del resto"
+msgstr ""
+
+msgid "Enviarme mi enlace"
+msgstr ""
+
+msgid "Enviarme mi enlace para pagar el resto"
 msgstr ""
 
 msgid "Enviar mensaje"
@@ -739,6 +760,9 @@ msgstr ""
 msgid "Estás viendo el portal como: %s"
 msgstr ""
 
+msgid "Es un pago por otras personas: continuar"
+msgstr ""
+
 msgid "Expediente"
 msgstr ""
 
@@ -794,9 +818,6 @@ msgid "Facturas"
 msgstr ""
 
 msgid "Falta CASANOVA_GIAV_APIKEY."
-msgstr ""
-
-msgid "Falta configurar la forma de pago de Aplazame en GIAV."
 msgstr ""
 
 msgid "Falta el expediente del mensaje."
@@ -856,9 +877,6 @@ msgstr ""
 msgid "GIAV #%d"
 msgstr ""
 
-msgid "GIAV no ha devuelto un PDF válido."
-msgstr ""
-
 msgid "Golf"
 msgstr ""
 
@@ -884,6 +902,9 @@ msgid "Hace %s"
 msgstr ""
 
 msgid "ha enviado un mensaje desde el portal de cliente."
+msgstr ""
+
+msgid "Has hecho demasiadas solicitudes. Inténtalo de nuevo en unos minutos."
 msgstr ""
 
 msgid "Has hecho demasiados intentos. Espera unos minutos y vuelve a intentarlo."
@@ -991,13 +1012,7 @@ msgstr ""
 msgid "Inespay no devolvio un enlace de pago."
 msgstr ""
 
-msgid "Inespay no devolvió un enlace de pago."
-msgstr ""
-
 msgid "Inespay no disponible."
-msgstr ""
-
-msgid "Inespay no está disponible en el servidor."
 msgstr ""
 
 msgid "Info"
@@ -1027,7 +1042,13 @@ msgstr ""
 msgid "Introduce tu DNI. Te enviaremos un código al email asociado a tu reserva para verificar que eres el titular."
 msgstr ""
 
+msgid "Introduce tu ID de Usuario."
+msgstr ""
+
 msgid "Introduce un ID de expediente para ver la conversación completa y responder desde WordPress."
+msgstr ""
+
+msgid "Introduce un ID de Usuario válido."
 msgstr ""
 
 msgid "Inténtalo de nuevo más tarde."
@@ -1205,6 +1226,9 @@ msgid "No encontrado. Contacta con la agencia."
 msgstr ""
 
 msgid "No encontramos ninguna reserva asociada a ese DNI. Si ya has viajado con nosotros, escríbenos y lo revisamos."
+msgstr ""
+
+msgid "No encontramos ningún cliente con ese ID de Usuario. Si ya has viajado con nosotros, escríbenos y lo revisamos."
 msgstr ""
 
 msgid "No encontramos un código activo. Solicita uno nuevo."
@@ -1465,13 +1489,13 @@ msgstr ""
 msgid "No se pudo identificar al usuario."
 msgstr ""
 
-msgid "No se pudo inicializar el pago (intents)."
-msgstr ""
-
 msgid "No se pudo iniciar Aplazame."
 msgstr ""
 
 msgid "No se pudo iniciar el pago."
+msgstr ""
+
+msgid "No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia."
 msgstr ""
 
 msgid "No se pudo iniciar el pago por transferencia."
@@ -1579,7 +1603,13 @@ msgstr ""
 msgid "Observaciones:"
 msgstr ""
 
+msgid "o el importe total: %s"
+msgstr ""
+
 msgid "Opción y personas"
+msgstr ""
+
+msgid "o solo el depósito: %s"
 msgstr ""
 
 msgid "Otros servicios"
@@ -1687,6 +1717,9 @@ msgstr ""
 msgid "Pago desactivado en vista cliente"
 msgstr ""
 
+msgid "Pago en USD no disponible."
+msgstr ""
+
 msgid "Pago inmediato y seguro"
 msgstr ""
 
@@ -1744,6 +1777,9 @@ msgstr ""
 msgid "Para confirmar tu viaje, puedes pagar un depósito de %s"
 msgstr ""
 
+msgid "Para pagar el resto usa tu enlace personal. Puedes pedirlo desde la página de pago del grupo con tu email y tu documento."
+msgstr ""
+
 msgid "Pasajero"
 msgstr ""
 
@@ -1778,6 +1814,9 @@ msgid "Pendiente: %s"
 msgstr ""
 
 msgid "Pendiente: {amount}"
+msgstr ""
+
+msgid "Pendiente del grupo"
 msgstr ""
 
 msgid "Pendiente de pago: %s"
@@ -1892,6 +1931,9 @@ msgid "Puedes combinar varias opciones en un mismo pago."
 msgstr ""
 
 msgid "Puedes consultar los datos del cliente, pero no modificarlos desde esta vista."
+msgstr ""
+
+msgid "Puedes pagar solo el depósito (%s). Lo eliges en el siguiente paso."
 msgstr ""
 
 msgid "Puedes revisar el estado de pagos, pero no iniciar cobros desde esta vista."
@@ -2029,6 +2071,9 @@ msgstr ""
 msgid "Secciones del viaje"
 msgstr ""
 
+msgid "Se cobrará con tarjeta en USD mediante Stripe."
+msgstr ""
+
 msgid "Se completará cuando quede confirmado"
 msgstr ""
 
@@ -2072,6 +2117,9 @@ msgid "Servicios incluidos"
 msgstr ""
 
 msgid "Servicios y planificación del viaje"
+msgstr ""
+
+msgid "Si encontramos un pago pendiente con esos datos, te hemos enviado por email tu enlace personal para completarlo."
 msgstr ""
 
 msgid "Sin datos"
@@ -2137,9 +2185,6 @@ msgstr ""
 msgid "Sistema de reservas no disponible"
 msgstr ""
 
-msgid "Sistema GIAV no disponible."
-msgstr ""
-
 msgid "Si te escribimos, lo verás aquí al momento."
 msgstr ""
 
@@ -2186,6 +2231,9 @@ msgid "Tarjetas"
 msgstr ""
 
 msgid "Te acompañaremos desde aquí"
+msgstr ""
+
+msgid "Te enviaremos por email tu enlace personal con tu importe pendiente actualizado. Indica el email y el documento que usaste al pagar el depósito."
 msgstr ""
 
 msgid "Te faltan <strong>%1$s</strong> para subir a <strong>%2$s</strong>."
@@ -2369,6 +2417,12 @@ msgid "Tu nivel actual, tus puntos y el progreso hacia el siguiente nivel."
 msgstr ""
 
 msgid "Tu nivel actual y los puntos que ya has acumulado."
+msgstr ""
+
+msgid "Tu parte pendiente"
+msgstr ""
+
+msgid "Tu parte pendiente tras este pago"
 msgstr ""
 
 msgid "Tu programa Mulligans"
@@ -2581,6 +2635,9 @@ msgstr ""
 msgid "WP #%d"
 msgstr ""
 
+msgid "Ya consta un pago con alguno de estos datos. Si eres tú y quieres pagar lo que te queda, pide tu enlace en \"Quiero pagar el resto del viaje\" con el email y el documento que usaste en tu primer pago."
+msgstr ""
+
 msgid "Ya estás en el nivel más alto del programa."
 msgstr ""
 
@@ -2588,6 +2645,9 @@ msgid "Ya hemos registrado tu depósito. Cuando quieras, puedes completar el res
 msgstr ""
 
 msgid "Ya puedes acceder a tu documentación (bonos y facturas) desde el portal:"
+msgstr ""
+
+msgid "Ya tenemos un pago tuyo para este viaje"
 msgstr ""
 
 msgid "Ya tienes documentación disponible para este viaje."
