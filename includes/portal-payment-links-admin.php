@@ -107,6 +107,9 @@ if (!function_exists('casanova_payment_links_service_create_individual')) {
     $stripe_only = !empty($input['stripe_only']);
     $offer_usd_payment = !empty($input['offer_usd_payment']) || $stripe_only;
     $disable_bank_transfer = !empty($input['disable_bank_transfer']);
+    // Bono regalo / ampliacion: la pagina de pago no ensena el total del viaje ni lo ya
+    // pagado, solo el importe de este enlace (quien amplia no debe ver el valor del regalo).
+    $hide_totals = !empty($input['hide_totals']);
 
     // Precio pactado directamente en dolares: Stripe cobra esta cifra exacta y el
     // importe en EUR pasa a ser solo el que se imputa al expediente en GIAV.
@@ -211,6 +214,9 @@ if (!function_exists('casanova_payment_links_service_create_individual')) {
     if ($expediente_lookup !== null) {
       $metadata['expediente_lookup'] = $expediente_lookup;
     }
+    if ($hide_totals) {
+      $metadata['hide_totals'] = true;
+    }
     if (!empty($input['metadata']) && is_array($input['metadata'])) {
       $metadata = array_merge($metadata, $input['metadata']);
     }
@@ -253,6 +259,7 @@ add_action('admin_post_casanova_create_payment_link', function () {
     'stripe_only' => !empty($_POST['stripe_only']),
     'offer_usd_payment' => !empty($_POST['offer_usd_payment']),
     'disable_bank_transfer' => !empty($_POST['disable_bank_transfer']),
+    'hide_totals' => !empty($_POST['hide_totals']),
     'usd_fixed_amount' => isset($_POST['usd_fixed_amount']) ? trim((string) $_POST['usd_fixed_amount']) : '',
     'created_by' => 'admin',
     'source' => 'admin_screen',

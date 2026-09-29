@@ -2727,3 +2727,6 @@ msgstr ""
 
 msgid "← Volver a mis expedientes"
 msgstr ""
+#: includes/portal-payment-links.php
+msgid "Importe a pagar"
+msgstr ""

@@ -1476,6 +1476,10 @@ function casanova_payments_render_settings_page(): void {
     echo '<td><label for="stripe_only"><input name="stripe_only" id="stripe_only" type="checkbox" value="1" /> Procesar todos los pagos por Stripe (tarjeta internacional)</label>';
     echo '<p class="description">Recomendado para clientes extranjeros. Todos los pagos van por Stripe (tambien en EUR), sin Redsys ni transferencia. Al cliente solo se le pide elegir moneda (EUR/USD) y no se le pregunta el tipo de tarjeta. Implica ofrecer USD.</p></td></tr>';
 
+    echo '<tr><th scope="row">Bono regalo</th>';
+    echo '<td><label for="hide_totals"><input name="hide_totals" id="hide_totals" type="checkbox" value="1" /> Ocultar el total del viaje y lo ya pagado</label>';
+    echo '<p class="description">Para ampliaciones de un bono regalo: quien paga solo ve el importe de este enlace, no el valor del bono ni lo pagado. Indica el importe a cobrar; no se ofrece deposito ni pagar el resto.</p></td></tr>';
+
     echo '<tr><th scope="row"><label for="expires_at">Caduca el (opcional)</label></th>';
     echo '<td><input name="expires_at" id="expires_at" type="date" class="regular-text" />';
     echo '<p class="description">Se aplica a fin de dia (23:59:59).</p></td></tr>';

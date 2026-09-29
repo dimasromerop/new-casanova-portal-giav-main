@@ -2727,3 +2727,6 @@ msgstr "← Viajes"
 
 msgid "← Volver a mis expedientes"
 msgstr "← Volver a mis expedientes"
+
+msgid "Importe a pagar"
+msgstr "Importe a pagar"

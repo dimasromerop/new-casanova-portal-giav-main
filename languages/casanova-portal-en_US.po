@@ -2727,3 +2727,6 @@ msgstr "← Trips"
 
 msgid "← Volver a mis expedientes"
 msgstr "← Back to my bookings"
+
+msgid "Importe a pagar"
+msgstr "Amount to pay"

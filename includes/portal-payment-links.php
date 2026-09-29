@@ -483,6 +483,9 @@ function casanova_handle_payment_link_request(string $token): void {
   $stripe_only = !empty($meta_prefill['stripe_only']);
   $offer_usd_payment = !empty($meta_prefill['offer_usd_payment']) || $stripe_only;
   $disable_bank_transfer = !empty($meta_prefill['disable_bank_transfer']) || $offer_usd_payment;
+  // Bono regalo / ampliacion: no se ensena el total del viaje, lo pagado ni el pendiente;
+  // solo el importe de este enlace, sin deposito ni opcion de pagar el resto.
+  $hide_totals = !empty($meta_prefill['hide_totals']);
   // Precio pactado en dolares: el USD es el importe de partida y no se convierte.
   $usd_fixed = !empty($meta_prefill['usd_fixed']);
   $usd_fixed_amount = round((float)($meta_prefill['usd_fixed_amount'] ?? 0), 2);
@@ -628,7 +631,7 @@ function casanova_handle_payment_link_request(string $token): void {
   // Hito del plan de cobros del gestor con opción de pagar todo: la elección
   // "depósito" (= el hito) se respeta aunque el expediente ya tenga cobros.
   $milestone_choice = false;
-  if (!$usd_fixed && !empty($meta_prefill['fixed_amount']) && !empty($meta_prefill['offer_full_payment']) && $authorized + 0.01 < $pending) {
+  if (!$usd_fixed && !$hide_totals && !empty($meta_prefill['fixed_amount']) && !empty($meta_prefill['offer_full_payment']) && $authorized + 0.01 < $pending) {
     // Enlace de un hito del plan de cobros del gestor (p.ej. el depósito) con
     // permiso para pagar todo: la opción "depósito" es el importe del hito y la
     // opción "total" es el pendiente real del expediente en GIAV. El % global del
@@ -639,7 +642,7 @@ function casanova_handle_payment_link_request(string $token): void {
     $authorized = round($pending, 2);
     $deposit_base = $authorized;
     $deposit_effective = true;
-  } elseif ($usd_fixed || !empty($meta_prefill['fixed_amount'])) {
+  } elseif ($usd_fixed || $hide_totals || !empty($meta_prefill['fixed_amount'])) {
     // El precio en dolares se pacto para el importe completo del enlace; un
     // deposito obligaria a repartir esa cifra y dejaria de ser el precio dado.
     // Lo mismo para enlaces con importe fijado desde el plan de cobros del
@@ -1234,8 +1237,9 @@ function casanova_handle_payment_link_request(string $token): void {
   echo casanova_pay_ui_title_block(__('Pago seguro', 'casanova-portal'), $trip['title'], implode(' · ', $meta_parts));
 
   // Con precio pactado en dolares no se enseña el pendiente en euros: seria una
-  // cifra distinta a la acordada y solo genera dudas al cliente.
-  if (!$usd_fixed) {
+  // cifra distinta a la acordada y solo genera dudas al cliente. Con hide_totals
+  // (bono regalo) tampoco: quien amplia no debe ver el valor del regalo.
+  if (!$usd_fixed && !$hide_totals) {
     $trip_total = round((float)($calc['total_objetivo'] ?? 0), 2);
     echo '<section class="cgp-card cgp-balance" aria-label="' . esc_attr__('Saldo del viaje', 'casanova-portal') . '">';
     if ($is_group_party) {
@@ -1282,9 +1286,9 @@ function casanova_handle_payment_link_request(string $token): void {
   }
   echo '<div class="cgp-option' . ($checked_full ? ' is-checked' : '') . '" data-cgp-option>';
   echo '<label class="cgp-option__head"><input class="cgp-radio" type="radio" name="mode" value="full" ' . ($checked_full ? 'checked' : '') . ' />';
-  echo '<span class="cgp-option__text"><span class="cgp-option__row"><span class="cgp-option__title">' . esc_html__('Importe total', 'casanova-portal') . '</span>';
+  echo '<span class="cgp-option__text"><span class="cgp-option__row"><span class="cgp-option__title">' . esc_html($hide_totals ? __('Importe a pagar', 'casanova-portal') : __('Importe total', 'casanova-portal')) . '</span>';
   echo '<span class="cgp-option__amount"' . $amount_attrs((float)$authorized, $usd_full_display) . '>' . esc_html($amount_text((float)$authorized, $usd_full_display)) . '</span></span>';
-  echo '<span class="cgp-option__hint">' . esc_html($covers_whole_trip
+  echo '<span class="cgp-option__hint">' . esc_html(($covers_whole_trip && !$hide_totals)
     ? __('Tu viaje queda totalmente pagado', 'casanova-portal')
     : __('Pagas el importe completo de este enlace', 'casanova-portal')) . '</span>';
   echo '</span></label>';
@@ -1322,7 +1326,7 @@ function casanova_handle_payment_link_request(string $token): void {
   echo '<section class="cgp-card cgp-paycard" aria-label="' . esc_attr__('Resumen del pago', 'casanova-portal') . '">';
   echo '<div class="cgp-paycard__row"><span class="cgp-paycard__label">' . esc_html__('Pagas ahora', 'casanova-portal') . '</span>';
   echo '<strong class="cgp-paycard__amount" id="cgp-pay-now" aria-live="polite">' . esc_html($initial_text) . '</strong></div>';
-  if (!$usd_fixed) {
+  if (!$usd_fixed && !$hide_totals) {
     echo '<div class="cgp-paycard__row cgp-paycard__row--sub"><span>' . ($is_group_party ? esc_html__('Tu parte pendiente tras este pago', 'casanova-portal') : esc_html__('Pendiente tras este pago', 'casanova-portal')) . '</span>';
     echo '<span class="cgp-num" id="cgp-outstanding-after" aria-live="polite">' . esc_html(casanova_pay_ui_money($outstanding_after)) . '</span></div>';
   }
