@@ -117,9 +117,51 @@ add_action('plugins_loaded', function () {
   load_plugin_textdomain('casanova-portal', false, dirname(plugin_basename(__FILE__)) . '/languages');
 });
 
+/**
+ * ¿La página actual pinta algún shortcode del portal?
+ * Busca en el contenido clásico y en los datos de Bricks (incluidas las plantillas insertadas con el elemento «Plantilla»).
+ * Forzar a mano: add_filter('casanova_portal_enqueue_assets', '__return_true');
+ */
+function casanova_portal_page_needs_assets(): bool {
+  static $needs = null;
+  if ($needs !== null) return $needs;
+
+  $needs = false;
+  if (is_singular()) {
+    $post_id = (int) get_queried_object_id();
+    $pattern = '/\[casanova_(?:portal(?:_app)?|link_account|react_dashboard|expedientes?|expediente_[a-z_]+|facturas|pasajeros|reservas|bonos|proximo_viaje|card_[a-z_]+|mulligans[a-z_]*|mensajes|mis_datos)\b/';
+
+    $sources = [(string) get_post_field('post_content', $post_id)];
+    $bricks  = get_post_meta($post_id, '_bricks_page_content_2', true);
+    if (is_array($bricks)) {
+      $sources[] = wp_json_encode($bricks);
+      foreach ($bricks as $element) {
+        $template_id = (int) ($element['settings']['template'] ?? 0);
+        if (($element['name'] ?? '') === 'template' && $template_id > 0) {
+          $sources[] = wp_json_encode(get_post_meta($template_id, '_bricks_page_content_2', true));
+        }
+      }
+    }
+
+    foreach ($sources as $source) {
+      if ($source && preg_match($pattern, $source)) {
+        $needs = true;
+        break;
+      }
+    }
+  }
+
+  $needs = (bool) apply_filters('casanova_portal_enqueue_assets', $needs);
+  return $needs;
+}
+
 add_action('wp_enqueue_scripts', function () {
   if (is_admin()) return;
   casanova_portal_register_i18n_runtime();
+
+  // Fuentes, CSS y JS del portal solo en las páginas que lo pintan (el resto de la web no los usa).
+  // Las páginas públicas de pago (/pay/…) imprimen su propio portal.css en casanova_portal_render_public_document_start().
+  if (!casanova_portal_page_needs_assets()) return;
 
   wp_enqueue_style(
     'casanova-portal-fonts',
