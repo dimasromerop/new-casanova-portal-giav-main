@@ -300,7 +300,14 @@ function casanova_payment_link_is_single_payment(int $payment_link_id): bool {
 
   $meta = casanova_payment_links_read_metadata($link);
 
-  return !empty($meta['usd_fixed']);
+  // Enlaces del gestor: son de UN pagador y UN importe (hito). Si tras cobrarse quedaran
+  // activos -el expediente sigue teniendo pendiente de otros pagadores- cualquiera con el
+  // enlace podria volver a pagarlo, y en el gestor aparecian como "caducados" en vez de
+  // "pagados" (los caducaba el ajuste de enlaces al quedar el hito cubierto).
+  $single = !empty($meta['usd_fixed'])
+    || (!empty($meta['fixed_amount']) && (string) ($meta['managed_by'] ?? '') === 'gestor');
+
+  return (bool) apply_filters('casanova_payment_link_is_single_payment', $single, $link, $meta);
 }
 
 function casanova_payment_link_sync_after_cobro(object $intent, int $payment_link_id, string $payment_link_scope, int $giav_payment_id = 0, string $billing_dni = ''): bool {
