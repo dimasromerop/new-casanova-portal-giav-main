@@ -586,7 +586,7 @@ export default function DashboardView({
               <div className="cp-trip-module__meta">
                 {isPaid ? tt("Todo el viaje está liquidado.") : ttf("Has pagado {paid} de {total}.", { paid: paidLabel, total: totalLabel })}
               </div>
-              <button className="cp-btn gold" onClick={viewPayments}>
+              <button className="cp-btn primary" onClick={viewPayments}>
                 {tt("Ver pagos")}
               </button>
             </>

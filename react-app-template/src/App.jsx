@@ -20,7 +20,7 @@ import { formatCurrency, formatDate, formatNumber, t, tt } from "./i18n/t.js";
 import { api } from "./lib/api.js";
 import { readParams, setParam } from "./lib/params.js";
 import { getBonusesVariant, getPaymentVariant, getStatusVariant } from "./lib/statusBadges.js";
-import { LS_KEYS, lsGet, lsSet, resolveInitialTheme } from "./lib/storage.js";
+import { LS_KEYS, lsGet, lsSet } from "./lib/storage.js";
 import { pickTripHeroImage } from "./lib/tripServices.js";
 
 /* ===== Local state =====
@@ -659,7 +659,6 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [profileErr, setProfileErr] = useState(null);
   const [toast, setToast] = useState(null);
-  const [theme, setTheme] = useState(() => resolveInitialTheme());
   const impersonation = window.CasanovaPortal?.impersonation || {};
   const isReadOnly = Boolean(impersonation.readOnly);
   const readOnlyMessage = String(impersonation.message || tt("Modo de vista cliente activo. Solo lectura."));
@@ -677,10 +676,6 @@ function App() {
     if (isMulligansEnabled || route.view !== "mulligans") return;
     setParam("view", "dashboard");
   }, [isMulligansEnabled, route.view]);
-
-  useEffect(() => {
-    lsSet(LS_KEYS.theme, theme);
-  }, [theme]);
 
   // Persist language preference (WPML):
   // - Backend stores the choice in user_meta via /profile/locale.
@@ -1124,8 +1119,8 @@ function App() {
   }, [activeView]);
 
   return (
-    <div className="cp-app" data-theme={theme}>
-      <Sidebar view={activeView} unread={unreadCount} items={visibleNavItems} theme={theme} />
+    <div className="cp-app">
+      <Sidebar view={activeView} unread={unreadCount} items={visibleNavItems} />
       <main className="cp-main">
         <Topbar
           title={topbarInfo.title}
@@ -1138,8 +1133,6 @@ function App() {
           onLogout={logout}
           onLocale={setLocale}
           readOnly={isReadOnly}
-          theme={theme}
-          onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
         />
         {toast ? (
           <div className={`cp-toast is-${toast.variant || 'info'}`}>{toast.message}</div>

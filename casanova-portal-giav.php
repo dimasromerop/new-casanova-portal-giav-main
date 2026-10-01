@@ -163,43 +163,58 @@ add_action('wp_enqueue_scripts', function () {
   // Las páginas públicas de pago (/pay/…) imprimen su propio portal.css en casanova_portal_render_public_document_start().
   if (!casanova_portal_page_needs_assets()) return;
 
-  wp_enqueue_style(
-    'casanova-portal-fonts',
-    'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=Playfair+Display:wght@500;600&display=swap',
-    [],
-    null
-  );
-
-  $file = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal.css';
-  $ver  = file_exists($file) ? (string) filemtime($file) : '0';
-
-  wp_enqueue_style(
-    'casanova-portal-giav',
-    CASANOVA_GIAV_PLUGIN_URL . 'assets/portal.css',
-    ['casanova-portal-fonts'],
-    $ver
-  );
-
-  // Custom CSS del portal (FUERA del plugin, para que sobreviva a actualizaciones)
-  // Ruta esperada: wp-content/uploads/casanova-portal/portal-custom.css
-  $u = wp_upload_dir();
-  $custom_path = trailingslashit($u['basedir']) . 'casanova-portal/portal-custom.css';
-  $custom_url  = trailingslashit($u['baseurl']) . 'casanova-portal/portal-custom.css';
-  if (!empty($u['basedir']) && file_exists($custom_path)) {
-    $cver = (string) filemtime($custom_path);
-    wp_enqueue_style('casanova-portal-giav-custom', $custom_url, ['casanova-portal-giav'], $cver);
+  // ¿Esta página pinta la SPA React con su build compilado?
+  $should_load_app = false;
+  if (is_singular()) {
+    $post = get_post();
+    if ($post && isset($post->post_content) && has_shortcode($post->post_content, 'casanova_portal_app')) {
+      $should_load_app = true;
+    }
   }
+  $app_js   = CASANOVA_GIAV_PLUGIN_PATH . 'react-app-template/dist/portal-app.js';
+  $use_build = $should_load_app && file_exists($app_js);
 
-  // JS: drawer (mobile) + loading overlay
-  $js = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal.js';
-  $js_ver = file_exists($js) ? (string) filemtime($js) : '0';
-  wp_enqueue_script(
-    'casanova-portal-giav',
-    CASANOVA_GIAV_PLUGIN_URL . 'assets/portal.js',
-    [casanova_portal_i18n_runtime_handle()],
-    $js_ver,
-    true
-  );
+  // La SPA usa los tokens --cg-* y las fuentes (Satoshi, Playfair) que ya carga el tema,
+  // así que no necesita Google Fonts ni el CSS/JS del portal PHP antiguo.
+  if (!$use_build) {
+    wp_enqueue_style(
+      'casanova-portal-fonts',
+      'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=Playfair+Display:wght@500;600&display=swap',
+      [],
+      null
+    );
+
+    $file = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal.css';
+    $ver  = file_exists($file) ? (string) filemtime($file) : '0';
+
+    wp_enqueue_style(
+      'casanova-portal-giav',
+      CASANOVA_GIAV_PLUGIN_URL . 'assets/portal.css',
+      ['casanova-portal-fonts'],
+      $ver
+    );
+
+    // Custom CSS del portal (FUERA del plugin, para que sobreviva a actualizaciones)
+    // Ruta esperada: wp-content/uploads/casanova-portal/portal-custom.css
+    $u = wp_upload_dir();
+    $custom_path = trailingslashit($u['basedir']) . 'casanova-portal/portal-custom.css';
+    $custom_url  = trailingslashit($u['baseurl']) . 'casanova-portal/portal-custom.css';
+    if (!empty($u['basedir']) && file_exists($custom_path)) {
+      $cver = (string) filemtime($custom_path);
+      wp_enqueue_style('casanova-portal-giav-custom', $custom_url, ['casanova-portal-giav'], $cver);
+    }
+
+    // JS: drawer (mobile) + loading overlay
+    $js = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal.js';
+    $js_ver = file_exists($js) ? (string) filemtime($js) : '0';
+    wp_enqueue_script(
+      'casanova-portal-giav',
+      CASANOVA_GIAV_PLUGIN_URL . 'assets/portal.js',
+      [casanova_portal_i18n_runtime_handle()],
+      $js_ver,
+      true
+    );
+  }
   wp_enqueue_script(casanova_portal_i18n_runtime_handle());
   casanova_portal_localize_i18n_runtime();
 
@@ -209,21 +224,11 @@ add_action('wp_enqueue_scripts', function () {
   // Solo encolamos la SPA si la página contiene el shortcode [casanova_portal_app]
   // y existe el build en assets/portal-app.js. Si no existe, usamos fallback (portal-react.js)
   // para evitar pantallas en blanco.
-  $should_load_app = false;
-  if (is_singular()) {
-    $post = get_post();
-    if ($post && isset($post->post_content) && has_shortcode($post->post_content, 'casanova_portal_app')) {
-      $should_load_app = true;
-    }
-  }
-
   if ($should_load_app) {
-    $app_js  = CASANOVA_GIAV_PLUGIN_PATH . 'react-app-template/dist/portal-app.js';
     $app_js_fallback  = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal-app.js';
     $app_css = CASANOVA_GIAV_PLUGIN_PATH . 'react-app-template/dist/portal-app.css';
     $app_css_fallback = CASANOVA_GIAV_PLUGIN_PATH . 'assets/portal-app.css';
 
-    $use_build = file_exists($app_js);
     $handle    = 'casanova-portal-app';
 
     if ($use_build) {

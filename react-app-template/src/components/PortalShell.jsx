@@ -21,21 +21,6 @@ function IconGlobe() {
   );
 }
 
-function IconMoon() {
-  return (
-    <svg {...ICON_PROPS} aria-hidden="true">
-      <path
-        d="M16.7 14.1A6.8 6.8 0 0 1 9.9 7.3c0-.9.2-1.8.5-2.6A8 8 0 1 0 19.3 15c-.8.3-1.7.5-2.6.5z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function IconUser() {
   return (
     <svg {...ICON_PROPS} aria-hidden="true">
@@ -160,7 +145,7 @@ function LanguageMenu({ locale, onLocale, disabled = false }) {
   );
 }
 
-function UserMenu({ profile, onGo, onLogout, theme = "light", onToggleTheme }) {
+function UserMenu({ profile, onGo, onLogout }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -176,7 +161,6 @@ function UserMenu({ profile, onGo, onLogout, theme = "light", onToggleTheme }) {
   const name = profile?.user?.displayName || profile?.giav?.nombre || "";
   const email = profile?.user?.email || profile?.giav?.email || "";
   const avatarUrl = profile?.user?.avatarUrl || "";
-  const isDark = theme === "dark";
 
   return (
     <div className="cp-user" ref={ref}>
@@ -212,24 +196,6 @@ function UserMenu({ profile, onGo, onLogout, theme = "light", onToggleTheme }) {
           </button>
 
           <div className="cp-user-sep" />
-          <button
-            type="button"
-            className="cp-user-item cp-user-item--toggle"
-            onClick={() => { if (typeof onToggleTheme === "function") onToggleTheme(); }}
-            role="menuitemcheckbox"
-            aria-checked={isDark ? "true" : "false"}
-          >
-            <span className="cp-user-item-ico" aria-hidden="true"><IconMoon /></span>
-            <span className="cp-user-item-copy">
-              <span className="cp-user-item-title">{tt("Modo oscuro")}</span>
-              <span className="cp-user-item-note">{isDark ? tt("Activado") : tt("Desactivado")}</span>
-            </span>
-            <span className={`cp-theme-switch ${isDark ? "is-on" : ""}`} aria-hidden="true">
-              <span className="cp-theme-switch__thumb" />
-            </span>
-          </button>
-
-          <div className="cp-user-sep" />
           <button type="button" className="cp-user-item is-danger" onClick={() => { setOpen(false); onLogout(); }} role="menuitem">
             <span className="cp-user-item-ico" aria-hidden="true"><IconLogout /></span>
             {t("menu_logout", "Cerrar sesión")}
@@ -240,13 +206,11 @@ function UserMenu({ profile, onGo, onLogout, theme = "light", onToggleTheme }) {
   );
 }
 
-export function Sidebar({ view, unread = 0, items = [], theme = "light" }) {
+export function Sidebar({ view, unread = 0, items = [] }) {
   const agency = window.CasanovaPortal?.agency || {};
   const branding = window.CasanovaPortal?.branding || {};
   const agencyName = String(agency.nombre || "Casanova Golf").trim();
-  const lightLogoUrl = String(branding.logoLightUrl || "").trim();
-  const darkLogoUrl = String(branding.logoDarkUrl || "").trim();
-  const logoUrl = theme === "dark" ? (darkLogoUrl || lightLogoUrl) : (lightLogoUrl || darkLogoUrl);
+  const logoUrl = String(branding.logoLightUrl || branding.logoDarkUrl || "").trim();
 
   return (
     <aside className="cp-sidebar">
@@ -300,7 +264,7 @@ export function Sidebar({ view, unread = 0, items = [], theme = "light" }) {
   );
 }
 
-export function Topbar({ title, subtitle, chip, onRefresh, isRefreshing, profile, onGo, onLogout, onLocale, readOnly = false, theme, onToggleTheme }) {
+export function Topbar({ title, subtitle, chip, onRefresh, isRefreshing, profile, onGo, onLogout, onLocale, readOnly = false }) {
   return (
     <div className="cp-topbar">
       <div className="cp-topbar-inner">
@@ -318,7 +282,7 @@ export function Topbar({ title, subtitle, chip, onRefresh, isRefreshing, profile
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:4}}><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             {tt("Actualizar")}
           </button>
-          <UserMenu profile={profile} onGo={onGo} onLogout={onLogout} theme={theme} onToggleTheme={onToggleTheme} />
+          <UserMenu profile={profile} onGo={onGo} onLogout={onLogout} />
         </div>
       </div>
     </div>

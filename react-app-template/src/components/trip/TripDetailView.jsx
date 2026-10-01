@@ -501,8 +501,8 @@ export default function TripDetailView({
             {invoices.length === 0 ? (
               <div className="cp-meta cp-mt-10">{tt("No hay facturas disponibles.")}</div>
             ) : (
-              <div className="casanova-tablewrap cp-mt-14">
-                <table className="casanova-table">
+              <div className="cp-table-wrap cp-mt-14">
+                <table className="cp-table">
                   <thead>
                     <tr>
                       <th>{tt("Factura")}</th>
@@ -527,11 +527,11 @@ export default function TripDetailView({
                           </td>
                           <td>
                             {inv.download_url ? (
-                              <a className="casanova-btn casanova-btn--sm casanova-btn--ghost" href={inv.download_url}>
+                              <a className="cp-btn cp-btn--sm" href={inv.download_url}>
                                 {tt("Descargar PDF")}
                               </a>
                             ) : (
-                              <span className="casanova-btn casanova-btn--sm casanova-btn--disabled">{tt("Descargar PDF")}</span>
+                              <span className="cp-btn cp-btn--sm is-disabled" aria-disabled="true">{tt("Descargar PDF")}</span>
                             )}
                           </td>
                         </tr>

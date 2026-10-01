@@ -2,7 +2,6 @@ export const LS_KEYS = {
   dashboardSnapshot: "casanovaPortal_dashboardSnapshot",
   inboxLatestTs: "casanovaPortal_inboxLatestTs",
   messagesLastSeenTs: "casanovaPortal_messagesLastSeenTs",
-  theme: "casanovaPortal_theme",
 };
 
 export function lsGetInt(key, fallback = 0) {
@@ -40,16 +39,4 @@ export function lsSet(key, value) {
     window.localStorage.setItem(key, String(value));
   } catch {
   }
-}
-
-export function resolveInitialTheme() {
-  const stored = String(lsGet(LS_KEYS.theme, "")).toLowerCase();
-  if (stored === "dark" || stored === "light") return stored;
-  try {
-    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      return "dark";
-    }
-  } catch {
-  }
-  return "light";
 }
