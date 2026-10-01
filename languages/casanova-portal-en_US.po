@@ -2730,3 +2730,15 @@ msgstr "← Back to my bookings"
 
 msgid "Importe a pagar"
 msgstr "Amount to pay"
+
+msgid "Introduce tu DNI o el ID de usuario que te hayamos facilitado. Te enviaremos un código al email asociado a tu reserva para verificar que eres el titular."
+msgstr "Enter your passport number or the user ID we gave you. We will send a code to the email address linked to your booking to confirm that you are the booking holder."
+
+msgid "Vincular por"
+msgstr "Link with"
+
+msgid "ID de Usuario"
+msgstr "User ID"
+
+msgid "Si no tienes DNI, usa el ID de Usuario que te hayamos facilitado."
+msgstr "If you do not have a passport number on file, use the user ID we gave you."
