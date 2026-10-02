@@ -438,6 +438,7 @@ function casanova_portal_get_js_i18n(): array {
     'nav_dashboard' => __('Inicio', 'casanova-portal'),
     'nav_trips' => __('Viajes', 'casanova-portal'),
     'nav_trip_detail' => __('Detalle del viaje', 'casanova-portal'),
+    'nav_proposals' => __('Propuestas', 'casanova-portal'),
     'nav_messages' => __('Mensajes', 'casanova-portal'),
     'nav_mulligans' => __('Mulligans', 'casanova-portal'),
     'nav_portal' => __('Portal', 'casanova-portal'),

@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: casanova-portal\n"
-"POT-Creation-Date: 2026-10-02 08:15+0000\n"
-"PO-Revision-Date: 2026-10-02 10:15+0200\n"
+"POT-Creation-Date: 2026-10-02 14:49+0000\n"
+"PO-Revision-Date: 2026-10-02 16:49+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: en_US\n"
@@ -47,6 +47,12 @@ msgstr "(optional)"
 
 msgid "(Opcional, según datos de facturación)"
 msgstr "(Optional, depending on billing information)"
+
+msgid "1 acompañante"
+msgstr "1 non-player"
+
+msgid "1 jugador"
+msgstr "1 player"
 
 msgid "3 cuotas"
 msgstr "3 installments"
@@ -108,6 +114,18 @@ msgstr "Actions"
 msgid "Acción"
 msgstr "Action"
 
+msgid "Aceptada"
+msgstr "Accepted"
+
+msgid "Aceptada el {date}"
+msgstr "Accepted on {date}"
+
+msgid "Acompañante"
+msgstr "Non-player"
+
+msgid "Acompañante ({room})"
+msgstr "Non-player ({room})"
+
 msgid "Activado"
 msgstr "Activated"
 
@@ -125,6 +143,15 @@ msgstr "Updating…"
 
 msgid "Actualizar"
 msgstr "Update"
+
+msgid "Actualizar propuesta"
+msgstr "Update proposal"
+
+msgid "Actualizar propuesta: {title}"
+msgstr "Update proposal: {title}"
+
+msgid "Actualizar tu propuesta"
+msgstr "Update your proposal"
 
 msgid "Adjuntar archivo"
 msgstr "Attach file"
@@ -225,6 +252,9 @@ msgstr "There are no payments associated with this trip yet."
 msgid "Aún no hay pagos disponibles para este viaje."
 msgstr "There are no payments available for this trip yet."
 
+msgid "Aún no tienes propuestas"
+msgstr "You don't have any proposals yet"
+
 msgid "Aún no tienes un viaje confirmado."
 msgstr "You don't have a confirmed trip yet."
 
@@ -291,8 +321,17 @@ msgstr "Search trips..."
 msgid "Cada archivo puede ocupar como máximo %s."
 msgstr "Each file can be at most %s."
 
+msgid "Caducada"
+msgstr "Expired"
+
+msgid "Caducó el {date}"
+msgstr "Expired on {date}"
+
 msgid "Calendario"
 msgstr "Calendar"
+
+msgid "Camas en las habitaciones dobles"
+msgstr "Beds in double rooms"
 
 msgid "Cambiar contraseña"
 msgstr "Change password"
@@ -305,6 +344,9 @@ msgstr "Password change disabled"
 
 msgid "Campos por confirmar"
 msgstr "Courses to be confirmed"
+
+msgid "Cancelar"
+msgstr "Cancel"
 
 msgid "Canje"
 msgstr "Redemption"
@@ -399,6 +441,9 @@ msgstr "completed"
 msgid "Completarás el pago en la página segura de nuestro proveedor de pagos."
 msgstr "You will complete the payment on our payment provider's secure page."
 
+msgid "Comprobando..."
+msgstr "Checking..."
+
 msgid "con"
 msgstr "with"
 
@@ -432,8 +477,17 @@ msgstr "Confirmed"
 msgid "Confirmados"
 msgstr "Confirmed"
 
+msgid "Confirmar"
+msgstr "Confirm"
+
 msgid "Confirmar nueva contraseña"
 msgstr "Confirm new password"
+
+msgid "Confirma tu email"
+msgstr "Confirm your email"
+
+msgid "Confírmanos tus datos y te prepararemos una propuesta nueva con precios actualizados."
+msgstr "Confirm your details and we'll prepare a new proposal with updated prices."
 
 msgid "Conoce antes que nadie las ofertas y destinos exclusivos."
 msgstr "Be the first to discover exclusive offers and destinations."
@@ -492,6 +546,9 @@ msgstr "Access credentials"
 msgid "Cuando se registren pagos o se aplique un bonus, aparecerán aquí."
 msgstr "When payments are posted or a bonus is applied, they will appear here."
 
+msgid "Cuando te preparemos una propuesta de viaje, la verás aquí con sus precios y podrás aceptarla desde la propia propuesta."
+msgstr "When we prepare a trip proposal for you, you'll see it here with its prices, and you can accept it from the proposal itself."
+
 msgid "Cuando tu reserva esté confirmada, aquí verás la conversación y las actualizaciones del equipo de Casanova Golf."
 msgstr "When your reservation is confirmed, here you will see the conversation and updates from the Casanova Golf team."
 
@@ -501,8 +558,17 @@ msgstr "When your booking is ready, you'll see all trip details here: hotel, gol
 msgid "Cuenta no vinculada."
 msgstr "Account not linked."
 
+msgid "Cuéntanos algo más"
+msgstr "Anything else we should know?"
+
+msgid "Cuéntanos qué viaje tienes en mente y te prepararemos una propuesta."
+msgstr "Tell us about the trip you have in mind and we'll prepare a proposal for you."
+
 msgid "Código:"
 msgstr "Code:"
+
+msgid "Código de 6 cifras"
+msgstr "6-digit code"
 
 msgid "Código de verificación"
 msgstr "Verification code"
@@ -574,6 +640,9 @@ msgstr "of the total as a deposit"
 msgid "Demasiados intentos. Espera unos minutos."
 msgstr "Too many attempts. Please wait a few minutes."
 
+msgid "Demasiados intentos. Pide un código nuevo."
+msgstr "Too many attempts. Please request a new code."
+
 msgid "Demasiados intentos de pago. Espera unos minutos."
 msgstr "Too many payment attempts. Please wait a few minutes."
 
@@ -606,6 +675,12 @@ msgstr "Description"
 
 msgid "Descripción:"
 msgstr "Description:"
+
+msgid "Desde"
+msgstr "From"
+
+msgid "Destino, hotel o campos de golf"
+msgstr "Destination, hotel or golf courses"
 
 msgid "Destino:"
 msgstr "Destination:"
@@ -642,6 +717,9 @@ msgstr "available"
 
 msgid "Distribución"
 msgstr "Distribution"
+
+msgid "Distribución de habitaciones"
+msgstr "Room distribution"
 
 msgid "DNI"
 msgstr "ID"
@@ -697,8 +775,14 @@ msgstr "The client will see it in the portal and will also receive an email with
 msgid "El código caduca en 10 minutos."
 msgstr "The code expires in 10 minutes."
 
+msgid "El código ha caducado. Pide uno nuevo."
+msgstr "The code has expired. Please request a new one."
+
 msgid "El código ha caducado. Solicita uno nuevo."
 msgstr "The code has expired. Request a new one."
+
+msgid "El código no es correcto."
+msgstr "That code isn't correct."
 
 msgid "El código no es válido."
 msgstr "The code is not valid."
@@ -717,6 +801,9 @@ msgstr "Choose another client"
 
 msgid "El expediente no tiene importe pendiente en GIAV."
 msgstr "The booking has no pending amount in GIAV."
+
+msgid "Elige"
+msgstr "Choose"
 
 msgid "Elige método de pago"
 msgstr "Choose payment method"
@@ -753,6 +840,9 @@ msgstr "Email"
 
 msgid "Email (obligatorio)"
 msgstr "Email (required)"
+
+msgid "Email confirmado"
+msgstr "Email confirmed"
 
 msgid "En \"%1$s\" solo quedan %2$d personas con depósito pendiente de resto."
 msgstr "Only %2$d people are left with a pending balance in \"%1$s\"."
@@ -796,6 +886,9 @@ msgstr "Link to complete your payment – Booking %s"
 msgid "En USD solo se puede pagar con tarjeta."
 msgstr "Payments in USD are by card only."
 
+msgid "Enviada el {date}"
+msgstr "Sent on {date}"
+
 msgid "Enviando..."
 msgstr "Sending..."
 
@@ -805,11 +898,17 @@ msgstr "Sending…"
 msgid "Enviar"
 msgstr "Send"
 
+msgid "Enviar a"
+msgstr "Send to"
+
 msgid "Enviar código"
 msgstr "Send code"
 
 msgid "Enviar enlace del resto"
 msgstr "Send remaining payment link"
+
+msgid "Enviarme el código"
+msgstr "Send me the code"
 
 msgid "Enviarme mi enlace"
 msgstr "Send me my link"
@@ -819,6 +918,9 @@ msgstr "Email me my link to pay the rest"
 
 msgid "Enviar mensaje"
 msgstr "Send message"
+
+msgid "Enviar solicitud"
+msgstr "Send request"
 
 msgid "en {year}"
 msgstr "in {year}"
@@ -847,6 +949,12 @@ msgstr "Write a message..."
 msgid "Escribe un mensaje o adjunta un archivo antes de enviarlo."
 msgstr "Write a message or attach a file before sending."
 
+msgid "Escribir a tu agente"
+msgstr "Email your agent"
+
+msgid "Escribir a {name}"
+msgstr "Email {name}"
+
 msgid "Español"
 msgstr "Spanish"
 
@@ -856,11 +964,17 @@ msgstr "Status"
 msgid "Estado: Todos"
 msgstr "Status: All"
 
+msgid "Estado de la solicitud"
+msgstr "Request status"
+
 msgid "Estado de pagos"
 msgstr "Payment status"
 
 msgid "Estado de pagos del viaje"
 msgstr "Trip payment status"
+
+msgid "Estamos confirmando tus servicios"
+msgstr "We're confirming your services"
 
 msgid "Estamos preparando la información de este viaje. En cuanto esté lista, la verás aquí."
 msgstr "We are preparing the information for this trip. As soon as it is ready, you will see it here."
@@ -870,6 +984,9 @@ msgstr "Stay"
 
 msgid "Estancia por confirmar"
 msgstr "Stay to be confirmed"
+
+msgid "Esta propuesta ya no está disponible."
+msgstr "This proposal is no longer available."
 
 msgid "Estas personas quedan totalmente pagadas"
 msgstr "These travelers will be fully paid"
@@ -973,6 +1090,12 @@ msgstr "Booking reference is missing from the message."
 msgid "Fecha"
 msgstr "Date"
 
+msgid "Fecha de llegada"
+msgstr "Date of arrival"
+
+msgid "Fecha de regreso"
+msgstr "Date of departure"
+
 msgid "Fecha emisión:"
 msgstr "Issue date:"
 
@@ -1036,6 +1159,9 @@ msgstr "Thank you, we process the payment and update your data."
 msgid "Gracias. Hemos recibido tu pago."
 msgstr "Thank you. We have received your payment."
 
+msgid "Green-fees por jugador"
+msgstr "Rounds of golf per player"
+
 msgid "Grupo"
 msgstr "Group"
 
@@ -1077,6 +1203,9 @@ msgstr "Up to €4,999"
 
 msgid "Hemos recibido el pago. Gracias, procesamos el cobro y actualizamos tus datos."
 msgstr "We have received payment. Thank you, we process the payment and update your data."
+
+msgid "Hemos recibido tu solicitud. Te escribiremos en cuanto tengamos tu propuesta."
+msgstr "We've received your request. We'll email you as soon as your proposal is ready."
 
 msgid "Hemos registrado correctamente tu pago para el expediente <strong>%s</strong>."
 msgstr "We have successfully recorded your payment for booking <strong>%s</strong>."
@@ -1180,6 +1309,9 @@ msgstr "Full amount"
 msgid "Indica cuántas personas pagas de cada opción"
 msgstr "Tell us how many people you are paying for in each option"
 
+msgid "Indica un teléfono de contacto."
+msgstr "Please enter a contact phone number."
+
 msgid "Inespay no devolvio un enlace de pago."
 msgstr "Inespay did not return a payment link."
 
@@ -1234,6 +1366,12 @@ msgstr "Please try again later."
 msgid "Ir al portal"
 msgstr "Go to portal"
 
+msgid "Jugador"
+msgstr "Player"
+
+msgid "Jugador ({room})"
+msgstr "Player ({room})"
+
 msgid "Jugadores"
 msgstr "Players"
 
@@ -1257,6 +1395,9 @@ msgstr "The application with Aplazame has been pending. We will update your paym
 
 msgid "La solicitud con Aplazame no se completó. Si el estado cambia más tarde, lo verás reflejado aquí."
 msgstr "The request with Aplazame was not completed. If the status changes later, you'll see it reflected here."
+
+msgid "Las propuestas que hemos preparado para ti y tus solicitudes en curso."
+msgstr "The proposals we've prepared for you and your requests in progress."
 
 msgid "La transferencia no se completó. Si el banco la confirma más tarde, lo verás reflejado aquí."
 msgstr "The transfer was not completed. If the bank confirms it later, you will see it reflected here."
@@ -1294,6 +1435,9 @@ msgstr "Logo"
 msgid "Lo que incluye tu viaje"
 msgstr "What your trip includes"
 
+msgid "Lo que nos has pedido y aún estamos preparando."
+msgstr "What you've asked us for and we're still preparing."
+
 msgid "Los adjuntos del portal no están disponibles."
 msgstr "Portal attachments are not available."
 
@@ -1302,6 +1446,9 @@ msgstr "Benefits are activated with a real reservation. If you do not travel for
 
 msgid "Los bonos aparecerán cuando el viaje esté pagado."
 msgstr "Vouchers will appear once the trip is paid in full."
+
+msgid "Los precios ya no están garantizados. Si te sigue interesando, la actualizamos con tus nuevas fechas."
+msgstr "Prices are no longer guaranteed. If you're still interested, we'll update it with your new dates."
 
 msgid "Los puntos clave de tu viaje"
 msgstr "The key points of your trip"
@@ -1332,6 +1479,9 @@ msgstr "My profile"
 
 msgid "Mis datos"
 msgstr "My details"
+
+msgid "Mis fechas son flexibles (± unos días)"
+msgstr "My dates are flexible (± a few days)"
 
 msgid "Modalidad"
 msgstr "Mode"
@@ -1531,6 +1681,9 @@ msgstr "No trips registered in %s."
 msgid "No hemos encontrado clientes con portal para esa busqueda."
 msgstr "We found no clients with a portal for that search."
 
+msgid "No hemos podido comprobar el código."
+msgstr "We couldn't check the code."
+
 msgid "No hemos podido consultar el sistema. Inténtalo más tarde."
 msgstr "We couldn't reach the system. Please try again later."
 
@@ -1539,6 +1692,12 @@ msgstr "We couldn't send the code because there is no valid email associated wit
 
 msgid "No hemos podido enviar el email. Inténtalo más tarde."
 msgstr "We couldn't send the email. Please try again later."
+
+msgid "No hemos podido enviar tu solicitud. Inténtalo de nuevo o escríbenos."
+msgstr "We couldn't send your request. Please try again or email us."
+
+msgid "No jugadores"
+msgstr "Non-players"
 
 msgid "Nombre"
 msgstr "First name"
@@ -1558,8 +1717,14 @@ msgstr "Full name"
 msgid "Nonce inválido"
 msgstr "Invalid nonce"
 
+msgid "No podemos abrir el formulario"
+msgstr "We can't open the form"
+
 msgid "No podemos cargar tu perfil"
 msgstr "We can't load your profile"
+
+msgid "No podemos cargar tus propuestas"
+msgstr "We can't load your proposals"
 
 msgid "No podemos consultar el sistema en este momento. Inténtalo más tarde."
 msgstr "We cannot reach the system right now. Please try again later."
@@ -1801,11 +1966,23 @@ msgstr "You do not have permission to access this booking."
 msgid "No tienes permiso para ver este expediente."
 msgstr "You don't have permission to view this booking."
 
+msgid "No tienes solicitudes pendientes."
+msgstr "You don't have any pending requests."
+
 msgid "No tienes viajes próximos."
 msgstr "You have no upcoming trips."
 
+msgid "Nueva"
+msgstr "New"
+
 msgid "Nueva contraseña"
 msgstr "New password"
+
+msgid "Nueva propuesta"
+msgstr "New proposal"
+
+msgid "Nueva solicitud"
+msgstr "New request"
 
 msgid "Nuevo"
 msgstr "New"
@@ -1828,11 +2005,26 @@ msgstr "Notes:"
 msgid "o el importe total: %s"
 msgstr "or the full amount: %s"
 
+msgid "Opciones para tu viaje"
+msgstr "Options for your trip"
+
+msgid "Opción individual (informativa)"
+msgstr "Single room option (for information)"
+
 msgid "Opción y personas"
 msgstr "Option and travelers"
 
+msgid "Opción {n}"
+msgstr "Option {n}"
+
 msgid "o solo el depósito: %s"
 msgstr "or just the deposit: %s"
+
+msgid "Otras propuestas"
+msgstr "Other proposals"
+
+msgid "Otro hotel, más rondas, un día más…"
+msgstr "Another hotel, more rounds, an extra day…"
 
 msgid "Otros servicios"
 msgstr "Other services"
@@ -2020,6 +2212,12 @@ msgstr "To confirm your trip, you can pay a deposit of %1$s by %2$s"
 msgid "Para confirmar tu viaje, puedes pagar un depósito de %s"
 msgstr "Para confirmar tu viaje, puedes pagar un depósito de %s"
 
+msgid "Para enseñarte las propuestas que te enviemos a {email}, confírmanos que es tuyo."
+msgstr "To show you the proposals we send to {email}, please confirm it's yours."
+
+msgid "Para enseñarte las propuestas que te enviemos por email, confírmanos que es tuyo."
+msgstr "To show you the proposals we email you, please confirm your email is yours."
+
 msgid "Para pagar el resto usa tu enlace personal. Puedes pedirlo desde la página de pago del grupo con tu email y tu documento."
 msgstr "To pay the balance, use your personal link. You can request it from the group payment page with your email and ID."
 
@@ -2046,6 +2244,9 @@ msgstr "PCI DSS certified"
 
 msgid "PDF"
 msgstr "PDF"
+
+msgid "Pedir una actualización"
+msgstr "Ask for an update"
 
 msgid "Pendiente"
 msgstr "Due"
@@ -2098,11 +2299,35 @@ msgstr "Travelers"
 msgid "Personas incluidas en este pago"
 msgstr "People included in this payment"
 
+msgid "Pide tu propuesta"
+msgstr "Request a proposal"
+
+msgid "Pide un código nuevo."
+msgstr "Please request a new code."
+
 msgid "Población"
 msgstr "City"
 
 msgid "Porcentaje pagado del viaje"
 msgstr "Share of the trip already paid"
+
+msgid "por jugador en habitación doble"
+msgstr "per player in a double room"
+
+msgid "por jugador en habitación individual"
+msgstr "per player in a single room"
+
+msgid "por persona en habitación doble"
+msgstr "per person in a double room"
+
+msgid "Por persona en habitación doble"
+msgstr "Per person in a double room"
+
+msgid "por persona en habitación individual"
+msgstr "per person in a single room"
+
+msgid "Por persona en habitación individual"
+msgstr "Per person in a single room"
 
 msgid "Por seguridad, el DNI y el email no se pueden modificar desde aquí."
 msgstr "For security reasons, the ID and email cannot be changed here."
@@ -2112,6 +2337,15 @@ msgstr "Portal"
 
 msgid "Portal cliente"
 msgstr "Client portal"
+
+msgid "Precio por persona"
+msgstr "Price per person"
+
+msgid "Preparada por {name}"
+msgstr "Prepared by {name}"
+
+msgid "Preparando tu propuesta"
+msgstr "Preparing your proposal"
 
 msgid "Previsión en destino"
 msgstr "Forecast at destination"
@@ -2151,6 +2385,18 @@ msgstr "Payment progress"
 
 msgid "Progreso Mulligans"
 msgstr "Mulligans progress"
+
+msgid "Propuesta: {title}"
+msgstr "Proposal: {title}"
+
+msgid "Propuesta lista"
+msgstr "Proposal ready"
+
+msgid "Propuesta original"
+msgstr "Original proposal"
+
+msgid "Propuestas"
+msgstr "Proposals"
 
 msgid "Proveedor"
 msgstr "Supplier"
@@ -2242,6 +2488,15 @@ msgstr "What you need to do now"
 msgid "Ratio actual"
 msgstr "Current ratio"
 
+msgid "Recibida"
+msgstr "Received"
+
+msgid "Recibido. Te prepararemos una propuesta actualizada y te la enviaremos por email."
+msgstr "Received. We'll prepare an updated proposal and email it to you."
+
+msgid "Recibido. {name} te preparará una propuesta actualizada y te la enviará por email."
+msgstr "Received. {name} will prepare an updated proposal and email it to you."
+
 msgid "Recibirás además un email con el enlace para completar el resto del pago."
 msgstr "You will also receive an email with the link to complete the remaining payment."
 
@@ -2302,8 +2557,14 @@ msgstr "Payment summary"
 msgid "Resumen de pago"
 msgstr "Payment summary"
 
+msgid "Revisa las fechas: la llegada tiene que ser futura y el regreso posterior a la llegada."
+msgstr "Please check the dates: arrival must be in the future and departure after arrival."
+
 msgid "Revisión activa de reservas"
 msgstr "Active booking review"
+
+msgid "Revísalas con calma: puedes aceptarlas desde la propuesta o escribir a tu agente si quieres cambiar algo."
+msgstr "Take your time: you can accept them from the proposal or email your agent if you'd like to change anything."
 
 msgid "Rondas de golf por confirmar"
 msgstr "Golf rounds to be confirmed"
@@ -2482,6 +2743,12 @@ msgstr "If you have any questions, please contact the agency before paying."
 msgid "Si ya hay depósitos pagados, cada persona puede pagar su parte restante desde aquí."
 msgstr "If deposits have already been paid, each traveler can pay their remaining balance here."
 
+msgid "Solicitud enviada"
+msgstr "Request sent"
+
+msgid "Solicitudes en curso"
+msgstr "Requests in progress"
+
 msgid "Solicitud no valida."
 msgstr "Invalid request."
 
@@ -2499,6 +2766,9 @@ msgstr "Only PDF, JPG, PNG or WEBP are accepted."
 
 msgid "Solo tarjeta disponible."
 msgstr "Card only."
+
+msgid "Suplemento individual"
+msgstr "Single supplement"
 
 msgid "Sí, eres oficialmente peligroso."
 msgstr "Yes, you are officially dangerous."
@@ -2530,6 +2800,9 @@ msgstr "Cards"
 msgid "Te acompañaremos desde aquí"
 msgstr "We will accompany you from here"
 
+msgid "Te avisaremos por email en cuanto tu propuesta esté lista."
+msgstr "We'll email you as soon as your proposal is ready."
+
 msgid "Te enviaremos por email tu enlace personal con tu importe pendiente actualizado. Indica el email y el documento que usaste al pagar el depósito."
 msgstr "We'll email you your personal link with your up-to-date outstanding amount. Enter the email and ID you used to pay the deposit."
 
@@ -2545,6 +2818,9 @@ msgstr "You are missing {amount} for {tier}."
 msgid "Te hemos enviado la confirmacion a %s."
 msgstr "We have sent the confirmation to %s."
 
+msgid "Te hemos enviado un código de 6 cifras a {email}. Caduca en 15 minutos."
+msgstr "We've sent a 6-digit code to {email}. It expires in 15 minutes."
+
 msgid "Te hemos reenviado el enlace de pago final si existía un depósito registrado."
 msgstr "We have resent the final payment link if a deposit was on record."
 
@@ -2556,6 +2832,9 @@ msgstr "We'll take you to a page where you can choose your bank and authorize th
 
 msgid "Teléfono"
 msgstr "Phone"
+
+msgid "Teléfono de contacto"
+msgstr "Contact phone"
 
 msgid "Texto: máximo %d caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP."
 msgstr "Text: maximum %d characters. Basic attachments: up to 3 files per message, maximum 5 MB per file. Formats: PDF, JPG, PNG and WEBP."
@@ -2578,6 +2857,12 @@ msgstr "You have <strong>%s</strong> invoice available."
 msgid "Tienes <strong>%s</strong> facturas disponibles."
 msgstr "You have <strong>%s</strong> invoices available."
 
+msgid "Tienes una propuesta de viaje pendiente de revisar."
+msgstr "You have a trip proposal waiting for your review."
+
+msgid "Tienes una propuesta nueva"
+msgstr "You have a new proposal"
+
 msgid "Tienes un nuevo mensaje de Casanova Golf en tu portal de cliente."
 msgstr "You have a new message from Casanova Golf in your client portal."
 
@@ -2589,6 +2874,12 @@ msgstr "You have a pending payment of <strong>%s</strong> for this trip."
 
 msgid "Tienes un pago pendiente de {amount} para este viaje."
 msgstr "You have a pending payment of {amount} for this trip."
+
+msgid "Tienes {count} propuestas de viaje pendientes de revisar."
+msgstr "You have {count} trip proposals waiting for your review."
+
+msgid "Tienes {count} propuestas nuevas"
+msgstr "You have {count} new proposals"
 
 msgid "Tipo"
 msgstr "Type"
@@ -2719,6 +3010,9 @@ msgstr "Your account is not linked to a Casanova client."
 msgid "Tu cuenta no está vinculada todavía."
 msgstr "Your account is not linked yet."
 
+msgid "Tu cuenta no tiene un email válido."
+msgstr "Your account doesn't have a valid email."
+
 msgid "Tu cuenta ya está vinculada."
 msgstr "Your account is already linked."
 
@@ -2727,6 +3021,23 @@ msgstr "Your verification code"
 
 msgid "Tu código de verificación para vincular tu cuenta es: %s\\n\\nCaduca en 10 minutos.\\n\\nSi no has solicitado este código, puedes ignorar este email."
 msgstr "Your verification code to link your account is: %s\\n\\nIt expires in 10 minutes.\\n\\nIf you did not request this code, you can ignore this email."
+
+#, php-format
+msgid ""
+"Tu código para confirmar tu email en el área de cliente de Casanova Golf es: %s\n"
+"\n"
+"Caduca en 15 minutos.\n"
+"\n"
+"Si no lo has pedido tú, puedes ignorar este email."
+msgstr ""
+"Your code to confirm your email in the Casanova Golf client area is: %s\n"
+"\n"
+"It expires in 15 minutes.\n"
+"\n"
+"If you didn't request it, you can ignore this email."
+
+msgid "tu email"
+msgstr "your email"
 
 msgid "Tu equipo Casanova"
 msgstr "Your Casanova team"
@@ -2755,6 +3066,12 @@ msgstr "Your first payment will appear here."
 msgid "Tu programa Mulligans"
 msgstr "Your Mulligans Program"
 
+msgid "Tu propuesta de viaje"
+msgstr "Your trip proposal"
+
+msgid "Tu propuesta está lista: te la hemos enviado por email."
+msgstr "Your proposal is ready: we've emailed it to you."
+
 msgid "Tu próximo viaje"
 msgstr "Your next trip"
 
@@ -2766,6 +3083,15 @@ msgstr "Your details"
 
 msgid "Tus Mulligans"
 msgstr "Your Mulligans"
+
+msgid "Tu solicitud"
+msgstr "Your request"
+
+msgid "Tu solicitud del {date}"
+msgstr "Your request from {date}"
+
+msgid "Tus propuestas"
+msgstr "Your proposals"
 
 msgid "Tus viajes"
 msgstr "your trips"
@@ -2851,6 +3177,12 @@ msgstr "View invoices"
 msgid "Verificar y continuar"
 msgstr "Verify and continue"
 
+msgid "Ver la propuesta"
+msgstr "View the proposal"
+
+msgid "Ver las propuestas"
+msgstr "View the proposals"
+
 msgid "Ver mapa"
 msgstr "See map"
 
@@ -2871,6 +3203,12 @@ msgstr "View payments"
 
 msgid "Ver portal como cliente"
 msgstr "View portal as client"
+
+msgid "Ver propuesta"
+msgstr "View proposal"
+
+msgid "Ver propuestas"
+msgstr "View proposals"
 
 msgid "Ver ruta"
 msgstr "See route"
@@ -2965,6 +3303,12 @@ msgstr "flights and transfers included"
 msgid "vuelos y traslados previstos"
 msgstr "planned flights and transfers"
 
+msgid "Válida hasta el {date}"
+msgstr "Valid until {date}"
+
+msgid "Válidas hasta el {date}"
+msgstr "Valid until {date}"
+
 msgid "Web"
 msgstr "Web"
 
@@ -2980,11 +3324,23 @@ msgstr "A payment is already registered with some of these details. If it is you
 msgid "Ya estás en el nivel más alto del programa."
 msgstr "You are now at the highest level of the program."
 
+msgid "Ya hemos recibido tu petición. Te escribiremos en breve."
+msgstr "We've already received your request. We'll be in touch shortly."
+
 msgid "Ya hemos registrado tu depósito. Cuando quieras, puedes completar el resto del pago desde este enlace seguro:"
 msgstr "We have already recorded your deposit. Whenever you're ready, you can complete the remaining payment from this secure link:"
 
+msgid "Ya la tienes en tus viajes"
+msgstr "It's already in your trips"
+
+msgid "Ya nos has pedido actualizarla: te escribiremos con la propuesta nueva."
+msgstr "You've already asked us to update it: we'll email you the new proposal."
+
 msgid "Ya puedes acceder a tu documentación (bonos y facturas) desde el portal:"
 msgstr "You can now access your documentation (vouchers and invoices) from the portal:"
+
+msgid "Ya puedes ver aquí las propuestas que te enviemos a este email."
+msgstr "You'll now see here the proposals we send to this email."
 
 msgid "Ya tenemos un pago tuyo para este viaje"
 msgstr "We already have a payment from you for this trip"
@@ -2995,11 +3351,17 @@ msgstr "You already have documentation available for this trip."
 msgid "{badge} · {count}"
 msgstr "{badge} · {count}"
 
+msgid "{count} acompañantes"
+msgstr "{count} non-players"
+
 msgid "{count} hotel"
 msgstr "{count} hotel"
 
 msgid "{count} hoteles"
 msgstr "{count} hotels"
+
+msgid "{count} jugadores"
+msgstr "{count} players"
 
 msgid "{count} mensaje sin leer"
 msgstr "{count} unread message"
@@ -3012,6 +3374,12 @@ msgstr "{count} night"
 
 msgid "{count} noches"
 msgstr "{count} nights"
+
+msgid "{count} opciones"
+msgstr "{count} options"
+
+msgid "{count} opciones para tu viaje"
+msgstr "{count} options for your trip"
 
 msgid "{count} ronda de golf"
 msgstr "{count} round of golf"
@@ -3040,8 +3408,14 @@ msgstr "Questions before paying?"
 msgid "¿No tienes acceso a ese email? Escríbenos y lo solucionamos."
 msgstr "Don't have access to that email? Write to us and we'll sort it out."
 
+msgid "¿Quieres cambiar algo más?"
+msgstr "Would you like to change anything else?"
+
 msgid "¿Qué quieres pagar?"
 msgstr "What would you like to pay?"
+
+msgid "¿Qué viaje tienes en mente?"
+msgstr "What trip do you have in mind?"
 
 msgid "¿Ya pagaste el depósito? Reenviar enlace para pagar el resto"
 msgstr "Already paid the deposit? Resend link to pay the remainder"

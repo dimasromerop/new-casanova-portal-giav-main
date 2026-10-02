@@ -265,7 +265,14 @@ function UserMenu({ profile, onGo, onLogout }) {
 
 /* ===== Estructura ===== */
 
-export function Sidebar({ view, unread = 0, items = [] }) {
+// Contador junto a una entrada del menú (mensajes sin leer, propuestas nuevas); no se
+// muestra estando ya en esa sección.
+function navCount(item, view, counts) {
+  const value = Number(counts?.[item.key] || 0);
+  return value > 0 && !item.isActive(view) ? value : 0;
+}
+
+export function Sidebar({ view, counts = {}, items = [] }) {
   const brand = brandInfo();
 
   return (
@@ -277,7 +284,7 @@ export function Sidebar({ view, unread = 0, items = [] }) {
           const IconComponent = item.icon;
           const active = item.isActive(view);
           const href = viewHref(item.view);
-          const showCount = item.key === "inbox" && view !== "inbox" && unread > 0;
+          const count = navCount(item, view, counts);
 
           return (
             <a
@@ -289,7 +296,7 @@ export function Sidebar({ view, unread = 0, items = [] }) {
             >
               <span className="cp-nav__icon"><IconComponent /></span>
               <span className="cp-nav__label">{navLabel(item)}</span>
-              {showCount ? <span className="cp-count">{unread}</span> : null}
+              {count ? <span className="cp-count">{count}</span> : null}
             </a>
           );
         })}
@@ -316,14 +323,14 @@ export function Sidebar({ view, unread = 0, items = [] }) {
   );
 }
 
-export function MobileTabBar({ view, unread = 0, items = [] }) {
+export function MobileTabBar({ view, counts = {}, items = [] }) {
   return (
     <nav className="cp-tabbar" aria-label={tt("Menú principal")}>
       {items.map((item) => {
         const IconComponent = item.icon;
         const active = item.isActive(view);
         const href = viewHref(item.view);
-        const showCount = item.key === "inbox" && view !== "inbox" && unread > 0;
+        const count = navCount(item, view, counts);
 
         return (
           <a
@@ -335,7 +342,7 @@ export function MobileTabBar({ view, unread = 0, items = [] }) {
           >
             <span className="cp-tabbar__icon">
               <IconComponent />
-              {showCount ? <span className="cp-tabbar__count">{unread > 9 ? "9+" : unread}</span> : null}
+              {count ? <span className="cp-tabbar__count">{count > 9 ? "9+" : count}</span> : null}
             </span>
             <span className="cp-tabbar__label">{navLabel(item)}</span>
           </a>

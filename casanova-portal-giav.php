@@ -331,6 +331,8 @@ add_action('wp_enqueue_scripts', function () {
       ],
       'features' => [
         'mulligansEnabled' => (function_exists('casanova_portal_mulligans_enabled') ? casanova_portal_mulligans_enabled() : true),
+        // Sección Propuestas: solo si el plugin de propuestas da los datos (ver proposals-controller.php).
+        'proposalsEnabled' => (class_exists('Casanova_Proposals_Controller') && Casanova_Proposals_Controller::is_available()),
       ],
 
     ]);
@@ -370,6 +372,7 @@ add_action('plugins_loaded', function () {
 
   // Security: OTP linking (email)
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-otp.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-email-verification.php';
 
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/giav-core.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/giav-client-search.php';
@@ -411,6 +414,7 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/services/inbox-service.php';
 require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/inbox-controller.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/profile-controller.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/linking-controller.php';
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/proposals-controller.php';
 
   add_action('rest_api_init', ['Casanova_Dashboard_Controller', 'register_routes']);
   add_action('rest_api_init', ['Casanova_Messages_Controller', 'register_routes']);
@@ -418,6 +422,7 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/inbox-controller.php';
   add_action('rest_api_init', ['Casanova_Expedientes_Controller', 'register_routes']);
   add_action('rest_api_init', ['Casanova_Inbox_Controller', 'register_routes']);
   add_action('rest_api_init', ['Casanova_Payments_Controller', 'register_routes']);
+  add_action('rest_api_init', ['Casanova_Proposals_Controller', 'register_routes']);
   add_action('rest_api_init', ['Casanova_Profile_Controller', 'register_routes']);
   add_action('rest_api_init', ['Casanova_Linking_Controller', 'register_routes']);
 

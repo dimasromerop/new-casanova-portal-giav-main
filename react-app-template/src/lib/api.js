@@ -12,6 +12,8 @@ export function api(path, options = {}) {
     credentials: "same-origin",
     headers,
   };
+  // La petición sigue aunque el usuario salga de la página (p. ej. al abrir una propuesta).
+  if (options.keepalive) init.keepalive = true;
 
   if (options.body !== undefined) {
     if (options.body instanceof FormData) {

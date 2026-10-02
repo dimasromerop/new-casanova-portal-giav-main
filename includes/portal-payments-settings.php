@@ -40,6 +40,16 @@ function casanova_portal_mulligans_enabled(): bool {
   return (bool) get_option('casanova_portal_mulligans_enabled', 1);
 }
 
+/**
+ * Sección «Propuestas» del portal: 'off' (nadie), 'admins' (solo administradores, también al ver
+ * el portal como un cliente) o 'all' (todos los clientes). Por defecto 'admins': se despliega
+ * sin que la vean los clientes y se prueba con datos reales antes de abrirla.
+ */
+function casanova_portal_proposals_mode(): string {
+  $mode = (string) get_option('casanova_portal_proposals_mode', 'admins');
+  return in_array($mode, ['off', 'admins', 'all'], true) ? $mode : 'admins';
+}
+
 function casanova_payments_sanitize_admin_notification_emails($value): string {
   $value = trim((string) $value);
   if ($value === '') {
@@ -443,6 +453,27 @@ add_action('admin_init', function () {
     },
     'default' => 1,
   ]);
+  // --- Propuestas en el portal (grupo propio: guardar aquí no toca Mulligans)
+  register_setting('casanova_portal_proposals', 'casanova_portal_proposals_mode', [
+    'type' => 'string',
+    'sanitize_callback' => function ($value) {
+      return in_array($value, ['off', 'admins', 'all'], true) ? $value : 'admins';
+    },
+    'default' => 'admins',
+  ]);
+  // Reglas de visibilidad que aplica el plugin de propuestas (WP_Travel_Portal_Feed_Service).
+  register_setting('casanova_portal_proposals', 'wp_travel_giav_portal_feed', [
+    'type' => 'array',
+    'sanitize_callback' => function ($value) {
+      $value = is_array($value) ? $value : [];
+      return [
+        'validity_days'         => max(0, min(365, absint($value['validity_days'] ?? 14))),
+        'expired_visible_days'  => max(0, min(365, absint($value['expired_visible_days'] ?? 30))),
+        'accepted_visible_days' => max(0, min(365, absint($value['accepted_visible_days'] ?? 30))),
+      ];
+    },
+    'default' => [],
+  ]);
   register_setting('casanova_portal', 'casanova_mulligans_giav_field_perk', [
     'type' => 'integer',
     'sanitize_callback' => 'absint',
@@ -765,6 +796,44 @@ function casanova_payments_render_settings_page(): void {
     echo '<p class="description">Por defecto <code>2238</code>. Lee el importe consumido de Mulligans en cada expediente.</p>';
     echo '<p class="description">Si defines <code>CASANOVA_MULLIGANS_GIAV_FIELD_PERK</code> o <code>CASANOVA_MULLIGANS_GIAV_FIELD_USED</code> en <code>wp-config.php</code>, esas constantes tienen prioridad sobre estos valores.</p>';
     submit_button('Guardar modulo', 'primary', 'submit', false);
+    echo '</form>';
+    echo '</div>';
+
+    // Propuestas en el portal
+    $proposals_mode = casanova_portal_proposals_mode();
+    $proposals_provider = has_filter('casanova_portal_proposals_feed');
+    $feed_settings = class_exists('WP_Travel_Portal_Feed_Service')
+      ? WP_Travel_Portal_Feed_Service::settings()
+      : ['validity_days' => 14, 'expired_visible_days' => 30, 'accepted_visible_days' => 30];
+    echo '<div class="casanova-admin-card casanova-admin-card--narrow">';
+    echo '<h2>Propuestas en el portal</h2>';
+    echo '<p>Los clientes ven sus propuestas y solicitudes en curso, y pueden pedir una nueva o actualizar una caducada.</p>';
+    if (!$proposals_provider) {
+      echo '<div class="notice notice-warning inline"><p>El plugin de propuestas no está activo: la sección no se mostrará aunque la actives.</p></div>';
+    }
+    echo '<form method="post" action="options.php">';
+    settings_fields('casanova_portal_proposals');
+    $modes = [
+      'off'    => 'Desactivada',
+      'admins' => 'Solo administradores (también al ver el portal como un cliente)',
+      'all'    => 'Todos los clientes',
+    ];
+    echo '<fieldset><legend class="screen-reader-text">Quién ve la sección</legend>';
+    foreach ($modes as $value => $label) {
+      echo '<p><label><input type="radio" name="casanova_portal_proposals_mode" value="' . esc_attr($value) . '" ' . checked($proposals_mode, $value, false) . ' /> ' . esc_html($label) . '</label></p>';
+    }
+    echo '</fieldset>';
+    if (class_exists('WP_Travel_Portal_Feed_Service')) {
+      $num = function (string $key, string $label, string $help) use ($feed_settings) {
+        echo '<p><label for="wtg_feed_' . esc_attr($key) . '"><strong>' . esc_html($label) . '</strong></label><br />';
+        echo '<input name="wp_travel_giav_portal_feed[' . esc_attr($key) . ']" id="wtg_feed_' . esc_attr($key) . '" type="number" min="0" max="365" step="1" value="' . esc_attr((string) (int) ($feed_settings[$key] ?? 0)) . '" class="small-text" /> días</p>';
+        echo '<p class="description">' . esc_html($help) . '</p>';
+      };
+      $num('validity_days', 'Validez de una propuesta', 'Desde que se envía. 0 = sin caducidad automática. Siempre caduca al llegar la fecha del viaje.');
+      $num('expired_visible_days', 'Caducadas visibles', 'Días que el cliente sigue viendo una propuesta caducada (para pedir que se la actualicemos).');
+      $num('accepted_visible_days', 'Aceptadas visibles', 'Días que sigue en Propuestas tras aceptarla; después solo está en Viajes.');
+    }
+    submit_button('Guardar propuestas', 'primary', 'submit', false);
     echo '</form>';
     echo '</div>';
 

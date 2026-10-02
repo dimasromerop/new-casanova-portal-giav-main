@@ -8,6 +8,7 @@ import './home.css';
 import './trips.css';
 import './payments.css';
 import './account.css';
+import './proposals.css';
 import './shell.css';
 
 const el = document.getElementById('casanova-portal-root');

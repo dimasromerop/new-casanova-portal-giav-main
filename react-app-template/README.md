@@ -46,6 +46,7 @@ Todos los CSS se importan en `src/main.jsx`, en este orden:
 | `trips.css` | Listado de viajes y ficha del viaje |
 | `payments.css` | Pestaña Pagos de la ficha |
 | `account.css` | Mensajes, Mulligans, Perfil y Seguridad |
+| `proposals.css` | Propuestas y aviso de propuestas del Inicio |
 | `shell.css` | Estructura: barra lateral, barra superior, pestañas móviles y pie |
 
 Reglas: solo tokens (nada de hexadecimales sueltos), un único acento cálido (arena),
@@ -53,5 +54,15 @@ iconos de `src/components/Icon.jsx` (Tabler), objetivos táctiles de 44 px como 
 
 ## Modo prueba
 
-`?mock=1` (solo administradores) lee `includes/mock/dashboard.json`, `trip.json`
-y `messages.json`.
+`?mock=1` (solo administradores) lee `includes/mock/dashboard.json`, `trip.json`,
+`messages.json` y `proposals.json`.
+
+## Propuestas
+
+`GET /casanova/v1/proposals` devuelve las propuestas y solicitudes en curso del cliente;
+`POST /casanova/v1/proposals/seen` (`ids`) quita la marca «Nueva» (no hace nada en la vista
+como cliente). Los datos los da el plugin de propuestas por el filtro
+`casanova_portal_proposals_feed`: sin él, `available` = false y la sección se oculta.
+`GET /casanova/v1/proposals/request-form` y `POST /casanova/v1/proposals/request` (con
+`proposal_id` para actualizar una caducada, sin él para una nueva) envían el MISMO formulario
+de solicitud de Gravity Forms de la web desde el plugin de propuestas; no hay formulario propio.

@@ -5,6 +5,7 @@ import Icon from "../Icon.jsx";
 import { EmptyState, ProgressBar } from "../ui.jsx";
 import { euro, formatDateES, formatNumberUi, formatTierLabel, formatTimestamp, normalizeTripDates } from "../../lib/formatters.js";
 import { setParams } from "../../lib/params.js";
+import { firstOpenGroup, formatDateRange, formatDayMonth, formatPrice, fromPrice, nightsLabel as proposalNights, travellersLabel } from "../../lib/proposals.js";
 import { compactList, countNightsBetween, flightSummary, serviceSemanticType, transferSummary, tripAllServices, uniqueStrings } from "../../lib/tripServices.js";
 
 function firstNameFromProfile(profile) {
@@ -53,6 +54,58 @@ function HomeCard({ icon, title, aside = null, className = "", children }) {
   );
 }
 
+// Aviso de propuestas abiertas cuando no hay viaje activo: la del primer grupo con algo abierto.
+function ProposalTeaser({ group, open }) {
+  const first = open[0];
+  const title = (group.type === "request" && group.request?.title) || group.title || first.title || tt("Tu propuesta de viaje");
+  const dates = formatDateRange(first.start_date, first.end_date);
+  const nights = proposalNights(first.nights);
+  const travellers = travellersLabel(first.players, first.non_players);
+  const from = fromPrice(open);
+  const expires = open.map((proposal) => proposal.expires_on).filter(Boolean).sort()[0] || "";
+  const badge = open.length > 1 ? ttf("{count} opciones para tu viaje", { count: open.length }) : tt("Nueva propuesta");
+  const fromLabel = !from
+    ? ""
+    : from.kind === "player"
+      ? (from.basis === "single" ? tt("por jugador en habitación individual") : tt("por jugador en habitación doble"))
+      : (from.basis === "single" ? tt("por persona en habitación individual") : tt("por persona en habitación doble"));
+
+  return (
+    <section className="cp-prop-teaser" aria-labelledby="cp-home-proposal-title">
+      <div className="cp-prop-teaser__media">
+        {first.image ? <img src={first.image} alt="" decoding="async" /> : null}
+      </div>
+      <div className="cp-prop-teaser__body">
+        <span className="cp-badge cp-badge--new">{badge}</span>
+        <h2 className="cp-prop-teaser__title" id="cp-home-proposal-title">{title}</h2>
+        <p className="cp-prop-card__meta">
+          {dates ? <span><Icon name="calendar" size={16} />{[dates, nights].filter(Boolean).join(" · ")}</span> : null}
+          {travellers ? <span><Icon name="user" size={16} />{travellers}</span> : null}
+        </p>
+        {from ? (
+          <p className="cp-prop-teaser__price">
+            {open.length > 1 ? `${tt("Desde")} ` : ""}<strong>{formatPrice(from.value, from.currency)}</strong> {fromLabel}
+          </p>
+        ) : null}
+        {expires ? (
+          <p className="cp-prop-card__note is-warn">
+            <Icon name="clock" size={16} />
+            {open.length > 1
+              ? ttf("Válidas hasta el {date}", { date: formatDayMonth(expires) })
+              : ttf("Válida hasta el {date}", { date: formatDayMonth(expires) })}
+          </p>
+        ) : null}
+        <div className="cp-prop-teaser__actions">
+          <button type="button" className="cp-btn cp-btn--primary" onClick={() => setParams({ view: "proposals", expediente: null, tab: null })}>
+            {open.length > 1 ? tt("Ver las propuestas") : tt("Ver la propuesta")}
+            <Icon name="arrow-right" size={18} />
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function IncludeRow({ icon, label, value, detail = "" }) {
   return (
     <li className="cp-home-includes__row">
@@ -74,6 +127,7 @@ export default function DashboardView({
   tripDetailLoading = false,
   mulligansEnabled = true,
   profile = null,
+  proposals = null,
 }) {
   // Se guarda qué URL ha cargado (o fallado) en lugar de un booleano: así una foto
   // servida desde caché, que dispara onLoad antes que cualquier efecto, no se pierde.
@@ -215,6 +269,14 @@ export default function DashboardView({
     : tt("Ya estás en el nivel más alto del programa.");
   const lastSyncLabel = formatTimestamp(mull?.last_sync);
 
+  /* ----- Propuestas ----- */
+  const openProposals = firstOpenGroup(proposals);
+  const newProposals = Number(proposals?.counts?.new || 0);
+  const openProposalCount = Number(proposals?.counts?.open || 0);
+  const proposalsLead = newProposals > 0
+    ? (newProposals === 1 ? tt("Tienes una propuesta nueva") : ttf("Tienes {count} propuestas nuevas", { count: newProposals }))
+    : "";
+
   /* ----- Navegación (una sola entrada en el historial) ----- */
   const openTrip = (id, tab = null) => {
     if (!id) return;
@@ -231,6 +293,7 @@ export default function DashboardView({
       <header className="cp-home__head">
         <h1 className="cp-home__title">{firstName ? `${tt("Hola")}, ${firstName}` : tt("Hola")}</h1>
         {hasActiveTrip && daysLeftLabel ? <p className="cp-home__lead">{daysLeftLabel}</p> : null}
+        {!hasActiveTrip && proposalsLead ? <p className="cp-home__lead">{proposalsLead}</p> : null}
       </header>
 
       {hasActiveTrip ? (
@@ -285,6 +348,8 @@ export default function DashboardView({
             </div>
           </div>
         </section>
+      ) : openProposals ? (
+        <ProposalTeaser group={openProposals.group} open={openProposals.open} />
       ) : (
         <EmptyState
           title={tt("Aún no tienes un viaje confirmado.")}
@@ -370,6 +435,26 @@ export default function DashboardView({
                 />
               </ul>
             )}
+          </HomeCard>
+        ) : null}
+
+        {hasActiveTrip && openProposalCount > 0 ? (
+          <HomeCard
+            icon="file"
+            title={tt("Propuestas")}
+            className="cp-home-card--proposals"
+            aside={newProposals > 0 ? <span className="cp-badge cp-badge--new">{tt("Nueva")}</span> : null}
+          >
+            <p className="cp-home-card__text">
+              {openProposalCount === 1
+                ? tt("Tienes una propuesta de viaje pendiente de revisar.")
+                : ttf("Tienes {count} propuestas de viaje pendientes de revisar.", { count: openProposalCount })}
+            </p>
+            <div className="cp-home-card__foot">
+              <button type="button" className="cp-btn cp-btn--ghost" onClick={() => setParams({ view: "proposals", expediente: null, tab: null })}>
+                {tt("Ver propuestas")}
+              </button>
+            </div>
           </HomeCard>
         ) : null}
 

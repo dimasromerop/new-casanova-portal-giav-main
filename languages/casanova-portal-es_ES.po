@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: casanova-portal\n"
-"POT-Creation-Date: 2026-10-02 08:15+0000\n"
-"PO-Revision-Date: 2026-10-02 10:15+0200\n"
+"POT-Creation-Date: 2026-10-02 14:49+0000\n"
+"PO-Revision-Date: 2026-10-02 16:49+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: es_ES\n"
@@ -47,6 +47,12 @@ msgstr "(opcional)"
 
 msgid "(Opcional, según datos de facturación)"
 msgstr "(Opcional, según datos de facturación)"
+
+msgid "1 acompañante"
+msgstr "1 acompañante"
+
+msgid "1 jugador"
+msgstr "1 jugador"
 
 msgid "3 cuotas"
 msgstr "3 cuotas"
@@ -108,6 +114,18 @@ msgstr "Acciones"
 msgid "Acción"
 msgstr "Acción"
 
+msgid "Aceptada"
+msgstr "Aceptada"
+
+msgid "Aceptada el {date}"
+msgstr "Aceptada el {date}"
+
+msgid "Acompañante"
+msgstr "Acompañante"
+
+msgid "Acompañante ({room})"
+msgstr "Acompañante ({room})"
+
 msgid "Activado"
 msgstr "Activado"
 
@@ -125,6 +143,15 @@ msgstr "Actualizando…"
 
 msgid "Actualizar"
 msgstr "Actualizar"
+
+msgid "Actualizar propuesta"
+msgstr "Actualizar propuesta"
+
+msgid "Actualizar propuesta: {title}"
+msgstr "Actualizar propuesta: {title}"
+
+msgid "Actualizar tu propuesta"
+msgstr "Actualizar tu propuesta"
 
 msgid "Adjuntar archivo"
 msgstr "Adjuntar archivo"
@@ -225,6 +252,9 @@ msgstr "Aún no hay pagos asociados a este viaje."
 msgid "Aún no hay pagos disponibles para este viaje."
 msgstr "Aún no hay pagos disponibles para este viaje."
 
+msgid "Aún no tienes propuestas"
+msgstr "Aún no tienes propuestas"
+
 msgid "Aún no tienes un viaje confirmado."
 msgstr "Aún no tienes un viaje confirmado."
 
@@ -291,8 +321,17 @@ msgstr "Buscar viaje..."
 msgid "Cada archivo puede ocupar como máximo %s."
 msgstr "Cada archivo puede ocupar como máximo %s."
 
+msgid "Caducada"
+msgstr "Caducada"
+
+msgid "Caducó el {date}"
+msgstr "Caducó el {date}"
+
 msgid "Calendario"
 msgstr "Calendario"
+
+msgid "Camas en las habitaciones dobles"
+msgstr "Camas en las habitaciones dobles"
 
 msgid "Cambiar contraseña"
 msgstr "Cambiar contraseña"
@@ -305,6 +344,9 @@ msgstr "Cambio de contraseña desactivado"
 
 msgid "Campos por confirmar"
 msgstr "Campos por confirmar"
+
+msgid "Cancelar"
+msgstr "Cancelar"
 
 msgid "Canje"
 msgstr "Canje"
@@ -399,6 +441,9 @@ msgstr "completado"
 msgid "Completarás el pago en la página segura de nuestro proveedor de pagos."
 msgstr "Completarás el pago en la página segura de nuestro proveedor de pagos."
 
+msgid "Comprobando..."
+msgstr "Comprobando..."
+
 msgid "con"
 msgstr "con"
 
@@ -432,8 +477,17 @@ msgstr "Confirmado"
 msgid "Confirmados"
 msgstr "Confirmados"
 
+msgid "Confirmar"
+msgstr "Confirmar"
+
 msgid "Confirmar nueva contraseña"
 msgstr "Confirmar nueva contraseña"
+
+msgid "Confirma tu email"
+msgstr "Confirma tu email"
+
+msgid "Confírmanos tus datos y te prepararemos una propuesta nueva con precios actualizados."
+msgstr "Confírmanos tus datos y te prepararemos una propuesta nueva con precios actualizados."
 
 msgid "Conoce antes que nadie las ofertas y destinos exclusivos."
 msgstr "Conoce antes que nadie las ofertas y destinos exclusivos."
@@ -492,6 +546,9 @@ msgstr "Credenciales de acceso"
 msgid "Cuando se registren pagos o se aplique un bonus, aparecerán aquí."
 msgstr "Cuando se registren pagos o se aplique un bonus, aparecerán aquí."
 
+msgid "Cuando te preparemos una propuesta de viaje, la verás aquí con sus precios y podrás aceptarla desde la propia propuesta."
+msgstr "Cuando te preparemos una propuesta de viaje, la verás aquí con sus precios y podrás aceptarla desde la propia propuesta."
+
 msgid "Cuando tu reserva esté confirmada, aquí verás la conversación y las actualizaciones del equipo de Casanova Golf."
 msgstr "Cuando tu reserva esté confirmada, aquí verás la conversación y las actualizaciones del equipo de Casanova Golf."
 
@@ -501,8 +558,17 @@ msgstr "Cuando tu reserva esté lista, aquí verás todos los detalles de tu via
 msgid "Cuenta no vinculada."
 msgstr "Cuenta no vinculada."
 
+msgid "Cuéntanos algo más"
+msgstr "Cuéntanos algo más"
+
+msgid "Cuéntanos qué viaje tienes en mente y te prepararemos una propuesta."
+msgstr "Cuéntanos qué viaje tienes en mente y te prepararemos una propuesta."
+
 msgid "Código:"
 msgstr "Código:"
+
+msgid "Código de 6 cifras"
+msgstr "Código de 6 cifras"
 
 msgid "Código de verificación"
 msgstr "Código de verificación"
@@ -574,6 +640,9 @@ msgstr "del total como reserva"
 msgid "Demasiados intentos. Espera unos minutos."
 msgstr "Demasiados intentos. Espera unos minutos."
 
+msgid "Demasiados intentos. Pide un código nuevo."
+msgstr "Demasiados intentos. Pide un código nuevo."
+
 msgid "Demasiados intentos de pago. Espera unos minutos."
 msgstr "Demasiados intentos de pago. Espera unos minutos."
 
@@ -606,6 +675,12 @@ msgstr "Descripción"
 
 msgid "Descripción:"
 msgstr "Descripción:"
+
+msgid "Desde"
+msgstr "Desde"
+
+msgid "Destino, hotel o campos de golf"
+msgstr "Destino, hotel o campos de golf"
 
 msgid "Destino:"
 msgstr "Destino:"
@@ -642,6 +717,9 @@ msgstr "disponibles"
 
 msgid "Distribución"
 msgstr "Distribución"
+
+msgid "Distribución de habitaciones"
+msgstr "Distribución de habitaciones"
 
 msgid "DNI"
 msgstr "DNI"
@@ -697,8 +775,14 @@ msgstr "El cliente lo verá dentro del portal y además recibirá un email con e
 msgid "El código caduca en 10 minutos."
 msgstr "El código caduca en 10 minutos."
 
+msgid "El código ha caducado. Pide uno nuevo."
+msgstr "El código ha caducado. Pide uno nuevo."
+
 msgid "El código ha caducado. Solicita uno nuevo."
 msgstr "El código ha caducado. Solicita uno nuevo."
+
+msgid "El código no es correcto."
+msgstr "El código no es correcto."
 
 msgid "El código no es válido."
 msgstr "El código no es válido."
@@ -717,6 +801,9 @@ msgstr "Elegir otro cliente"
 
 msgid "El expediente no tiene importe pendiente en GIAV."
 msgstr "El expediente no tiene importe pendiente en GIAV."
+
+msgid "Elige"
+msgstr "Elige"
 
 msgid "Elige método de pago"
 msgstr "Elige método de pago"
@@ -753,6 +840,9 @@ msgstr "Email"
 
 msgid "Email (obligatorio)"
 msgstr "Email (obligatorio)"
+
+msgid "Email confirmado"
+msgstr "Email confirmado"
 
 msgid "En \"%1$s\" solo quedan %2$d personas con depósito pendiente de resto."
 msgstr "En \"%1$s\" solo quedan %2$d personas con depósito pendiente de resto."
@@ -796,6 +886,9 @@ msgstr "Enlace para completar tu pago – Expediente %s"
 msgid "En USD solo se puede pagar con tarjeta."
 msgstr "En USD solo se puede pagar con tarjeta."
 
+msgid "Enviada el {date}"
+msgstr "Enviada el {date}"
+
 msgid "Enviando..."
 msgstr "Enviando..."
 
@@ -805,11 +898,17 @@ msgstr "Enviando…"
 msgid "Enviar"
 msgstr "Enviar"
 
+msgid "Enviar a"
+msgstr "Enviar a"
+
 msgid "Enviar código"
 msgstr "Enviar código"
 
 msgid "Enviar enlace del resto"
 msgstr "Enviar enlace del resto"
+
+msgid "Enviarme el código"
+msgstr "Enviarme el código"
 
 msgid "Enviarme mi enlace"
 msgstr "Enviarme mi enlace"
@@ -819,6 +918,9 @@ msgstr "Enviarme mi enlace para pagar el resto"
 
 msgid "Enviar mensaje"
 msgstr "Enviar mensaje"
+
+msgid "Enviar solicitud"
+msgstr "Enviar solicitud"
 
 msgid "en {year}"
 msgstr "en {year}"
@@ -847,6 +949,12 @@ msgstr "Escribe un mensaje..."
 msgid "Escribe un mensaje o adjunta un archivo antes de enviarlo."
 msgstr "Escribe un mensaje o adjunta un archivo antes de enviarlo."
 
+msgid "Escribir a tu agente"
+msgstr "Escribir a tu agente"
+
+msgid "Escribir a {name}"
+msgstr "Escribir a {name}"
+
 msgid "Español"
 msgstr "Español"
 
@@ -856,11 +964,17 @@ msgstr "Estado"
 msgid "Estado: Todos"
 msgstr "Estado: Todos"
 
+msgid "Estado de la solicitud"
+msgstr "Estado de la solicitud"
+
 msgid "Estado de pagos"
 msgstr "Estado de pagos"
 
 msgid "Estado de pagos del viaje"
 msgstr "Estado de pagos del viaje"
+
+msgid "Estamos confirmando tus servicios"
+msgstr "Estamos confirmando tus servicios"
 
 msgid "Estamos preparando la información de este viaje. En cuanto esté lista, la verás aquí."
 msgstr "Estamos preparando la información de este viaje. En cuanto esté lista, la verás aquí."
@@ -870,6 +984,9 @@ msgstr "Estancia"
 
 msgid "Estancia por confirmar"
 msgstr "Estancia por confirmar"
+
+msgid "Esta propuesta ya no está disponible."
+msgstr "Esta propuesta ya no está disponible."
 
 msgid "Estas personas quedan totalmente pagadas"
 msgstr "Estas personas quedan totalmente pagadas"
@@ -973,6 +1090,12 @@ msgstr "Falta el expediente del mensaje."
 msgid "Fecha"
 msgstr "Fecha"
 
+msgid "Fecha de llegada"
+msgstr "Fecha de llegada"
+
+msgid "Fecha de regreso"
+msgstr "Fecha de regreso"
+
 msgid "Fecha emisión:"
 msgstr "Fecha emisión:"
 
@@ -1036,6 +1159,9 @@ msgstr "Gracias, procesamos el cobro y actualizamos tus datos."
 msgid "Gracias. Hemos recibido tu pago."
 msgstr "Gracias. Hemos recibido tu pago."
 
+msgid "Green-fees por jugador"
+msgstr "Green-fees por jugador"
+
 msgid "Grupo"
 msgstr "Grupo"
 
@@ -1077,6 +1203,9 @@ msgstr "Hasta 4.999 €"
 
 msgid "Hemos recibido el pago. Gracias, procesamos el cobro y actualizamos tus datos."
 msgstr "Hemos recibido el pago. Gracias, procesamos el cobro y actualizamos tus datos."
+
+msgid "Hemos recibido tu solicitud. Te escribiremos en cuanto tengamos tu propuesta."
+msgstr "Hemos recibido tu solicitud. Te escribiremos en cuanto tengamos tu propuesta."
 
 msgid "Hemos registrado correctamente tu pago para el expediente <strong>%s</strong>."
 msgstr "Hemos registrado correctamente tu pago para el expediente <strong>%s</strong>."
@@ -1180,6 +1309,9 @@ msgstr "Importe total"
 msgid "Indica cuántas personas pagas de cada opción"
 msgstr "Indica cuántas personas pagas de cada opción"
 
+msgid "Indica un teléfono de contacto."
+msgstr "Indica un teléfono de contacto."
+
 msgid "Inespay no devolvio un enlace de pago."
 msgstr "Inespay no devolvio un enlace de pago."
 
@@ -1231,6 +1363,12 @@ msgstr "Inténtalo de nuevo más tarde."
 msgid "Ir al portal"
 msgstr "Ir al portal"
 
+msgid "Jugador"
+msgstr "Jugador"
+
+msgid "Jugador ({room})"
+msgstr "Jugador ({room})"
+
 msgid "Jugadores"
 msgstr "Jugadores"
 
@@ -1254,6 +1392,9 @@ msgstr "La solicitud con Aplazame ha quedado pendiente. Actualizaremos tus pagos
 
 msgid "La solicitud con Aplazame no se completó. Si el estado cambia más tarde, lo verás reflejado aquí."
 msgstr "La solicitud con Aplazame no se completó. Si el estado cambia más tarde, lo verás reflejado aquí."
+
+msgid "Las propuestas que hemos preparado para ti y tus solicitudes en curso."
+msgstr "Las propuestas que hemos preparado para ti y tus solicitudes en curso."
 
 msgid "La transferencia no se completó. Si el banco la confirma más tarde, lo verás reflejado aquí."
 msgstr "La transferencia no se completó. Si el banco la confirma más tarde, lo verás reflejado aquí."
@@ -1291,6 +1432,9 @@ msgstr "Logo"
 msgid "Lo que incluye tu viaje"
 msgstr "Lo que incluye tu viaje"
 
+msgid "Lo que nos has pedido y aún estamos preparando."
+msgstr "Lo que nos has pedido y aún estamos preparando."
+
 msgid "Los adjuntos del portal no están disponibles."
 msgstr "Los adjuntos del portal no están disponibles."
 
@@ -1299,6 +1443,9 @@ msgstr "Los beneficios se activan con una reserva real. Si un año no viajas, ma
 
 msgid "Los bonos aparecerán cuando el viaje esté pagado."
 msgstr "Los bonos aparecerán cuando el viaje esté pagado."
+
+msgid "Los precios ya no están garantizados. Si te sigue interesando, la actualizamos con tus nuevas fechas."
+msgstr "Los precios ya no están garantizados. Si te sigue interesando, la actualizamos con tus nuevas fechas."
 
 msgid "Los puntos clave de tu viaje"
 msgstr "Los puntos clave de tu viaje"
@@ -1329,6 +1476,9 @@ msgstr "Mi perfil"
 
 msgid "Mis datos"
 msgstr "Mis datos"
+
+msgid "Mis fechas son flexibles (± unos días)"
+msgstr "Mis fechas son flexibles (± unos días)"
 
 msgid "Modalidad"
 msgstr "Modalidad"
@@ -1528,6 +1678,9 @@ msgstr "No hay viajes registrados en %s."
 msgid "No hemos encontrado clientes con portal para esa busqueda."
 msgstr "No hemos encontrado clientes con portal para esa busqueda."
 
+msgid "No hemos podido comprobar el código."
+msgstr "No hemos podido comprobar el código."
+
 msgid "No hemos podido consultar el sistema. Inténtalo más tarde."
 msgstr "No hemos podido consultar el sistema. Inténtalo más tarde."
 
@@ -1536,6 +1689,12 @@ msgstr "No hemos podido enviar el código porque no hay un email válido asociad
 
 msgid "No hemos podido enviar el email. Inténtalo más tarde."
 msgstr "No hemos podido enviar el email. Inténtalo más tarde."
+
+msgid "No hemos podido enviar tu solicitud. Inténtalo de nuevo o escríbenos."
+msgstr "No hemos podido enviar tu solicitud. Inténtalo de nuevo o escríbenos."
+
+msgid "No jugadores"
+msgstr "No jugadores"
 
 msgid "Nombre"
 msgstr "Nombre"
@@ -1555,8 +1714,14 @@ msgstr "Nombre y apellidos"
 msgid "Nonce inválido"
 msgstr "Nonce inválido"
 
+msgid "No podemos abrir el formulario"
+msgstr "No podemos abrir el formulario"
+
 msgid "No podemos cargar tu perfil"
 msgstr "No podemos cargar tu perfil"
+
+msgid "No podemos cargar tus propuestas"
+msgstr "No podemos cargar tus propuestas"
 
 msgid "No podemos consultar el sistema en este momento. Inténtalo más tarde."
 msgstr "No podemos consultar el sistema en este momento. Inténtalo más tarde."
@@ -1798,11 +1963,23 @@ msgstr "No tienes permiso para acceder a este expediente."
 msgid "No tienes permiso para ver este expediente."
 msgstr "No tienes permiso para ver este expediente."
 
+msgid "No tienes solicitudes pendientes."
+msgstr "No tienes solicitudes pendientes."
+
 msgid "No tienes viajes próximos."
 msgstr "No tienes viajes próximos."
 
+msgid "Nueva"
+msgstr "Nueva"
+
 msgid "Nueva contraseña"
 msgstr "Nueva contraseña"
+
+msgid "Nueva propuesta"
+msgstr "Nueva propuesta"
+
+msgid "Nueva solicitud"
+msgstr "Nueva solicitud"
 
 msgid "Nuevo"
 msgstr "Nuevo"
@@ -1825,11 +2002,26 @@ msgstr "Observaciones:"
 msgid "o el importe total: %s"
 msgstr "o el importe total: %s"
 
+msgid "Opciones para tu viaje"
+msgstr "Opciones para tu viaje"
+
+msgid "Opción individual (informativa)"
+msgstr "Opción individual (informativa)"
+
 msgid "Opción y personas"
 msgstr "Opción y personas"
 
+msgid "Opción {n}"
+msgstr "Opción {n}"
+
 msgid "o solo el depósito: %s"
 msgstr "o solo el depósito: %s"
+
+msgid "Otras propuestas"
+msgstr "Otras propuestas"
+
+msgid "Otro hotel, más rondas, un día más…"
+msgstr "Otro hotel, más rondas, un día más…"
 
 msgid "Otros servicios"
 msgstr "Otros servicios"
@@ -2017,6 +2209,12 @@ msgstr "Para confirmar tu viaje, puedes pagar un depósito de %1$s hasta el %2$s
 msgid "Para confirmar tu viaje, puedes pagar un depósito de %s"
 msgstr "Para confirmar tu viaje, puedes pagar un depósito de %s"
 
+msgid "Para enseñarte las propuestas que te enviemos a {email}, confírmanos que es tuyo."
+msgstr "Para enseñarte las propuestas que te enviemos a {email}, confírmanos que es tuyo."
+
+msgid "Para enseñarte las propuestas que te enviemos por email, confírmanos que es tuyo."
+msgstr "Para enseñarte las propuestas que te enviemos por email, confírmanos que es tuyo."
+
 msgid "Para pagar el resto usa tu enlace personal. Puedes pedirlo desde la página de pago del grupo con tu email y tu documento."
 msgstr "Para pagar el resto usa tu enlace personal. Puedes pedirlo desde la página de pago del grupo con tu email y tu documento."
 
@@ -2043,6 +2241,9 @@ msgstr "PCI DSS certificado"
 
 msgid "PDF"
 msgstr "PDF"
+
+msgid "Pedir una actualización"
+msgstr "Pedir una actualización"
 
 msgid "Pendiente"
 msgstr "Pendiente"
@@ -2095,11 +2296,35 @@ msgstr "Personas"
 msgid "Personas incluidas en este pago"
 msgstr "Personas incluidas en este pago"
 
+msgid "Pide tu propuesta"
+msgstr "Pide tu propuesta"
+
+msgid "Pide un código nuevo."
+msgstr "Pide un código nuevo."
+
 msgid "Población"
 msgstr "Población"
 
 msgid "Porcentaje pagado del viaje"
 msgstr "Porcentaje pagado del viaje"
+
+msgid "por jugador en habitación doble"
+msgstr "por jugador en habitación doble"
+
+msgid "por jugador en habitación individual"
+msgstr "por jugador en habitación individual"
+
+msgid "por persona en habitación doble"
+msgstr "por persona en habitación doble"
+
+msgid "Por persona en habitación doble"
+msgstr "Por persona en habitación doble"
+
+msgid "por persona en habitación individual"
+msgstr "por persona en habitación individual"
+
+msgid "Por persona en habitación individual"
+msgstr "Por persona en habitación individual"
 
 msgid "Por seguridad, el DNI y el email no se pueden modificar desde aquí."
 msgstr "Por seguridad, el DNI y el email no se pueden modificar desde aquí."
@@ -2109,6 +2334,15 @@ msgstr "Portal"
 
 msgid "Portal cliente"
 msgstr "Portal cliente"
+
+msgid "Precio por persona"
+msgstr "Precio por persona"
+
+msgid "Preparada por {name}"
+msgstr "Preparada por {name}"
+
+msgid "Preparando tu propuesta"
+msgstr "Preparando tu propuesta"
 
 msgid "Previsión en destino"
 msgstr "Previsión en destino"
@@ -2148,6 +2382,18 @@ msgstr "Progreso de pago"
 
 msgid "Progreso Mulligans"
 msgstr "Progreso Mulligans"
+
+msgid "Propuesta: {title}"
+msgstr "Propuesta: {title}"
+
+msgid "Propuesta lista"
+msgstr "Propuesta lista"
+
+msgid "Propuesta original"
+msgstr "Propuesta original"
+
+msgid "Propuestas"
+msgstr "Propuestas"
 
 msgid "Proveedor"
 msgstr "Proveedor"
@@ -2239,6 +2485,15 @@ msgstr "Qué necesitas hacer ahora"
 msgid "Ratio actual"
 msgstr "Ratio actual"
 
+msgid "Recibida"
+msgstr "Recibida"
+
+msgid "Recibido. Te prepararemos una propuesta actualizada y te la enviaremos por email."
+msgstr "Recibido. Te prepararemos una propuesta actualizada y te la enviaremos por email."
+
+msgid "Recibido. {name} te preparará una propuesta actualizada y te la enviará por email."
+msgstr "Recibido. {name} te preparará una propuesta actualizada y te la enviará por email."
+
 msgid "Recibirás además un email con el enlace para completar el resto del pago."
 msgstr "Recibirás además un email con el enlace para completar el resto del pago."
 
@@ -2299,8 +2554,14 @@ msgstr "Resumen del pago"
 msgid "Resumen de pago"
 msgstr "Resumen de pago"
 
+msgid "Revisa las fechas: la llegada tiene que ser futura y el regreso posterior a la llegada."
+msgstr "Revisa las fechas: la llegada tiene que ser futura y el regreso posterior a la llegada."
+
 msgid "Revisión activa de reservas"
 msgstr "Revisión activa de reservas"
+
+msgid "Revísalas con calma: puedes aceptarlas desde la propuesta o escribir a tu agente si quieres cambiar algo."
+msgstr "Revísalas con calma: puedes aceptarlas desde la propuesta o escribir a tu agente si quieres cambiar algo."
 
 msgid "Rondas de golf por confirmar"
 msgstr "Rondas de golf por confirmar"
@@ -2476,6 +2737,12 @@ msgstr "Si tienes dudas, contacta con la agencia antes de pagar."
 msgid "Si ya hay depósitos pagados, cada persona puede pagar su parte restante desde aquí."
 msgstr "Si ya hay depósitos pagados, cada persona puede pagar su parte restante desde aquí."
 
+msgid "Solicitud enviada"
+msgstr "Solicitud enviada"
+
+msgid "Solicitudes en curso"
+msgstr "Solicitudes en curso"
+
 msgid "Solicitud no valida."
 msgstr "Solicitud no valida."
 
@@ -2493,6 +2760,9 @@ msgstr "Solo se admiten PDF, JPG, PNG o WEBP."
 
 msgid "Solo tarjeta disponible."
 msgstr "Solo tarjeta disponible."
+
+msgid "Suplemento individual"
+msgstr "Suplemento individual"
 
 msgid "Sí, eres oficialmente peligroso."
 msgstr "Sí, eres oficialmente peligroso."
@@ -2524,6 +2794,9 @@ msgstr "Tarjetas"
 msgid "Te acompañaremos desde aquí"
 msgstr "Te acompañaremos desde aquí"
 
+msgid "Te avisaremos por email en cuanto tu propuesta esté lista."
+msgstr "Te avisaremos por email en cuanto tu propuesta esté lista."
+
 msgid "Te enviaremos por email tu enlace personal con tu importe pendiente actualizado. Indica el email y el documento que usaste al pagar el depósito."
 msgstr "Te enviaremos por email tu enlace personal con tu importe pendiente actualizado. Indica el email y el documento que usaste al pagar el depósito."
 
@@ -2539,6 +2812,9 @@ msgstr "Te faltan {amount} para {tier}."
 msgid "Te hemos enviado la confirmacion a %s."
 msgstr "Te hemos enviado la confirmacion a %s."
 
+msgid "Te hemos enviado un código de 6 cifras a {email}. Caduca en 15 minutos."
+msgstr "Te hemos enviado un código de 6 cifras a {email}. Caduca en 15 minutos."
+
 msgid "Te hemos reenviado el enlace de pago final si existía un depósito registrado."
 msgstr "Te hemos reenviado el enlace de pago final si existía un depósito registrado."
 
@@ -2550,6 +2826,9 @@ msgstr "Te llevaremos a una página donde podrás elegir tu banco y autorizar la
 
 msgid "Teléfono"
 msgstr "Teléfono"
+
+msgid "Teléfono de contacto"
+msgstr "Teléfono de contacto"
 
 msgid "Texto: máximo %d caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP."
 msgstr "Texto: máximo %d caracteres. Adjuntos básicos: hasta 3 archivos por mensaje, máximo 5 MB por archivo. Formatos: PDF, JPG, PNG y WEBP."
@@ -2572,6 +2851,12 @@ msgstr "Tienes <strong>%s</strong> factura disponible."
 msgid "Tienes <strong>%s</strong> facturas disponibles."
 msgstr "Tienes <strong>%s</strong> facturas disponibles."
 
+msgid "Tienes una propuesta de viaje pendiente de revisar."
+msgstr "Tienes una propuesta de viaje pendiente de revisar."
+
+msgid "Tienes una propuesta nueva"
+msgstr "Tienes una propuesta nueva"
+
 msgid "Tienes un nuevo mensaje de Casanova Golf en tu portal de cliente."
 msgstr "Tienes un nuevo mensaje de Casanova Golf en tu portal de cliente."
 
@@ -2583,6 +2868,12 @@ msgstr "Tienes un pago pendiente de <strong>%s</strong> para este viaje."
 
 msgid "Tienes un pago pendiente de {amount} para este viaje."
 msgstr "Tienes un pago pendiente de {amount} para este viaje."
+
+msgid "Tienes {count} propuestas de viaje pendientes de revisar."
+msgstr "Tienes {count} propuestas de viaje pendientes de revisar."
+
+msgid "Tienes {count} propuestas nuevas"
+msgstr "Tienes {count} propuestas nuevas"
 
 msgid "Tipo"
 msgstr "Tipo"
@@ -2713,6 +3004,9 @@ msgstr "Tu cuenta no está vinculada a un cliente casanova."
 msgid "Tu cuenta no está vinculada todavía."
 msgstr "Tu cuenta no está vinculada todavía."
 
+msgid "Tu cuenta no tiene un email válido."
+msgstr ""
+
 msgid "Tu cuenta ya está vinculada."
 msgstr "Tu cuenta ya está vinculada."
 
@@ -2721,6 +3015,18 @@ msgstr "Tu código de verificación"
 
 msgid "Tu código de verificación para vincular tu cuenta es: %s\\n\\nCaduca en 10 minutos.\\n\\nSi no has solicitado este código, puedes ignorar este email."
 msgstr "Tu código de verificación para vincular tu cuenta es: %s\\n\\nCaduca en 10 minutos.\\n\\nSi no has solicitado este código, puedes ignorar este email."
+
+#, php-format
+msgid ""
+"Tu código para confirmar tu email en el área de cliente de Casanova Golf es: %s\n"
+"\n"
+"Caduca en 15 minutos.\n"
+"\n"
+"Si no lo has pedido tú, puedes ignorar este email."
+msgstr ""
+
+msgid "tu email"
+msgstr "tu email"
 
 msgid "Tu equipo Casanova"
 msgstr "Tu equipo Casanova"
@@ -2749,6 +3055,12 @@ msgstr "Tu primer pago aparecerá aquí."
 msgid "Tu programa Mulligans"
 msgstr "Tu programa Mulligans"
 
+msgid "Tu propuesta de viaje"
+msgstr "Tu propuesta de viaje"
+
+msgid "Tu propuesta está lista: te la hemos enviado por email."
+msgstr "Tu propuesta está lista: te la hemos enviado por email."
+
 msgid "Tu próximo viaje"
 msgstr "Tu próximo viaje"
 
@@ -2760,6 +3072,15 @@ msgstr "Tus datos"
 
 msgid "Tus Mulligans"
 msgstr "Tus Mulligans"
+
+msgid "Tu solicitud"
+msgstr "Tu solicitud"
+
+msgid "Tu solicitud del {date}"
+msgstr "Tu solicitud del {date}"
+
+msgid "Tus propuestas"
+msgstr "Tus propuestas"
 
 msgid "Tus viajes"
 msgstr "Tus viajes"
@@ -2845,6 +3166,12 @@ msgstr "Ver facturas"
 msgid "Verificar y continuar"
 msgstr "Verificar y continuar"
 
+msgid "Ver la propuesta"
+msgstr "Ver la propuesta"
+
+msgid "Ver las propuestas"
+msgstr "Ver las propuestas"
+
 msgid "Ver mapa"
 msgstr "Ver mapa"
 
@@ -2865,6 +3192,12 @@ msgstr "Ver pagos"
 
 msgid "Ver portal como cliente"
 msgstr "Ver portal como cliente"
+
+msgid "Ver propuesta"
+msgstr "Ver propuesta"
+
+msgid "Ver propuestas"
+msgstr "Ver propuestas"
 
 msgid "Ver ruta"
 msgstr "Ver ruta"
@@ -2956,6 +3289,12 @@ msgstr "vuelos y traslados incluidos"
 msgid "vuelos y traslados previstos"
 msgstr "vuelos y traslados previstos"
 
+msgid "Válida hasta el {date}"
+msgstr "Válida hasta el {date}"
+
+msgid "Válidas hasta el {date}"
+msgstr "Válidas hasta el {date}"
+
 msgid "Web"
 msgstr "Web"
 
@@ -2971,11 +3310,23 @@ msgstr "Ya consta un pago con alguno de estos datos. Si eres tú y quieres pagar
 msgid "Ya estás en el nivel más alto del programa."
 msgstr "Ya estás en el nivel más alto del programa."
 
+msgid "Ya hemos recibido tu petición. Te escribiremos en breve."
+msgstr "Ya hemos recibido tu petición. Te escribiremos en breve."
+
 msgid "Ya hemos registrado tu depósito. Cuando quieras, puedes completar el resto del pago desde este enlace seguro:"
 msgstr "Ya hemos registrado tu depósito. Cuando quieras, puedes completar el resto del pago desde este enlace seguro:"
 
+msgid "Ya la tienes en tus viajes"
+msgstr "Ya la tienes en tus viajes"
+
+msgid "Ya nos has pedido actualizarla: te escribiremos con la propuesta nueva."
+msgstr "Ya nos has pedido actualizarla: te escribiremos con la propuesta nueva."
+
 msgid "Ya puedes acceder a tu documentación (bonos y facturas) desde el portal:"
 msgstr "Ya puedes acceder a tu documentación (bonos y facturas) desde el portal:"
+
+msgid "Ya puedes ver aquí las propuestas que te enviemos a este email."
+msgstr "Ya puedes ver aquí las propuestas que te enviemos a este email."
 
 msgid "Ya tenemos un pago tuyo para este viaje"
 msgstr "Ya tenemos un pago tuyo para este viaje"
@@ -2986,11 +3337,17 @@ msgstr "Ya tienes documentación disponible para este viaje."
 msgid "{badge} · {count}"
 msgstr "{badge} · {count}"
 
+msgid "{count} acompañantes"
+msgstr "{count} acompañantes"
+
 msgid "{count} hotel"
 msgstr "{count} hotel"
 
 msgid "{count} hoteles"
 msgstr "{count} hoteles"
+
+msgid "{count} jugadores"
+msgstr "{count} jugadores"
 
 msgid "{count} mensaje sin leer"
 msgstr "{count} mensaje sin leer"
@@ -3003,6 +3360,12 @@ msgstr "{count} noche"
 
 msgid "{count} noches"
 msgstr "{count} noches"
+
+msgid "{count} opciones"
+msgstr "{count} opciones"
+
+msgid "{count} opciones para tu viaje"
+msgstr "{count} opciones para tu viaje"
 
 msgid "{count} ronda de golf"
 msgstr "{count} ronda de golf"
@@ -3031,8 +3394,14 @@ msgstr "¿Dudas antes de pagar?"
 msgid "¿No tienes acceso a ese email? Escríbenos y lo solucionamos."
 msgstr "¿No tienes acceso a ese email? Escríbenos y lo solucionamos."
 
+msgid "¿Quieres cambiar algo más?"
+msgstr "¿Quieres cambiar algo más?"
+
 msgid "¿Qué quieres pagar?"
 msgstr "¿Qué quieres pagar?"
+
+msgid "¿Qué viaje tienes en mente?"
+msgstr "¿Qué viaje tienes en mente?"
 
 msgid "¿Ya pagaste el depósito? Reenviar enlace para pagar el resto"
 msgstr "¿Ya pagaste el depósito? Reenviar enlace para pagar el resto"

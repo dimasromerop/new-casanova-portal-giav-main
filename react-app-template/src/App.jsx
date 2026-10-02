@@ -25,6 +25,7 @@ const loadInbox = () => import("./components/InboxView.jsx");
 const loadMulligans = () => import("./components/MulligansView.jsx");
 const loadProfile = () => import("./components/ProfileView.jsx");
 const loadSecurity = () => import("./components/SecurityView.jsx");
+const loadProposals = () => import("./components/ProposalsView.jsx");
 
 const TripsList = lazy(loadTripsList);
 const TripDetailView = lazy(loadTripDetail);
@@ -32,9 +33,10 @@ const InboxView = lazy(loadInbox);
 const MulligansView = lazy(loadMulligans);
 const ProfileView = lazy(loadProfile);
 const SecurityView = lazy(loadSecurity);
+const ProposalsView = lazy(loadProposals);
 
 function preloadViews() {
-  const run = () => [loadTripsList, loadTripDetail, loadInbox, loadMulligans].forEach((load) => load().catch(() => {}));
+  const run = () => [loadTripsList, loadTripDetail, loadInbox, loadMulligans, loadProposals].forEach((load) => load().catch(() => {}));
   if ("requestIdleCallback" in window) window.requestIdleCallback(run, { timeout: 4000 });
   else window.setTimeout(run, 2500);
 }
@@ -54,6 +56,7 @@ function ViewFallback() {
 // Iconos del menú (Tabler, como el resto del portal).
 const NavIconHome = () => <Icon name="home" size={20} />;
 const NavIconTrips = () => <Icon name="map-pin" size={20} />;
+const NavIconProposals = () => <Icon name="file" size={20} />;
 const NavIconMessages = () => <Icon name="message" size={20} />;
 const NavIconMulligans = () => <Icon name="star" size={20} />;
 
@@ -75,6 +78,14 @@ const NAV_ITEMS = [
     isActive: (view) => view === "trips" || view === "trip",
   },
   {
+    key: "proposals",
+    labelKey: "nav_proposals",
+    label: "Propuestas",
+    view: "proposals",
+    icon: NavIconProposals,
+    isActive: (view) => view === "proposals",
+  },
+  {
     key: "inbox",
     labelKey: "nav_messages",
     label: "Mensajes",
@@ -92,8 +103,8 @@ const NAV_ITEMS = [
   },
 ];
 
-function getNavItems({ mulligansEnabled = true } = {}) {
-  return NAV_ITEMS.filter((item) => mulligansEnabled || item.key !== "mulligans");
+function getNavItems({ mulligansEnabled = true, proposalsEnabled = false } = {}) {
+  return NAV_ITEMS.filter((item) => (mulligansEnabled || item.key !== "mulligans") && (proposalsEnabled || item.key !== "proposals"));
 }
 
 /* ===== App ===== */
@@ -145,6 +156,11 @@ function App() {
   const paymentDismissKey = "casanova_payment_banner_dismissed";
 
   const [inbox, setInbox] = useState(null);
+
+  const [proposals, setProposals] = useState(null);
+  const [loadingProposals, setLoadingProposals] = useState(false);
+  const [proposalsErr, setProposalsErr] = useState(null);
+  const proposalsRequestIdRef = useRef(0);
   const [loadingInbox, setLoadingInbox] = useState(false);
   const [inboxErr, setInboxErr] = useState(null);
 
@@ -160,8 +176,14 @@ function App() {
   const isReadOnly = Boolean(impersonation.readOnly);
   const readOnlyMessage = String(impersonation.message || tt("Modo de vista cliente activo. Solo lectura."));
   const isMulligansEnabled = window.CasanovaPortal?.features?.mulligansEnabled !== false;
-  const visibleNavItems = useMemo(() => getNavItems({ mulligansEnabled: isMulligansEnabled }), [isMulligansEnabled]);
-  const activeView = !isMulligansEnabled && route.view === "mulligans" ? "dashboard" : route.view;
+  const isProposalsEnabled = window.CasanovaPortal?.features?.proposalsEnabled === true;
+  const visibleNavItems = useMemo(
+    () => getNavItems({ mulligansEnabled: isMulligansEnabled, proposalsEnabled: isProposalsEnabled }),
+    [isMulligansEnabled, isProposalsEnabled],
+  );
+  const activeView = (!isMulligansEnabled && route.view === "mulligans") || (!isProposalsEnabled && route.view === "proposals")
+    ? "dashboard"
+    : route.view;
 
   useEffect(() => {
     const onPop = () => setRoute(readParams());
@@ -485,6 +507,72 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView]);
 
+  async function loadProposalsFeed({ background = false } = {}) {
+    if (!isProposalsEnabled) return null;
+    const requestId = ++proposalsRequestIdRef.current;
+    try {
+      if (!background) setLoadingProposals(true);
+      const res = await api(`/proposals${route.mock ? "?mock=1" : ""}`);
+      if (requestId !== proposalsRequestIdRef.current) return res;
+      startTransition(() => {
+        setProposals(res);
+        setProposalsErr(null);
+      });
+      return res;
+    } catch (e) {
+      if (requestId === proposalsRequestIdRef.current) setProposalsErr(e);
+      return null;
+    } finally {
+      if (!background && requestId === proposalsRequestIdRef.current) setLoadingProposals(false);
+    }
+  }
+
+  // Al abrir una propuesta deja de ser «Nueva» (en la vista como cliente no se marca nada).
+  function markProposalSeen(proposal) {
+    if (!proposal?.is_new || isReadOnly) return;
+    const id = Number(proposal.id);
+    setProposals((current) => {
+      if (!current || typeof current !== "object") return current;
+      const groups = (current.groups || []).map((group) => ({
+        ...group,
+        proposals: (group.proposals || []).map((item) => (Number(item.id) === id ? { ...item, is_new: false } : item)),
+      }));
+      const counts = { ...(current.counts || {}), new: Math.max(0, Number(current.counts?.new || 0) - 1) };
+      return { ...current, groups, counts };
+    });
+    if (!route.mock) {
+      void api("/proposals/seen", { method: "POST", body: { ids: [id] }, keepalive: true }).catch(() => {});
+    }
+  }
+
+  // Las propuestas se piden cuando el navegador está libre: el menú y el Inicio
+  // muestran el aviso de propuestas nuevas sin retrasar la primera pintura.
+  useEffect(() => {
+    if (!isProposalsEnabled) return undefined;
+    setProposals(null);
+    setProposalsErr(null);
+    if (activeView === "proposals") {
+      void loadProposalsFeed();
+      return undefined;
+    }
+    const run = () => { void loadProposalsFeed({ background: true }); };
+    if (typeof window.requestIdleCallback === "function") {
+      const idleId = window.requestIdleCallback(run, { timeout: 2000 });
+      return () => window.cancelIdleCallback?.(idleId);
+    }
+    const timer = window.setTimeout(run, 1200);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.mock, isProposalsEnabled]);
+
+  // Al entrar en la sección se refresca en segundo plano (puede haber llegado algo nuevo).
+  useEffect(() => {
+    if (activeView !== "proposals") return;
+    if (proposals) void loadProposalsFeed({ background: true });
+    else if (proposalsErr) void loadProposalsFeed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView]);
+
   function refreshMessagesState() {
     void (async () => {
       const inboxRes = await loadInbox({ refresh: true, background: true });
@@ -573,6 +661,7 @@ function App() {
 
   function handleRefresh() {
     void loadDashboard(true, { waitForInbox: activeView === "inbox" });
+    void loadProposalsFeed({ background: !!proposals });
 
     if (activeView === "profile" || activeView === "security") {
       void loadProfile(true).catch(() => {
@@ -584,6 +673,7 @@ function App() {
   const unreadInbox = inbox?.unread;
   const unreadDash = dashboard?.messages?.unread;
   const unreadCount = typeof unreadInbox === "number" ? unreadInbox : (typeof unreadDash === "number" ? unreadDash : 0);
+  const navCounts = { inbox: unreadCount, proposals: Number(proposals?.counts?.new || 0) };
 
   const chipItems = [];
   if (route.mock) chipItems.push(t('mock_mode', 'Modo prueba'));
@@ -595,6 +685,10 @@ function App() {
     if (activeView === "viajes" || activeView === "trips") return {
       title: t('nav_trips', 'Viajes'),
       subtitle: t('trips_subtitle', 'Consulta fechas, pagos y estado de cada expediente.'),
+    };
+    if (activeView === "proposals") return {
+      title: t('nav_proposals', 'Propuestas'),
+      subtitle: tt("Las propuestas que hemos preparado para ti y tus solicitudes en curso."),
     };
     // La ficha pinta su propio <h1> (el nombre del viaje) sobre la foto.
     if (activeView === "trip") return { title: null, subtitle: null };
@@ -620,7 +714,7 @@ function App() {
   return (
     <div className="cp-app">
       <a className="cp-skip" href="#cp-main-content">{tt("Saltar al contenido")}</a>
-      <Sidebar view={activeView} unread={unreadCount} items={visibleNavItems} />
+      <Sidebar view={activeView} counts={navCounts} items={visibleNavItems} />
       <div className="cp-main">
         <Topbar
           title={topbarInfo.title}
@@ -688,6 +782,18 @@ function App() {
               onSeen={refreshMessagesState}
               mulligansEnabled={isMulligansEnabled}
             />
+          ) : activeView === "proposals" ? (
+            <ProposalsView
+              feed={proposals}
+              loading={!proposals && !proposalsErr}
+              error={proposals ? null : proposalsErr}
+              onOpenProposal={markProposalSeen}
+              onRefresh={() => { void loadProposalsFeed({ background: true }); }}
+              mock={route.mock}
+              profile={profile}
+              readOnly={isReadOnly}
+              readOnlyMessage={readOnlyMessage}
+            />
           ) : activeView === "inbox" ? (
             <InboxView
               mock={route.mock}
@@ -707,6 +813,7 @@ function App() {
               tripDetailLoading={dashboardTripDetailLoading}
               mulligansEnabled={isMulligansEnabled}
               profile={profile}
+              proposals={isProposalsEnabled ? proposals : null}
             />
           ) : activeView === "mulligans" ? (
             <MulligansView data={dashboard} />
@@ -735,7 +842,7 @@ function App() {
         </main>
         <PortalFooter />
       </div>
-      <MobileTabBar view={activeView} unread={unreadCount} items={visibleNavItems} />
+      <MobileTabBar view={activeView} counts={navCounts} items={visibleNavItems} />
     </div>
   );
 }

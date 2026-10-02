@@ -1,0 +1,169 @@
+{
+  "counts": { "new": 2, "open": 2 },
+  "groups": [
+    {
+      "key": "r901",
+      "type": "request",
+      "title": "",
+      "request": {
+        "id": 901,
+        "title": "Portugal · mayo 2027",
+        "start_date": "2027-05-12",
+        "end_date": "2027-05-16",
+        "players": 3,
+        "non_players": 1,
+        "rooms": "1 doble + 2 individuales",
+        "beds": "Cama de matrimonio",
+        "created_on": "2026-09-24",
+        "step": "ready"
+      },
+      "proposals": [
+        {
+          "id": 9101,
+          "url": "#mock-propuesta-9101",
+          "title": "Lisboa y Penha Longa · golf y relax",
+          "image": "/casanova/wp-content/uploads/2015/02/penha-longa-golf-resort-golf-course-1.jpg",
+          "lang": "es",
+          "start_date": "2027-05-12",
+          "end_date": "2027-05-16",
+          "nights": 4,
+          "players": 3,
+          "non_players": 1,
+          "state": "open",
+          "is_new": true,
+          "sent_on": "2026-10-01",
+          "expires_on": "2026-10-15",
+          "accepted_on": null,
+          "expediente_id": null,
+          "agent": { "name": "Dimas", "email": "dr@golfcasanova.com" },
+          "price": {
+            "currency": "EUR",
+            "basis": "double",
+            "main": [
+              { "kind": "player", "room": "", "value": 1890 },
+              { "kind": "non_player", "room": "", "value": 1170 }
+            ],
+            "extras": [
+              { "kind": "single_supplement", "room": "", "value": 340 }
+            ],
+            "total": 7350
+          }
+        },
+        {
+          "id": 9102,
+          "url": "#mock-propuesta-9102",
+          "title": "Algarve · Vilamoura y Quinta do Lago",
+          "image": "/casanova/wp-content/uploads/2025/11/quinta-do-lago-north3.jpg",
+          "lang": "es",
+          "start_date": "2027-05-12",
+          "end_date": "2027-05-16",
+          "nights": 4,
+          "players": 3,
+          "non_players": 1,
+          "state": "open",
+          "is_new": true,
+          "sent_on": "2026-10-01",
+          "expires_on": "2026-10-15",
+          "accepted_on": null,
+          "expediente_id": null,
+          "agent": { "name": "Dimas", "email": "dr@golfcasanova.com" },
+          "price": {
+            "currency": "EUR",
+            "basis": "double",
+            "main": [
+              { "kind": "player", "room": "Deluxe", "value": 2140 },
+              { "kind": "non_player", "room": "Deluxe", "value": 1290 }
+            ],
+            "extras": [
+              { "kind": "player", "room": "Suite", "value": 2390 },
+              { "kind": "non_player", "room": "Suite", "value": 1540 }
+            ],
+            "total": 7710
+          }
+        }
+      ]
+    },
+    {
+      "key": "p9103",
+      "type": "single",
+      "title": "",
+      "request": null,
+      "proposals": [
+        {
+          "id": 9103,
+          "url": "#mock-propuesta-9103",
+          "title": "Costa del Sol · La Hacienda Links",
+          "image": "/casanova/wp-content/uploads/2025/02/la-hacienda-golf-campo-links-18.jpg",
+          "lang": "es",
+          "start_date": "2027-05-01",
+          "end_date": "2027-05-05",
+          "nights": 4,
+          "players": 2,
+          "non_players": 0,
+          "state": "accepted",
+          "is_new": false,
+          "sent_on": "2026-09-20",
+          "expires_on": null,
+          "accepted_on": "2026-09-28",
+          "expediente_id": 3031303,
+          "agent": { "name": "Dimas", "email": "dr@golfcasanova.com" },
+          "price": {
+            "currency": "EUR",
+            "basis": "double",
+            "main": [ { "kind": "player", "room": "", "value": 1250 } ],
+            "extras": [],
+            "total": 2500
+          }
+        }
+      ]
+    },
+    {
+      "key": "p9104",
+      "type": "single",
+      "title": "",
+      "request": null,
+      "proposals": [
+        {
+          "id": 9104,
+          "url": "#mock-propuesta-9104",
+          "title": "Valencia · golf y spa",
+          "image": "/casanova/wp-content/uploads/2015/03/sella-golf05.jpg",
+          "lang": "es",
+          "start_date": "2026-11-08",
+          "end_date": "2026-11-11",
+          "nights": 3,
+          "players": 2,
+          "non_players": 0,
+          "state": "expired",
+          "is_new": false,
+          "sent_on": "2026-09-02",
+          "expires_on": "2026-09-16",
+          "accepted_on": null,
+          "expediente_id": null,
+          "agent": { "name": "Dimas", "email": "dr@golfcasanova.com" },
+          "price": {
+            "currency": "EUR",
+            "basis": "double",
+            "main": [ { "kind": "player", "room": "", "value": 890 } ],
+            "extras": [],
+            "total": 1780
+          }
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "id": 902,
+      "title": "Escocia · St Andrews y Carnoustie",
+      "start_date": "2027-06-14",
+      "end_date": "2027-06-20",
+      "players": 6,
+      "non_players": 0,
+      "rooms": "3 dobles",
+      "beds": "3 twin",
+      "created_on": "2026-09-28",
+      "step": "preparing"
+    }
+  ]
+}
