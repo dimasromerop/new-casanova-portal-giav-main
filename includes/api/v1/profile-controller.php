@@ -135,7 +135,7 @@ class Casanova_Profile_Controller {
         'id' => $user_id,
         'displayName' => $display_name,
         'email' => $user ? (string)($user->user_email ?? '') : (string) ($giav['email'] ?? ''),
-        'avatarUrl' => ($user_id > 0 && function_exists('get_avatar_url')) ? (string) get_avatar_url($user_id, ['size' => 128]) : '',
+        'avatarUrl' => ($user_id > 0 && function_exists('get_avatar_url')) ? (string) get_avatar_url($user_id, ['size' => 128, 'default' => 'blank']) : '',
       ],
       'giav' => $giav,
       'locale' => $locale,

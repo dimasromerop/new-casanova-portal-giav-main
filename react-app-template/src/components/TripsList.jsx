@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 import BadgeLabel from "./BadgeLabel.jsx";
-import { Notice, ProgressBar, TableSkeleton } from "./ui.jsx";
+import Icon from "./Icon.jsx";
+import { EmptyState, Notice, TableSkeleton } from "./ui.jsx";
 import { tt, ttf } from "../i18n/t.js";
 import { api } from "../lib/api.js";
 import { euro, formatDateES, normalizeTripDates } from "../lib/formatters.js";
@@ -128,52 +129,6 @@ function getTripFinancials(trip) {
   };
 }
 
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
-
-function PeopleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function CardsViewIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
-
-function TableViewIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path d="M3 6h18M3 12h18M3 18h18" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="11" cy="11" r="8" />
-      <path d="M21 21l-4.35-4.35" />
-    </svg>
-  );
-}
-
 function getTripNights(trip) {
   const range = normalizeTripDates(trip);
   if (!range.start || !range.end) return null;
@@ -184,27 +139,47 @@ function getTripNights(trip) {
   return diff > 0 ? diff : null;
 }
 
-function TripsCardsSkeleton({ count = 4 }) {
+function TripsCardsSkeleton({ count = 3 }) {
   return (
-    <div className="cp-trips-skeleton-grid" aria-hidden="true">
+    <div className="cp-trips-grid" aria-hidden="true">
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="cp-trips-skeleton-card">
-          <span className="cp-trips-skeleton-hero" />
-          <span className="cp-trips-skeleton-line is-eyebrow" />
-          <span className="cp-trips-skeleton-line is-title" />
-          <span className="cp-trips-skeleton-line is-copy" />
-          <span className="cp-trips-skeleton-line is-copy short" />
-          <div className="cp-trips-skeleton-block">
-            <span className="cp-trips-skeleton-line is-kicker" />
-            <span className="cp-trips-skeleton-line is-copy" />
-            <span className="cp-trips-skeleton-progress" />
-          </div>
-          <div className="cp-trips-skeleton-actions">
-            <span className="cp-trips-skeleton-button is-primary" />
-            <span className="cp-trips-skeleton-button" />
+        <div key={index} className="cp-trip-card is-skeleton">
+          <span className="cp-trip-card__media" />
+          <div className="cp-trip-card__body">
+            <div className="cp-skeleton">
+              <div className="cp-skeleton__line" />
+              <div className="cp-skeleton__line" />
+              <div className="cp-skeleton__line" />
+            </div>
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function PaymentMeter({ financials }) {
+  if (!financials.hasPayments) {
+    return <p className="cp-trip-card__pay-empty">{tt("Sin datos de pago")}</p>;
+  }
+  const settled = financials.pendingAmount <= 0.01;
+  return (
+    <div className="cp-trip-card__pay">
+      <div className="cp-trip-card__pay-head">
+        <span>{settled ? tt("Viaje pagado") : ttf("Pagado {amount}", { amount: financials.paidLabel })}</span>
+        <strong>{financials.totalLabel}</strong>
+      </div>
+      <div
+        className={`cp-meter ${settled ? "is-done" : ""}`.trim()}
+        role="progressbar"
+        aria-label={tt("Progreso de pago")}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(financials.progressPct)}
+      >
+        <span style={{ width: `${financials.progressPct}%` }} />
+      </div>
+      {!settled ? <p className="cp-trip-card__pay-due">{financials.pendingText}</p> : null}
     </div>
   );
 }
@@ -213,107 +188,61 @@ function TripCard({ trip, onOpen }) {
   const range = normalizeTripDates(trip);
   const financials = getTripFinancials(trip);
   const title = sanitizeText(trip?.title, ttf("Expediente #{id}", { id: trip?.id }));
-  const reference = sanitizeText(trip?.code, ttf("Expediente #{id}", { id: trip?.id }));
+  const reference = sanitizeText(trip?.code, "");
   const statusLabel = sanitizeText(trip?.status, tt("Sin estado"));
   const statusVariant = getStatusVariant(statusLabel);
-  const startLabel = formatTripDate(range.start);
-  const endLabel = formatTripDate(range.end);
   const canPay = financials.hasPayments && financials.pendingAmount > 0.01;
   const heroImageUrl = getTripHeroImage(trip);
-  const [heroReady, setHeroReady] = useState(!heroImageUrl);
-  const [heroError, setHeroError] = useState(false);
+  // Se guarda la URL cargada (no un booleano) para no perder fotos servidas desde caché.
+  const [loadedUrl, setLoadedUrl] = useState("");
+  const [failedUrl, setFailedUrl] = useState("");
+  const showImage = Boolean(heroImageUrl) && failedUrl !== heroImageUrl;
   const nights = getTripNights(trip);
   const isGroup = Boolean(trip?.is_group || trip?.group);
   const nightsLabel = nights
     ? (isGroup ? `${nights} ${tt("noches")} · ${tt("Grupo")}` : `${nights} ${tt("noches")}`)
-    : null;
-  const fillClass = financials.progressPct >= 100
-    ? "is-green"
-    : financials.progressPct > 0
-      ? "is-green"
-      : "is-empty";
-
-  useEffect(() => {
-    setHeroReady(!heroImageUrl);
-    setHeroError(false);
-  }, [heroImageUrl]);
-
-  const showHeroImage = Boolean(heroImageUrl) && !heroError;
+    : "";
 
   return (
     <article className="cp-trip-card">
-      <div className={`cp-trip-card__hero ${showHeroImage ? "has-image" : "is-fallback"} ${showHeroImage && !heroReady ? "is-loading" : ""}`.trim()}>
-        {showHeroImage ? (
+      <div className={`cp-trip-card__media ${showImage ? "has-image" : ""}`.trim()}>
+        {showImage ? (
           <img
-            className={`cp-trip-card__hero-img ${heroReady ? "is-ready" : ""}`.trim()}
+            className={loadedUrl === heroImageUrl ? "is-ready" : ""}
             src={heroImageUrl}
             alt=""
             loading="lazy"
-            onLoad={() => setHeroReady(true)}
-            onError={() => setHeroError(true)}
+            decoding="async"
+            ref={(img) => { if (img?.complete && img.naturalWidth > 0) setLoadedUrl(heroImageUrl); }}
+            onLoad={() => setLoadedUrl(heroImageUrl)}
+            onError={() => setFailedUrl(heroImageUrl)}
           />
         ) : null}
-        <div className="cp-trip-card__hero-overlay" aria-hidden="true" />
-        <div className="cp-trip-card__hero-top">
-          <div className="cp-trip-card__reference">{reference}</div>
-          <BadgeLabel label={statusLabel} variant={statusVariant} className="cp-trip-card__status" />
-        </div>
+        <BadgeLabel label={statusLabel} variant={statusVariant} className="cp-trip-card__status" />
       </div>
 
       <div className="cp-trip-card__body">
-        <div className="cp-trip-card__title">{title}</div>
-        <div className="cp-trip-card__sub">
-          {trip?.code
-            ? ttf("Referencia interna #{id}", { id: trip.id })
-            : ttf("Expediente #{id}", { id: trip.id })}
-        </div>
-
-        <div className="cp-trip-card__chips">
-          <div className="cp-trip-card__chip">
-            <CalendarIcon />
-            {startLabel} — {endLabel}
-          </div>
-          {nightsLabel ? (
-            <div className="cp-trip-card__chip">
-              <PeopleIcon />
-              {nightsLabel}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="cp-trip-card__payment">
-          <div className="cp-trip-card__payment-head">
-            <span className="cp-trip-card__payment-copy">{financials.summaryLabel}</span>
-            <span className="cp-trip-card__payment-total">{financials.totalLabel}</span>
-          </div>
-
-          <div className="cp-trip-card__progress">
-            <div
-              className={`cp-trips-table__minibar-fill ${fillClass}`}
-              style={{ width: `${financials.progressPct}%`, height: "100%", borderRadius: "3px" }}
-            />
-          </div>
-
-          <div className="cp-trip-card__payment-meta">
-            <span>{ttf("Pagado {amount}", { amount: financials.paidLabel })}</span>
-            <span>{financials.pendingText}</span>
-          </div>
-        </div>
+        {reference ? <p className="cp-trip-card__ref">{reference}</p> : null}
+        <h2 className="cp-trip-card__title">
+          <button type="button" className="cp-trip-card__link" onClick={() => onOpen(trip.id)}>{title}</button>
+        </h2>
+        <p className="cp-trip-card__meta">
+          <span><Icon name="calendar" size={16} />{formatTripDate(range.start)} — {formatTripDate(range.end)}</span>
+          {nightsLabel ? <span><Icon name="bed" size={16} />{nightsLabel}</span> : null}
+        </p>
+        <PaymentMeter financials={financials} />
       </div>
 
-      <div className="cp-trip-card__actions">
-        <button type="button" className="cp-trip-card__cta" onClick={() => onOpen(trip.id)}>
-          {tt("Ver detalle")}
-        </button>
+      <div className="cp-trip-card__foot">
         {canPay ? (
-          <button
-            type="button"
-            className="cp-trip-card__secondary"
-            onClick={() => onOpen(trip.id, "payments")}
-          >
+          <button type="button" className="cp-btn cp-btn--sm" onClick={() => onOpen(trip.id, "payments")}>
             {tt("Pagar")}
           </button>
-        ) : null}
+        ) : <span />}
+        <button type="button" className="cp-btn cp-btn--primary cp-btn--sm" onClick={() => onOpen(trip.id)}>
+          {tt("Ver detalle")}
+          <Icon name="arrow-right" size={16} />
+        </button>
       </div>
     </article>
   );
@@ -469,92 +398,85 @@ export default function TripsList({ mock, onOpen, dashboard }) {
   const showCards = view !== "table";
 
   return (
-    <div className="cp-content">
-      {/* ─── Stats row ─── */}
+    <div className="cp-content cp-trips">
       {!loading && trips.length > 0 ? (
-        <div className="cp-trips-stats">
+        <dl className="cp-trips-stats">
           <div className="cp-trips-stat">
-            <div className="cp-trips-stat__label">{tt("Total viajes")}</div>
-            <div className="cp-trips-stat__val">{stats.total}</div>
-            <div className="cp-trips-stat__sub">{ttf("en {year}", { year })}</div>
+            <dt>{tt("Total viajes")}</dt>
+            <dd>{stats.total}</dd>
+            <span>{ttf("en {year}", { year })}</span>
           </div>
           <div className="cp-trips-stat">
-            <div className="cp-trips-stat__label">{tt("Confirmados")}</div>
-            <div className="cp-trips-stat__val" style={{ color: "var(--accent)" }}>{stats.confirmed}</div>
-            <div className="cp-trips-stat__sub">{tt("listo para viajar")}</div>
+            <dt>{tt("Confirmados")}</dt>
+            <dd>{stats.confirmed}</dd>
+            <span>{tt("listo para viajar")}</span>
           </div>
           <div className="cp-trips-stat">
-            <div className="cp-trips-stat__label">{tt("Pendientes")}</div>
-            <div className="cp-trips-stat__val" style={{ color: "var(--gold)" }}>{stats.pending}</div>
-            <div className="cp-trips-stat__sub">{tt("sin estado")}</div>
+            <dt>{tt("Total facturado")}</dt>
+            <dd>{euro(stats.totalBilled)}</dd>
+            <span>{ttf("{paid} pagados", { paid: euro(stats.totalPaid) })}</span>
           </div>
-          <div className="cp-trips-stat">
-            <div className="cp-trips-stat__label">{tt("Total facturado")}</div>
-            <div className="cp-trips-stat__val">{euro(stats.totalBilled)}</div>
-            <div className="cp-trips-stat__sub">{ttf("{paid} pagados", { paid: euro(stats.totalPaid) })}</div>
-          </div>
-        </div>
+        </dl>
       ) : null}
 
-      {/* ─── Controls row ─── */}
-      <div className="cp-trips-list__controls">
-        <div className="cp-trips-list__controls-left">
-          <div className="cp-trips-view-toggle" role="group" aria-label={tt("Cambiar vista de viajes")}>
+      <div className="cp-trips-toolbar">
+        <label className="cp-trips-search">
+          <span className="cp-sr-only">{tt("Buscar viaje...")}</span>
+          <Icon name="search" size={18} />
+          <input
+            type="search"
+            placeholder={tt("Buscar viaje...")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+
+        <div className="cp-trips-toolbar__filters">
+          <label className="cp-select">
+            <span className="cp-sr-only">{tt("Estado")}</span>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">{tt("Estado: Todos")}</option>
+              <option value="confirmed">{tt("Confirmado")}</option>
+              <option value="pending">{tt("Sin estado")}</option>
+            </select>
+            <Icon name="chevron" size={16} />
+          </label>
+
+          <label className="cp-select">
+            <span className="cp-sr-only">{tt("Fechas")}</span>
+            <select value={year} onChange={(event) => setYear(event.target.value)}>
+              {years.map((optionYear) => (
+                <option key={optionYear} value={optionYear}>{optionYear}</option>
+              ))}
+            </select>
+            <Icon name="chevron" size={16} />
+          </label>
+
+          <div className="cp-segmented" role="group" aria-label={tt("Cambiar vista de viajes")}>
             <button
               type="button"
-              className={`cp-trips-view-toggle__btn ${showCards ? "is-active" : ""}`.trim()}
+              className={showCards ? "is-active" : ""}
               aria-pressed={showCards}
+              aria-label={tt("Tarjetas")}
+              title={tt("Tarjetas")}
               onClick={() => setView("cards")}
             >
-              <CardsViewIcon />
-              <span>{tt("Tarjetas")}</span>
+              <Icon name="grid" size={18} />
             </button>
             <button
               type="button"
-              className={`cp-trips-view-toggle__btn ${showCards ? "" : "is-active"}`.trim()}
+              className={showCards ? "" : "is-active"}
               aria-pressed={!showCards}
+              aria-label={tt("Tabla")}
+              title={tt("Tabla")}
               onClick={() => setView("table")}
             >
-              <TableViewIcon />
-              <span>{tt("Tabla")}</span>
+              <Icon name="list" size={18} />
             </button>
           </div>
-
-          <div className="cp-trips-search">
-            <SearchIcon />
-            <input
-              type="text"
-              placeholder={tt("Buscar viaje...")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="cp-trips-list__controls-right">
-          <select
-            className="cp-trips-list__select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">{tt("Estado: Todos")}</option>
-            <option value="confirmed">{tt("Confirmado")}</option>
-            <option value="pending">{tt("Sin estado")}</option>
-          </select>
-
-          <select
-            value={year}
-            onChange={(event) => setYear(event.target.value)}
-            className="cp-trips-list__select"
-          >
-            {years.map((optionYear) => (
-              <option key={optionYear} value={optionYear}>{optionYear}</option>
-            ))}
-          </select>
         </div>
       </div>
 
-      {/* ─── Content ─── */}
       <div className="cp-trips-list">
         {error ? (
           <Notice variant="warn" title={tt("Error al cargar los viajes")}>
@@ -563,12 +485,11 @@ export default function TripsList({ mock, onOpen, dashboard }) {
         ) : null}
 
         {loading ? (
-          showCards ? <TripsCardsSkeleton /> : <TableSkeleton rows={6} cols={6} />
+          showCards ? <TripsCardsSkeleton /> : <TableSkeleton rows={6} cols={5} />
         ) : !hasTrips ? (
-          <div className="cp-trips-empty">
-            <div className="cp-trips-empty__title">{tt("No hay viajes disponibles")}</div>
-            <div className="cp-trips-empty__copy">{tt("No hay viajes disponibles para el año seleccionado.")}</div>
-          </div>
+          <EmptyState title={tt("No hay viajes disponibles")} icon="luggage">
+            {tt("No hay viajes disponibles para el año seleccionado.")}
+          </EmptyState>
         ) : showCards ? (
           <div className="cp-trips-grid">
             {filteredTrips.map((trip) => (
@@ -576,16 +497,16 @@ export default function TripsList({ mock, onOpen, dashboard }) {
             ))}
           </div>
         ) : (
-          <div className="cp-trips-table-wrap">
-            <table className="cp-trips-table">
+          <div className="cp-table-wrap cp-trips-table-wrap">
+            <table className="cp-table cp-trips-table">
               <thead>
                 <tr>
                   <th>{tt("Viaje")}</th>
                   <th>{tt("Fechas")}</th>
                   <th>{tt("Estado")}</th>
-                  <th className="is-right">{tt("Total")}</th>
+                  <th className="num">{tt("Total")}</th>
                   <th>{tt("Pagado")}</th>
-                  <th></th>
+                  <th><span className="cp-sr-only">{tt("Acciones")}</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -596,47 +517,36 @@ export default function TripsList({ mock, onOpen, dashboard }) {
                   const title = sanitizeText(trip?.title, reference);
                   const statusLabel = sanitizeText(trip?.status, tt("Sin estado"));
                   const canPay = financials.hasPayments && financials.pendingAmount > 0.01;
-                  const fillClass = financials.progressPct >= 100
-                    ? "is-green"
-                    : financials.progressPct > 0
-                      ? "is-green"
-                      : "is-empty";
 
                   return (
                     <tr key={trip.id}>
                       <td>
-                        <div className="cp-trips-table__title">{title}</div>
-                        <div className="cp-trips-table__sub">
-                          {tt("Ref.")} {reference}
-                          {trip?.id ? ` · #${trip.id}` : ""}
-                        </div>
+                        <button type="button" className="cp-trips-table__title" onClick={() => onOpen(trip.id)}>{title}</button>
+                        <div className="cp-trips-table__sub">{reference}</div>
                       </td>
-                      <td>{formatTripDate(range.start)} — {formatTripDate(range.end)}</td>
+                      <td className="cp-trips-table__dates">{formatTripDate(range.start)} — {formatTripDate(range.end)}</td>
                       <td>
                         <BadgeLabel label={statusLabel} variant={getStatusVariant(statusLabel)} />
                       </td>
-                      <td className="is-right cp-trips-table__amount">{financials.totalLabel}</td>
+                      <td className="num">{financials.totalLabel}</td>
                       <td>
-                        <div className="cp-trips-table__paid-cell">
-                          {financials.paidLabel}
-                          <div className="cp-trips-table__minibar">
-                            <div
-                              className={`cp-trips-table__minibar-fill ${fillClass}`}
-                              style={{ width: `${financials.progressPct}%` }}
-                            />
+                        <div className="cp-trips-table__paid">
+                          <span>{financials.paidLabel}</span>
+                          <div className={`cp-meter ${financials.progressPct >= 100 ? "is-done" : ""}`.trim()} aria-hidden="true">
+                            <span style={{ width: `${financials.progressPct}%` }} />
                           </div>
                         </div>
                       </td>
                       <td>
                         <div className="cp-trips-table__actions">
-                          <button type="button" className="cp-btn primary" onClick={() => onOpen(trip.id)}>
-                            {tt("Detalle")}
-                          </button>
                           {canPay ? (
-                            <button type="button" className="cp-btn cp-btn--ghost" onClick={() => onOpen(trip.id, "payments")}>
+                            <button type="button" className="cp-btn cp-btn--sm" onClick={() => onOpen(trip.id, "payments")}>
                               {tt("Pagar")}
                             </button>
                           ) : null}
+                          <button type="button" className="cp-btn cp-btn--primary cp-btn--sm" onClick={() => onOpen(trip.id)}>
+                            {tt("Detalle")}
+                          </button>
                         </div>
                       </td>
                     </tr>

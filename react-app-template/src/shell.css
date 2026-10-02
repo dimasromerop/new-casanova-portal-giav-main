@@ -1,0 +1,690 @@
+/* =========================================================================
+   Estructura del portal (Casanova 2026)
+   Barra lateral + barra superior en escritorio; cabecera compacta y barra
+   de pestañas inferior en móvil y tablet (< 992 px, breakpoint de Bricks).
+   ========================================================================= */
+
+.cp-app {
+  --sidebar-w: 256px;
+  --topbar-h: 72px;
+  --tabbar-h: 64px;
+  --admin-bar: var(--wp-admin--admin-bar--height, 0px);
+  --page-gutter: clamp(16px, 2.4vw, 32px);
+
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-m);
+  line-height: 1.5;
+}
+
+.cp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.cp-skip {
+  position: fixed;
+  top: calc(var(--admin-bar) + 8px);
+  left: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--surface);
+  font-weight: 500;
+  transform: translateY(-200%);
+}
+.cp-skip:focus {
+  transform: none;
+}
+
+.cp-icon {
+  flex: 0 0 auto;
+  display: block;
+}
+.cp-icon.is-spinning {
+  animation: cp-spin 1s linear infinite;
+}
+@keyframes cp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ----- Barra lateral ---------------------------------------------------- */
+
+.cp-sidebar {
+  position: sticky;
+  top: var(--admin-bar);
+  height: calc(100vh - var(--admin-bar));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cg-space-l, 32px);
+  padding: 28px 16px 24px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.cp-sidebar__brand {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 0 12px;
+  color: var(--accent);
+}
+.cp-sidebar__brand img {
+  display: block;
+  width: auto;
+  height: 76px;
+}
+
+.cp-brand-text {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.cp-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cp-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  font-size: var(--fs-m);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.cp-nav__item:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+.cp-nav__item.is-active {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.cp-nav__icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  color: inherit;
+}
+.cp-nav__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cp-nav__label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cp-count {
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--surface);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.cp-sidebar__help {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.cp-sidebar__help-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: var(--fs-l);
+  font-weight: 500;
+  color: var(--text);
+}
+
+.cp-sidebar__help-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  color: var(--text-soft);
+  font-size: var(--fs-s);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.cp-sidebar__help-link .cp-icon {
+  color: var(--accent);
+}
+.cp-sidebar__help-link:hover {
+  color: var(--accent);
+}
+
+/* ----- Columna principal ------------------------------------------------ */
+
+.cp-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.cp-view {
+  flex: 1 0 auto;
+  min-width: 0;
+  outline: none;
+  /* Red de seguridad: ningún bloque de contenido puede ensanchar la página
+     (en móvil rompería la barra de pestañas fija). */
+  overflow-x: clip;
+}
+
+.cp-content {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 8px var(--page-gutter) var(--page-gutter);
+}
+
+/* ----- Barra superior --------------------------------------------------- */
+
+.cp-topbar {
+  position: sticky;
+  top: var(--admin-bar);
+  z-index: 20;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.cp-topbar__inner {
+  max-width: 1600px;
+  min-height: var(--topbar-h);
+  margin: 0 auto;
+  padding: 12px var(--page-gutter);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cp-topbar__brand {
+  display: none;
+}
+
+.cp-topbar__heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cp-topbar__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h4);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-topbar__subtitle {
+  margin: 2px 0 0;
+  font-size: var(--fs-s);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-topbar__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-topbar__chip {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--warn-soft);
+  box-shadow: inset 0 0 0 1px var(--sand);
+  color: var(--warn);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* El título de página solo se repite debajo de la cabecera en móvil. */
+.cp-pagehead {
+  display: none;
+}
+
+/* ----- Botones de icono y menús ---------------------------------------- */
+
+.cp-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-s);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.cp-iconbtn:hover:not(:disabled) {
+  background: var(--accent-light);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.cp-iconbtn:disabled {
+  cursor: default;
+  opacity: .7;
+}
+.cp-iconbtn:not(.cp-iconbtn--text) {
+  padding: 0;
+}
+
+.cp-menu {
+  position: relative;
+}
+
+.cp-avatarbtn {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+}
+
+.cp-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--surface);
+  font-size: var(--fs-s);
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+.cp-avatar__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cp-menu__head .cp-avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.cp-menu__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: 280px;
+  padding: 8px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow-m);
+  animation: cp-menu-in var(--dur-fast) var(--ease);
+}
+.cp-menu__panel--narrow {
+  width: 200px;
+}
+@keyframes cp-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+.cp-menu__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cp-menu__who {
+  min-width: 0;
+}
+
+.cp-menu__name {
+  font-weight: 500;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.cp-menu__email {
+  margin-top: 2px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.cp-menu__item {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-m);
+  text-align: left;
+  cursor: pointer;
+}
+.cp-menu__item .cp-icon {
+  color: var(--muted);
+}
+.cp-menu__item:hover,
+.cp-menu__item:focus-visible {
+  background: var(--bg);
+}
+.cp-menu__item[aria-checked="true"] {
+  color: var(--accent);
+  font-weight: 500;
+}
+.cp-menu__item.is-danger,
+.cp-menu__item.is-danger .cp-icon {
+  color: var(--danger);
+}
+
+.cp-menu__label {
+  flex: 1 1 auto;
+}
+
+.cp-menu__check {
+  color: var(--accent) !important;
+}
+
+.cp-menu__sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+
+/* ----- Pie --------------------------------------------------------------- */
+
+.cp-footer {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.cp-footer__inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px var(--page-gutter);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  font-size: var(--fs-s);
+}
+
+.cp-footer__name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.cp-footer__muted {
+  margin-top: 2px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.cp-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.cp-footer__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+.cp-footer__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* En escritorio el contacto ya está en la barra lateral. */
+@media (min-width: 992px) {
+  .cp-footer__link.is-contact {
+    display: none;
+  }
+}
+
+/* ----- Barra de pestañas (solo móvil y tablet) ------------------------- */
+
+.cp-tabbar {
+  display: none;
+}
+
+@media (max-width: 991px) {
+  .cp-app {
+    --topbar-h: 60px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cp-sidebar {
+    display: none;
+  }
+
+  .cp-main {
+    padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .cp-topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .cp-topbar__inner {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 8px;
+  }
+
+  .cp-topbar__brand {
+    display: flex;
+    align-items: center;
+    margin-right: auto;
+  }
+  .cp-topbar__brand img {
+    display: block;
+    width: auto;
+    height: 44px;
+  }
+
+  .cp-topbar__heading {
+    display: none;
+  }
+
+  .cp-pagehead {
+    display: block;
+    padding: 20px var(--page-gutter) 4px;
+  }
+
+  .cp-pagehead__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--fs-h3);
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  .cp-pagehead__subtitle {
+    margin: 4px 0 0;
+    font-size: var(--fs-s);
+    color: var(--muted);
+  }
+
+  .cp-content {
+    padding-top: 12px;
+  }
+
+  .cp-tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    min-height: var(--tabbar-h);
+    padding: 0 4px env(safe-area-inset-bottom, 0px);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -8px 24px color-mix(in srgb, var(--text) 5%, transparent);
+  }
+
+  .cp-tabbar__item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: var(--tabbar-h);
+    padding: 8px 4px;
+    color: var(--muted);
+    font-size: var(--fs-2xs);
+    font-weight: 500;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .cp-tabbar__item.is-active {
+    color: var(--accent);
+  }
+  .cp-tabbar__item.is-active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 28%;
+    right: 28%;
+    height: 2px;
+    border-radius: 0 0 2px 2px;
+    background: var(--accent);
+  }
+
+  .cp-tabbar__icon {
+    position: relative;
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+  }
+  .cp-tabbar__icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .cp-tabbar__count {
+    position: absolute;
+    top: -5px;
+    left: 15px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: var(--radius-pill);
+    background: var(--accent);
+    box-shadow: 0 0 0 2px var(--surface);
+    color: var(--surface);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  .cp-tabbar__label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Por debajo de 600 px WordPress deja de fijar su barra de admin (se va con el
+   scroll), así que la cabecera debe pegarse arriba del todo. */
+@media (max-width: 600px) {
+  .cp-app {
+    --admin-bar: 0px;
+  }
+}
+
+@media (max-width: 478px) {
+  .cp-topbar__chip {
+    display: none;
+  }
+
+  .cp-topbar__brand img {
+    height: 40px;
+  }
+
+  .cp-iconbtn--text span {
+    display: none;
+  }
+
+  .cp-menu__panel {
+    position: fixed;
+    top: calc(var(--admin-bar) + var(--topbar-h) + 4px);
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}

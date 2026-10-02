@@ -155,6 +155,67 @@ function casanova_portal_page_needs_assets(): bool {
   return $needs;
 }
 
+/**
+ * ¿La página actual contiene la SPA del portal ([casanova_portal_app])?
+ */
+function casanova_portal_is_app_page(): bool {
+  static $is_app = null;
+  if ($is_app !== null) return $is_app;
+
+  $is_app = false;
+  if (is_singular()) {
+    $post = get_post();
+    $is_app = $post && isset($post->post_content) && has_shortcode($post->post_content, 'casanova_portal_app');
+  }
+  return $is_app;
+}
+
+/**
+ * ¿Se sirve la SPA con el build de Vite (react-app-template/dist)?
+ */
+function casanova_portal_uses_app_build(): bool {
+  return casanova_portal_is_app_page() && file_exists(CASANOVA_GIAV_PLUGIN_PATH . 'react-app-template/dist/portal-app.js');
+}
+
+/**
+ * El build de Vite se divide en trozos que se cargan bajo demanda con import():
+ * el script principal tiene que ser un módulo ES.
+ */
+add_filter('script_loader_tag', function ($tag, $handle) {
+  if ($handle !== 'casanova-portal-app' || !casanova_portal_uses_app_build()) return $tag;
+  $tag = preg_replace('/\stype=("|\')[^"\']*\1/', '', $tag);
+  return str_replace('<script ', '<script type="module" ', $tag);
+}, 10, 2);
+
+/**
+ * portal-app.js es una entrada mínima que importa chunks/core-[hash].js: se precarga en
+ * el <head> para que el navegador lo pida en paralelo y no tras descargar la entrada.
+ */
+add_action('wp_head', function () {
+  if (!casanova_portal_uses_app_build()) return;
+  $core = glob(CASANOVA_GIAV_PLUGIN_PATH . 'react-app-template/dist/chunks/core-*.js');
+  if (empty($core)) return;
+  $url = CASANOVA_GIAV_PLUGIN_URL . 'react-app-template/dist/chunks/' . basename($core[0]);
+  echo '<link rel="modulepreload" href="' . esc_url($url) . '">' . "\n";
+}, 2);
+
+/**
+ * La SPA no usa los estilos de buscadores y listados de terceros que se cargan en
+ * todo el sitio (unos 195 KB). Se quitan solo en la página del portal.
+ */
+add_action('wp_enqueue_scripts', function () {
+  if (is_admin() || !casanova_portal_uses_app_build()) return;
+
+  $styles = (array) apply_filters('casanova_portal_app_dequeue_styles', [
+    'jet-search',
+    'jquery-chosen',
+    'jet-engine-frontend',
+  ]);
+  foreach ($styles as $style) {
+    wp_dequeue_style((string) $style);
+  }
+}, 100);
+
 add_action('wp_enqueue_scripts', function () {
   if (is_admin()) return;
   casanova_portal_register_i18n_runtime();
@@ -164,15 +225,9 @@ add_action('wp_enqueue_scripts', function () {
   if (!casanova_portal_page_needs_assets()) return;
 
   // ¿Esta página pinta la SPA React con su build compilado?
-  $should_load_app = false;
-  if (is_singular()) {
-    $post = get_post();
-    if ($post && isset($post->post_content) && has_shortcode($post->post_content, 'casanova_portal_app')) {
-      $should_load_app = true;
-    }
-  }
+  $should_load_app = casanova_portal_is_app_page();
   $app_js   = CASANOVA_GIAV_PLUGIN_PATH . 'react-app-template/dist/portal-app.js';
-  $use_build = $should_load_app && file_exists($app_js);
+  $use_build = casanova_portal_uses_app_build();
 
   // La SPA usa los tokens --cg-* y las fuentes (Satoshi, Playfair) que ya carga el tema,
   // así que no necesita Google Fonts ni el CSS/JS del portal PHP antiguo.
@@ -264,6 +319,13 @@ add_action('wp_enqueue_scripts', function () {
       // Agency contact (used by the lightweight footer)
       'agency' => (function_exists('casanova_portal_agency_profile') ? casanova_portal_agency_profile() : []),
       'branding' => [
+        // Logo Casanova 2026 (mu-plugin cg-2026-assets); se puede cambiar con el filtro.
+        'logoBrandUrl' => esc_url_raw((string) apply_filters(
+          'casanova_portal_brand_logo_url',
+          (defined('WPMU_PLUGIN_DIR') && file_exists(WPMU_PLUGIN_DIR . '/cg-2026-assets/casanova-logo-verde.svg'))
+            ? WPMU_PLUGIN_URL . '/cg-2026-assets/casanova-logo-verde.svg'
+            : ''
+        )),
         'logoLightUrl' => (defined('CASANOVA_AGENCY_LOGO_URL') && CASANOVA_AGENCY_LOGO_URL ? esc_url_raw((string) CASANOVA_AGENCY_LOGO_URL) : ''),
         'logoDarkUrl' => (defined('WP_TRAVEL_GIAV_PUBLIC_LOGO_URL') && WP_TRAVEL_GIAV_PUBLIC_LOGO_URL ? esc_url_raw((string) WP_TRAVEL_GIAV_PUBLIC_LOGO_URL) : ''),
       ],

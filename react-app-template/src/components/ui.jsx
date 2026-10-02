@@ -1,32 +1,37 @@
 import React, { useId } from "react";
 
 import { t } from "../i18n/t.js";
+import Icon from "./Icon.jsx";
+
+const NOTICE_ICONS = { info: "info", success: "success", warn: "warn", warning: "warn", error: "error", danger: "error" };
 
 export function Notice({ variant = "info", title, children, action, className = "", onClose, closeLabel = t("close", "Cerrar") }) {
+  const isUrgent = variant === "error" || variant === "danger";
   return (
-    <div className={`cp-notice2 is-${variant} ${className}`.trim()}>
+    <div className={`cp-notice2 is-${variant} ${className}`.trim()} role={isUrgent ? "alert" : "status"}>
+      <Icon name={NOTICE_ICONS[variant] || "info"} size={20} className="cp-notice2__icon" />
       <div className="cp-notice2__body">
         {title ? <div className="cp-notice2__title">{title}</div> : null}
-        <div className="cp-notice2__text">{children}</div>
+        {children ? <div className="cp-notice2__text">{children}</div> : null}
       </div>
-      <div className="cp-notice2__action">
-        {action ? <div className="cp-notice2__action-inner">{action}</div> : null}
-        {typeof onClose === "function" ? (
-          <button type="button" className="cp-notice2__close" onClick={onClose} aria-label={closeLabel} title={closeLabel}>
-            ×
-          </button>
-        ) : null}
-      </div>
+      {action || typeof onClose === "function" ? (
+        <div className="cp-notice2__action">
+          {action ? <div className="cp-notice2__action-inner">{action}</div> : null}
+          {typeof onClose === "function" ? (
+            <button type="button" className="cp-notice2__close" onClick={onClose} aria-label={closeLabel} title={closeLabel}>
+              <Icon name="x" size={18} />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-export function EmptyState({ title, children, icon = "🗂️", action }) {
+export function EmptyState({ title, children, icon = "folder", action }) {
   return (
     <div className="cp-empty">
-      <div className="cp-empty__icon" aria-hidden="true">
-        {icon}
-      </div>
+      <span className="cp-empty__icon"><Icon name={icon} size={24} /></span>
       <div className="cp-empty__title">{title}</div>
       {children ? <div className="cp-empty__text">{children}</div> : null}
       {action ? <div className="cp-empty__action">{action}</div> : null}

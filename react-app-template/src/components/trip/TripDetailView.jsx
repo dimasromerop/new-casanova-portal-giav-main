@@ -1,18 +1,45 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 import BadgeLabel from "../BadgeLabel.jsx";
-import MessagesTimeline from "../MessagesTimeline.jsx";
-import { Notice, Skeleton } from "../ui.jsx";
+import ChatThread from "../ChatThread.jsx";
+import Icon from "../Icon.jsx";
+import { EmptyState, Notice, Skeleton } from "../ui.jsx";
 import { tt, ttf } from "../../i18n/t.js";
 import { api } from "../../lib/api.js";
 import { euro, formatDateES, formatNumberUi } from "../../lib/formatters.js";
-import { readParams, setParam } from "../../lib/params.js";
+import { readParams, setParams } from "../../lib/params.js";
 import { getHistoryBadge, getInvoiceVariant } from "../../lib/statusBadges.js";
-import { tripPackages } from "../../lib/tripServices.js";
+import { pickTripHeroImage, tripPackages } from "../../lib/tripServices.js";
 import PaymentActions from "./PaymentActions.jsx";
 import ServiceList from "./ServiceList.jsx";
 import Tabs from "./TripTabs.jsx";
 import TripHeader from "./TripHeader.jsx";
+
+// Cabecera del chat del viaje: el equipo y el contacto directo (datos de la agencia, no fijos).
+function TeamHeader() {
+  const agency = window.CasanovaPortal?.agency || {};
+  const tel = String(agency.tel || "").trim();
+  const email = String(agency.email || "").trim();
+  return (
+    <div className="cp-thread-head">
+      <span className="cp-msg__avatar" aria-hidden="true">CG</span>
+      <div className="cp-thread-head__copy">
+        <h2 className="cp-thread-head__title">{String(agency.nombre || "Casanova Golf")}</h2>
+        <p className="cp-thread-head__meta">{tt("Equipo de soporte · Responde en menos de 24h")}</p>
+      </div>
+      {tel ? (
+        <a className="cp-iconbtn" href={`tel:${tel.replace(/\s+/g, "")}`} aria-label={tt("Llamar")} title={tt("Llamar")}>
+          <Icon name="phone" size={18} />
+        </a>
+      ) : null}
+      {email ? (
+        <a className="cp-iconbtn" href={`mailto:${email}`} aria-label={tt("Email")} title={tt("Email")}>
+          <Icon name="mail" size={18} />
+        </a>
+      ) : null}
+    </div>
+  );
+}
 
 export default function TripDetailView({
   mock,
@@ -22,13 +49,7 @@ export default function TripDetailView({
   readOnlyMessage = "",
   onSeen,
   mulligansEnabled = true,
-  KpiCard,
-  paymentIcons = {},
 }) {
-  const BriefcaseIcon = paymentIcons.IconBriefcase ?? (() => null);
-  const ShieldCheckIcon = paymentIcons.IconShieldCheck ?? (() => null);
-  const ClockArrowIcon = paymentIcons.IconClockArrow ?? (() => null);
-  const SparkleIcon = paymentIcons.IconSparkle ?? (() => null);
 
   const trips = Array.isArray(dashboard?.trips) ? dashboard.trips : [];
   const fallbackTrip = trips.find((trip) => String(trip.id) === String(expediente)) || { id: expediente };
@@ -39,17 +60,9 @@ export default function TripDetailView({
   const [err, setErr] = useState(null);
   const [historyPage, setHistoryPage] = useState(1);
 
+  // El expediente se carga una vez por viaje; cambiar de pestaña no vuelve a pedirlo.
   useEffect(() => {
     let alive = true;
-
-    if (tab === "messages") {
-      setDetail(null);
-      setLoading(false);
-      setErr(null);
-      return () => {
-        alive = false;
-      };
-    }
 
     (async () => {
       try {
@@ -83,7 +96,7 @@ export default function TripDetailView({
     return () => {
       alive = false;
     };
-  }, [expediente, mock, tab]);
+  }, [expediente, mock]);
 
   const trip = detail?.trip || fallbackTrip;
   const payments = detail?.payments || null;
@@ -130,24 +143,6 @@ export default function TripDetailView({
     setHistoryPage(1);
   }, [expediente, chargeHistory.length]);
 
-  const paymentKpiItems = payments
-    ? [
-        { key: "total", label: tt("Total"), value: totalLabel, icon: <BriefcaseIcon />, colorClass: "is-salmon" },
-        { key: "paid", label: tt("Pagado"), value: paidLabel, icon: <ShieldCheckIcon />, colorClass: "is-blue", sub: `${paidPct}% ${tt("completado")}` },
-        { key: "pending", label: tt("Pendiente"), value: pendingLabel, icon: <ClockArrowIcon />, colorClass: "is-green", cardClass: "is-pending", sub: `${pendingPct}% ${tt("pendiente")}` },
-        ...(mulligansEnabled
-          ? [{
-              key: "mulligans",
-              label: tt("Mulligans usados"),
-              value: formatNumberUi(mulligansUsed),
-              icon: <SparkleIcon />,
-              colorClass: "is-lilac",
-              sub: `${formatNumberUi(mulligansAvailable)} ${tt("disponibles")}`,
-            }]
-          : []),
-      ]
-    : [];
-
   const bonusDisabledReason = (type) => {
     if (!isPaid) return tt("El viaje debe estar pagado para descargar los bonos.");
     return type === "view"
@@ -181,7 +176,6 @@ export default function TripDetailView({
     );
   };
 
-  const title = trip?.title || ttf("Expediente #{id}", { id: expediente });
   const showDetailState = tab !== "messages";
 
   const resolvedTrip = useMemo(() => {
@@ -207,27 +201,29 @@ export default function TripDetailView({
       <React.Fragment key={key}>
         <div className="cp-pkg-card">
           <div className="cp-pkg-card__info">
-            <h3 className="cp-pkg-card__title">{packageItem.title || tt("Paquete")}</h3>
-            <p className="cp-pkg-card__meta">{metaParts.join(" | ")}</p>
+            <h2 className="cp-pkg-card__title">{packageItem.title || tt("Paquete")}</h2>
+            {metaParts.length ? <p className="cp-pkg-card__meta">{metaParts.join(" · ")}</p> : null}
           </div>
           <div className="cp-pkg-card__right">
             {typeof packageItem.price === "number" ? (
               <span className="cp-pkg-card__price">{euro(packageItem.price)}</span>
             ) : null}
-            <span className="cp-chip">{(packageItem.type || "PQ").toUpperCase()}</span>
-            <div className="cp-pkg-card__actions">
-              <button type="button" className="cp-btn cp-btn--ghost" onClick={() => {}} disabled={!packageItem.actions?.detail}>{tt("Detalle")}</button>
-              {packageItem.voucher_urls?.view ? (
-                <a className="cp-btn cp-btn--ghost" href={packageItem.voucher_urls.view} target="_blank" rel="noreferrer">{tt("Bono")}</a>
-              ) : (
-                <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("Bono")}</span>
-              )}
-              {packageItem.voucher_urls?.pdf ? (
-                <a className="cp-btn cp-btn--ghost" href={packageItem.voucher_urls.pdf} target="_blank" rel="noreferrer">{tt("PDF")}</a>
-              ) : (
-                <span className="cp-btn cp-btn--ghost cp-btn--disabled">{tt("PDF")}</span>
-              )}
-            </div>
+            {packageItem.voucher_urls?.view || packageItem.voucher_urls?.pdf ? (
+              <div className="cp-pkg-card__actions">
+                {packageItem.voucher_urls?.view ? (
+                  <a className="cp-btn cp-btn--ghost cp-btn--sm" href={packageItem.voucher_urls.view} target="_blank" rel="noreferrer">
+                    <Icon name="ticket" size={16} />
+                    {tt("Bono")}
+                  </a>
+                ) : null}
+                {packageItem.voucher_urls?.pdf ? (
+                  <a className="cp-btn cp-btn--ghost cp-btn--sm" href={packageItem.voucher_urls.pdf} target="_blank" rel="noreferrer">
+                    <Icon name="download" size={16} />
+                    {tt("PDF")}
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
         {packageServices.length > 0 ? (
@@ -245,48 +241,41 @@ export default function TripDetailView({
 
   return (
     <div className="cp-content cp-trip-detail">
-      <div className="cp-trip-detail__nav">
-        <button type="button" className="cp-btn cp-trip-detail__back" onClick={() => setParam("view", "trips")}>
-          {tt("← Viajes")}
-        </button>
-        <div className="cp-meta cp-trip-detail__breadcrumb">
-          {tt("Viajes >")} <span className="cp-strong">{title}</span>
-        </div>
-      </div>
-
       <TripHeader
         trip={detail?.trip ? resolvedTrip : trip}
-        payments={payments}
         map={detail?.map}
         weather={detail?.weather}
         itineraryUrl={detail?.itinerary_pdf_url}
-      />
-
-      <Tabs
-        tab={tab}
-        onTab={(value) => {
-          setParam("tab", value);
+        imageUrl={pickTripHeroImage(detail) || fallbackTrip?.hero_image_url || ""}
+        showPayments={tab !== "payments"}
+        onBack={(event) => {
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+          event.preventDefault();
+          setParams({ view: "trips", expediente: null, tab: null });
         }}
+        onPayments={() => setParams({ tab: "payments" }, { scrollTop: false })}
       />
 
-      <div className="cp-trip-detail__body">
+      <Tabs tab={tab} onTab={(value) => setParams({ tab: value }, { scrollTop: false })} />
+
+      <div className="cp-trip-detail__body" role="tabpanel" id="cp-trip-panel" aria-labelledby={`cp-tab-${tab}`}>
         {showDetailState && loading ? (
-          <div className="cp-card">
-            <div className="cp-card-title">{tt("Cargando expediente")}</div>
-            <Skeleton lines={8} />
+          <div className="cp-card" aria-busy="true">
+            <span className="cp-sr-only">{tt("Cargando expediente")}</span>
+            <Skeleton lines={6} />
           </div>
         ) : showDetailState && err ? (
-          <div className="cp-notice is-warn">{tt("No se puede cargar el expediente ahora mismo.")}</div>
+          <Notice variant="error" title={tt("No se puede cargar el expediente ahora mismo.")}>
+            {tt("Inténtalo de nuevo más tarde.")}
+          </Notice>
         ) : null}
 
-        {tab === "summary" ? (
+        {tab === "summary" && !loading && !err ? (
           <>
             {!hasServices ? (
-              <div className="cp-card">
-                <div className="cp-meta cp-mt-10">
-                  {tt("No hay servicios disponibles ahora mismo.")}
-                </div>
-              </div>
+              <EmptyState title={tt("No hay servicios disponibles ahora mismo.")} icon="luggage">
+                {tt("Estamos preparando la información de este viaje. En cuanto esté lista, la verás aquí.")}
+              </EmptyState>
             ) : (
               <div className="cp-summary-services">
                 {packages.length > 1 ? (
@@ -307,48 +296,52 @@ export default function TripDetailView({
           </>
         ) : null}
 
-        {tab === "payments" ? (
+        {tab === "payments" && !loading && !err ? (
           <div className="cp-pay-tab">
             {!payments ? (
-              <div className="cp-card">
-                <div className="cp-card-title">{tt("Pagos")}</div>
-                <div className="cp-meta cp-mt-10">{tt("Aún no hay pagos asociados a este viaje.")}</div>
-              </div>
+              <EmptyState title={tt("Aún no hay pagos asociados a este viaje.")} icon="credit-card" />
             ) : (
               <>
-                {/* KPI cards */}
-                <div className="cp-kpi-card-grid">
-                  {paymentKpiItems.map((item) => (
-                    <KpiCard
-                      key={item.key}
-                      icon={item.icon}
-                      label={item.label}
-                      value={item.value}
-                      sub={item.sub}
-                      colorClass={item.colorClass}
-                      cardClass={item.cardClass}
-                    />
-                  ))}
-                </div>
-
-                {/* Progress bar */}
-                <div className="cp-pay-progress">
-                  <div className="cp-pay-progress__track">
-                    <div
-                      className="cp-pay-progress__fill"
-                      style={{ width: `${paidPct}%` }}
-                    />
+                <section className="cp-pay-summary" aria-label={tt("Pagos del viaje")}>
+                  <dl className="cp-pay-summary__figures">
+                    <div>
+                      <dt>{tt("Total")}</dt>
+                      <dd>{totalLabel}</dd>
+                    </div>
+                    <div>
+                      <dt>{tt("Pagado")}</dt>
+                      <dd>{paidLabel}</dd>
+                      <span>{paidPct}% {tt("completado")}</span>
+                    </div>
+                    <div className={isPaid ? "" : "is-due"}>
+                      <dt>{tt("Pendiente")}</dt>
+                      <dd>{pendingLabel}</dd>
+                      <span>{pendingPct}% {tt("pendiente")}</span>
+                    </div>
+                    {mulligansEnabled ? (
+                      <div>
+                        <dt>{tt("Mulligans usados")}</dt>
+                        <dd>{formatNumberUi(mulligansUsed)}</dd>
+                        <span>{formatNumberUi(mulligansAvailable)} {tt("disponibles")}</span>
+                      </div>
+                    ) : null}
+                  </dl>
+                  <div
+                    className={`cp-meter cp-pay-summary__meter ${isPaid ? "is-done" : ""}`.trim()}
+                    role="progressbar"
+                    aria-label={tt("Progreso de pago")}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.max(0, Math.min(100, paidPct))}
+                  >
+                    <span style={{ width: `${Math.max(0, Math.min(100, paidPct))}%` }} />
                   </div>
-                  <div className="cp-pay-progress__labels">
-                    <span>{tt("Pagado")}: <strong>{paidLabel}</strong></span>
-                    <span>{tt("Pendiente")}: <strong>{pendingLabel}</strong></span>
-                  </div>
-                </div>
+                </section>
 
                 {isPaid ? (
-                  <div className="cp-mt-12">
-                    <div className="cp-pill cp-pill--success">{tt("Pagado")}</div>
-                  </div>
+                  <Notice variant="success" title={tt("Viaje pagado")}>
+                    {tt("Todo el viaje está liquidado.")}
+                  </Notice>
                 ) : (
                   <PaymentActions
                     expediente={expediente}
@@ -359,23 +352,20 @@ export default function TripDetailView({
                   />
                 )}
 
-                {/* Payment history card */}
                 {showGroupContributionSummary ? (
-                  <div className="cp-pay-history">
-                    <div className="cp-pay-history__title">
-                      {tt("Aportaciones del grupo")}
-                      <span className="cp-pay-history__count">
-                        {payerTotals.length} {tt("pagadores")}
-                      </span>
-                    </div>
+                  <section className="cp-pay-block">
+                    <header className="cp-pay-block__head">
+                      <h2 className="cp-pay-block__title">{tt("Aportaciones del grupo")}</h2>
+                      <span className="cp-pay-block__count">{payerTotals.length} {tt("pagadores")}</span>
+                    </header>
                     <div className="cp-table-wrap">
-                      <table className="cp-payments-history__table">
+                      <table className="cp-table">
                         <thead>
                           <tr>
                             <th>{tt("Pagador")}</th>
                             <th>{tt("Movimientos")}</th>
                             <th>{tt("Último movimiento")}</th>
-                            <th className="is-right">{tt("Total neto")}</th>
+                            <th className="num">{tt("Total neto")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -384,33 +374,31 @@ export default function TripDetailView({
                               <td>{row.payer || "—"}</td>
                               <td>{row.count ?? 0}</td>
                               <td>{row.last_date ? formatDateES(row.last_date) : "—"}</td>
-                              <td className="is-right">{euro(Number(row.amount ?? 0), currency)}</td>
+                              <td className="num">{euro(Number(row.amount ?? 0), currency)}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  </div>
+                  </section>
                 ) : null}
 
-                <div className="cp-pay-history">
-                  <div className="cp-pay-history__title">
-                    {tt("Historial de pagos")}
-                    <span className="cp-pay-history__count">
-                      {chargeHistory.length} {tt("cobros")}
-                    </span>
-                  </div>
+                <section className="cp-pay-block">
+                  <header className="cp-pay-block__head">
+                    <h2 className="cp-pay-block__title">{tt("Historial de pagos")}</h2>
+                    <span className="cp-pay-block__count">{chargeHistory.length} {tt("cobros")}</span>
+                  </header>
                   {chargeHistory.length > 0 ? (
                     <>
                       <div className="cp-table-wrap">
-                        <table className="cp-payments-history__table">
+                        <table className="cp-table">
                           <thead>
                             <tr>
                               <th>{tt("Fecha")}</th>
                               <th>{tt("Tipo")}</th>
                               <th>{tt("Concepto")}</th>
                               <th>{tt("Pagador")}</th>
-                              <th className="is-right">{tt("Importe")}</th>
+                              <th className="num">{tt("Importe")}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -418,17 +406,13 @@ export default function TripDetailView({
                               const historyBadge = getHistoryBadge(row);
                               return (
                                 <tr key={row.id}>
-                                  <td>{formatDateES(row.date)}</td>
+                                  <td className="cp-nowrap">{formatDateES(row.date)}</td>
                                   <td>
-                                    <BadgeLabel
-                                      label={historyBadge.label}
-                                      variant={historyBadge.variant}
-                                      className="cp-history-badge"
-                                    />
+                                    <BadgeLabel label={historyBadge.label} variant={historyBadge.variant} />
                                   </td>
                                   <td>{row.concept}</td>
                                   <td>{row.payer || row.document || "—"}</td>
-                                  <td className="is-right">
+                                  <td className={`num ${row.is_refund ? "is-refund" : ""}`.trim()}>
                                     {euro(row.is_refund ? -row.amount : row.amount, currency)}
                                   </td>
                                 </tr>
@@ -438,63 +422,48 @@ export default function TripDetailView({
                         </table>
                       </div>
                       {historyTotalPages > 1 ? (
-                        <div className="cp-pay-history__pagination">
+                        <nav className="cp-pay-block__pagination" aria-label={tt("Historial de pagos")}>
                           <button
                             type="button"
-                            className="cp-btn cp-btn--ghost"
+                            className="cp-btn cp-btn--ghost cp-btn--sm"
                             onClick={() => setHistoryPage((page) => Math.max(1, page - 1))}
                             disabled={historyCurrentPage <= 1}
                           >
                             {tt("Anterior")}
                           </button>
-                          <span className="cp-pay-history__page">
-                            {ttf("Página {current} de {total}", {
-                              current: historyCurrentPage,
-                              total: historyTotalPages,
-                            })}
+                          <span>
+                            {ttf("Página {current} de {total}", { current: historyCurrentPage, total: historyTotalPages })}
                           </span>
                           <button
                             type="button"
-                            className="cp-btn cp-btn--ghost"
+                            className="cp-btn cp-btn--ghost cp-btn--sm"
                             onClick={() => setHistoryPage((page) => Math.min(historyTotalPages, page + 1))}
                             disabled={historyCurrentPage >= historyTotalPages}
                           >
                             {tt("Siguiente")}
                           </button>
-                        </div>
+                        </nav>
                       ) : null}
                     </>
                   ) : (
-                    <div className="cp-pay-history__empty">
-                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.3">
-                        <circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>
-                      </svg>
-                      <p>{tt("No hay cobros registrados todavía.")}<br />{tt("Tu primer pago aparecerá aquí.")}</p>
-                    </div>
+                    <p className="cp-pay-block__empty">
+                      <Icon name="receipt" size={20} />
+                      <span>{tt("No hay cobros registrados todavía.")} {tt("Tu primer pago aparecerá aquí.")}</span>
+                    </p>
                   )}
-                </div>
+                </section>
 
-                {/* Security footer */}
-                <div className="cp-pay-security">
-                  <div className="cp-pay-security__item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    {tt("Pago seguro SSL")}
-                  </div>
-                  <div className="cp-pay-security__item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    {tt("Datos encriptados")}
-                  </div>
-                  <div className="cp-pay-security__item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
-                    {tt("PCI DSS certificado")}
-                  </div>
-                </div>
+                <ul className="cp-pay-trust">
+                  <li><Icon name="shield-lock" size={18} />{tt("Pago seguro SSL")}</li>
+                  <li><Icon name="lock" size={18} />{tt("Datos encriptados")}</li>
+                  <li><Icon name="success" size={18} />{tt("PCI DSS certificado")}</li>
+                </ul>
               </>
             )}
           </div>
         ) : null}
 
-        {tab === "invoices" ? (
+        {tab === "invoices" && !loading && !err ? (
           <div className="cp-card">
             <div className="cp-card-title">{tt("Facturas")}</div>
             <div className="cp-card-sub">{tt("Descargas asociadas a este viaje")}</div>
@@ -544,7 +513,7 @@ export default function TripDetailView({
           </div>
         ) : null}
 
-        {tab === "vouchers" ? (
+        {tab === "vouchers" && !loading && !err ? (
           <div className="cp-card">
             <div className="cp-card-title">{tt("Bonos")}</div>
             <div className="cp-card-sub">{tt("Vouchers y documentación")}</div>
@@ -580,12 +549,15 @@ export default function TripDetailView({
         ) : null}
 
         {tab === "messages" ? (
-          <MessagesTimeline
+          <ChatThread
             expediente={expediente}
             mock={mock}
             onSeen={onSeen}
             readOnly={readOnly}
             readOnlyMessage={readOnlyMessage}
+            header={<TeamHeader />}
+            emptyText={tt("Si necesitas algo sobre este viaje, escríbenos desde aquí y seguiremos la conversación en el portal.")}
+            placeholder={tt("Escribe aquí tu mensaje sobre este viaje...")}
           />
         ) : null}
       </div>

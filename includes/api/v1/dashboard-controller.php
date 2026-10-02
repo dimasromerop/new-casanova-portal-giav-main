@@ -101,7 +101,14 @@ class Casanova_Dashboard_Controller {
           ];
         }
 
-        if (!array_key_exists('next_trip_summary', $data)) $data['next_trip_summary'] = null;
+        // En modo prueba, el resumen del próximo viaje sale del primer viaje de trip.json
+        // (en real lo construye DashboardService con los servicios y fotos de GIAV).
+        if (empty($data['next_trip_summary'])) {
+          $trip_file = CASANOVA_GIAV_PLUGIN_PATH . 'includes/mock/trip.json';
+          $trips = file_exists($trip_file) ? json_decode((string) file_get_contents($trip_file), true) : null;
+          $summary = is_array($trips) ? reset($trips) : null;
+          $data['next_trip_summary'] = (is_array($summary) && isset($summary['trip'])) ? $summary : null;
+        }
         if (!array_key_exists('post_trip', $data)) $data['post_trip'] = null;
         if (!array_key_exists('active_trip_exists', $data)) {
           $data['active_trip_exists'] = !empty($data['next_trip']['id']);

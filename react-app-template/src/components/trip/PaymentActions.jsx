@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 
+import Icon from "../Icon.jsx";
 import { Notice } from "../ui.jsx";
 import { tt } from "../../i18n/t.js";
 import { api } from "../../lib/api.js";
@@ -24,7 +25,7 @@ function loadAplazameSdk(config = {}) {
   const publicKey = String(config?.public_key || "").trim();
   const sandbox = Boolean(config?.sandbox);
   if (!publicKey) {
-    return Promise.reject(new Error(tt("Aplazame no esta configurado correctamente.")));
+    return Promise.reject(new Error(tt("Aplazame no está configurado correctamente.")));
   }
 
   if (aplazameSdkPromise) {
@@ -58,44 +59,17 @@ function loadAplazameSdk(config = {}) {
   return aplazameSdkPromise;
 }
 
-const CheckSvg = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5"/></svg>
-);
-
-function methodIcon(id) {
-  if (id === "card_usd") {
-    return {
-      bg: "var(--gold-light)",
-      stroke: "var(--gold)",
-      svg: <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/><path d="M12 7v10M15 9.5h-4.5a2 2 0 0 0 0 4h3a2 2 0 0 1 0 4H9"/></svg>,
-    };
-  }
-  if (id === "bank_transfer") {
-    return {
-      bg: "var(--accent-light)",
-      stroke: "var(--accent)",
-      svg: <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8"><path d="M3 21V7a2 2 0 0 1 2-2h6v16"/><path d="M21 21V11a2 2 0 0 0-2-2h-4v12"/></svg>,
-    };
-  }
-  if (id === "aplazame") {
-    return {
-      bg: "var(--purple-light)",
-      stroke: "var(--purple)",
-      svg: <svg viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>,
-    };
-  }
-  // card
-  return {
-    bg: "var(--blue-light)",
-    stroke: "var(--blue)",
-    svg: <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>,
-  };
+function methodIconName(id) {
+  if (id === "card_usd") return "dollar";
+  if (id === "bank_transfer") return "bank";
+  if (id === "aplazame") return "calendar";
+  return "credit-card";
 }
 
 function methodBadges(id) {
   if (id === "card_usd") return ["USD", "Stripe", "SSL"];
-  if (id === "bank_transfer") return ["PSD2", "Sin recargo", "SEPA"];
-  if (id === "aplazame") return ["3 cuotas", "6 cuotas", "12 cuotas"];
+  if (id === "bank_transfer") return ["PSD2", tt("Sin recargo"), "SEPA"];
+  if (id === "aplazame") return [tt("3 cuotas"), tt("6 cuotas"), tt("12 cuotas")];
   return ["Visa", "Mastercard", "AMEX", "SSL"];
 }
 
@@ -193,7 +167,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
             window.location.href = returnUrls.ko || window.location.href;
           },
           onError() {
-            setState({ loading: null, error: tt("No se pudo abrir Aplazame. Intentalo de nuevo.") });
+            setState({ loading: null, error: tt("No se pudo abrir Aplazame. Inténtalo de nuevo.") });
           },
           onDismiss() {
             setState({ loading: null, error: null });
@@ -212,7 +186,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
               return;
             }
             if (resultStatus === "error") {
-              setState({ loading: null, error: tt("No se pudo abrir Aplazame. Intentalo de nuevo.") });
+              setState({ loading: null, error: tt("No se pudo abrir Aplazame. Inténtalo de nuevo.") });
               return;
             }
             setState({ loading: null, error: null });
@@ -270,7 +244,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
     return parts.join(" - ");
   })();
   const transferNote = tt("El pago por transferencia bancaria online PSD2 no tiene recargo y es completamente seguro. Serás redirigido a una página de pago donde podrás seleccionar tu banco y acceder a tu banca online para autorizar la transferencia. Una vez completado el pago, volverás automáticamente a nuestra página. Este método es compatible con la mayoría de bancos españoles y portugueses.");
-  const aplazameNote = tt("Aplazame te permite fraccionar el pago del viaje. Al continuar se abrira su checkout seguro para completar la financiacion en cuotas.");
+  const aplazameNote = tt("Aplazame te permite fraccionar el pago del viaje. Al continuar se abrirá su checkout seguro para completar la financiación en cuotas.");
   const usdNote = tt("Se cobrará con tarjeta en USD mediante Stripe.");
 
   // Resolved amount and label for CTA
@@ -293,7 +267,7 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
 
   if (readOnly) {
     return (
-      <div className="cp-mt-20">
+      <div className="cp-pay-form">
         <Notice variant="warn" title={tt("Pagos desactivados")}>
           {lockedMessage} {tt("Puedes revisar el estado de pagos, pero no iniciar cobros desde esta vista.")}
         </Notice>
@@ -301,12 +275,39 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
     );
   }
 
+  const amountOptions = [
+    depositAllowed ? {
+      type: "deposit",
+      label: tt("Pagar depósito"),
+      amount: depositAmount,
+      desc: isUsdMethod
+        ? formatBaseHint(depositAmount)
+        : (Number.isFinite(totalAmount) && totalAmount > 0
+            ? `${Math.round((depositAmount / totalAmount) * 100)}% ${tt("del total como reserva")}`
+            : ""),
+    } : null,
+    balanceAllowed ? {
+      type: "balance",
+      label: tt("Pagar pendiente"),
+      amount: balanceAmount,
+      desc: isUsdMethod ? formatBaseHint(balanceAmount) : tt("Liquida el importe total pendiente"),
+      tag: hasMultipleActionChoices ? tt("Saldar deuda completa") : "",
+    } : null,
+  ].filter(Boolean);
+
+  const methodNote = payMethod === "bank_transfer"
+    ? transferNote
+    : payMethod === "aplazame"
+      ? aplazameNote
+      : payMethod === "card_usd"
+        ? usdNote
+        : "";
+
   return (
-    <div className="cp-mt-20 cp-stack-10">
-      {/* ─── Method selection ─── */}
-      <div className="cp-pay-section">
-        <div className="cp-pay-section__label">{tt("Elige método de pago")}</div>
-        <div className="cp-pay-methods" role="tablist" aria-label={tt("Método de pago")}>
+    <div className="cp-pay-form">
+      <section className="cp-pay-step">
+        <h2 className="cp-pay-step__title" id="cp-pay-method-title">{tt("Elige método de pago")}</h2>
+        <div className="cp-pay-methods" role="radiogroup" aria-labelledby="cp-pay-method-title">
           {enabledMethods.map((method) => {
             const isBankTransfer = method.id === "bank_transfer";
             const isAplazame = method.id === "aplazame";
@@ -319,162 +320,125 @@ export default function PaymentActions({ expediente, payments, mock, readOnly = 
                 ? tt("Aplazame")
                 : (method.label || tt("Tarjeta"));
             const desc = isUsdCard
-              ? tt("Pago con tarjeta en dolares mediante Stripe.") + (usdMethodHint ? ` ${usdMethodHint}` : "")
+              ? tt("Pago con tarjeta en dólares mediante Stripe.") + (usdMethodHint ? ` ${usdMethodHint}` : "")
               : isBankTransfer
               ? tt("Transferencia bancaria online PSD2. Sin recargo adicional.")
               : isAplazame
                 ? tt("Pago a plazos. Divide el importe en cuotas mensuales cómodas.")
                 : tt("Pago inmediato y seguro con tarjeta de crédito o débito.");
-            const icon = methodIcon(method.id);
-            const badges = methodBadges(method.id);
+            const selected = payMethod === method.id;
 
             return (
               <button
                 key={method.id}
                 type="button"
-                className={`cp-pay-method ${payMethod === method.id ? "is-active" : ""}`}
+                role="radio"
+                aria-checked={selected ? "true" : "false"}
+                className={`cp-pay-option ${selected ? "is-active" : ""}`.trim()}
                 onClick={() => setPayMethod(method.id)}
               >
-                <span className="cp-pay-method__check"><CheckSvg /></span>
-                <div className="cp-pay-method__top">
-                  <span className="cp-pay-method__icon" style={{ background: icon.bg }}>
-                    {icon.svg}
+                <span className="cp-pay-option__icon"><Icon name={methodIconName(method.id)} size={20} /></span>
+                <span className="cp-pay-option__body">
+                  <span className="cp-pay-option__title">{title}</span>
+                  <span className="cp-pay-option__desc">{desc}</span>
+                  <span className="cp-pay-option__tags">
+                    {methodBadges(method.id).map((badge) => <span key={badge}>{badge}</span>)}
                   </span>
-                  <span className="cp-pay-method__title">{title}</span>
-                </div>
-                <span className="cp-pay-method__meta">{desc}</span>
-                <span className="cp-pay-method__badges">
-                  {badges.map((b) => <span key={b}>{b}</span>)}
                 </span>
+                <span className="cp-pay-option__check" aria-hidden="true"><Icon name="check" size={14} /></span>
               </button>
             );
           })}
         </div>
-      </div>
 
-      {payMethod === "card" ? (
-        <div className="cp-pay-card-brand">
-          <div className="cp-pay-card-brand__label">{tt("Tipo de tarjeta")}</div>
-          <div className="cp-pay-card-brand__choices" role="radiogroup" aria-label={tt("Tipo de tarjeta")}>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={cardBrand === "other"}
-              className={`cp-pay-card-brand__choice ${cardBrand === "other" ? "is-active" : ""}`}
-              onClick={() => setCardBrand("other")}
-            >
-              <span className="cp-pay-card-brand__choice-title">{tt("Otra tarjeta")}</span>
-              <span className="cp-pay-card-brand__choice-hint">{tt("Visa, Mastercard y similares.")}</span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={cardBrand === "amex"}
-              className={`cp-pay-card-brand__choice ${cardBrand === "amex" ? "is-active" : ""}`}
-              onClick={() => setCardBrand("amex")}
-            >
-              <span className="cp-pay-card-brand__choice-title">{tt("American Express (AMEX)")}</span>
-              <span className="cp-pay-card-brand__choice-hint">{tt("Selecciona esta opcion si vas a pagar con AMEX.")}</span>
-            </button>
-          </div>
-          <div className="cp-pay-card-brand__hint">{tt("Elige con que tarjeta quieres realizar el pago.")}</div>
-        </div>
-      ) : null}
-
-      {payMethod === "bank_transfer" ? (
-        <div className="cp-pay-method-note">
-          {transferNote}
-        </div>
-      ) : null}
-
-      {payMethod === "aplazame" ? (
-        <div className="cp-pay-method-note">
-          {aplazameNote}
-        </div>
-      ) : null}
-
-      {payMethod === "card_usd" ? (
-        <div className="cp-pay-method-note">
-          {usdNote}
-        </div>
-      ) : null}
-
-      {/* ─── Amount selection ─── */}
-      <div className="cp-pay-section">
-        <div className="cp-pay-section__label">{tt("Selecciona cuánto pagar ahora")}</div>
-        <div className="cp-pay-cta-row">
-          {depositAllowed ? (
-            <button
-              type="button"
-              className={`cp-pay-cta ${payType === "deposit" || (!hasMultipleActionChoices) ? "primary" : ""}`.trim()}
-              disabled={state.loading !== null}
-              onClick={() => {
-                if (hasMultipleActionChoices) {
-                  setPayType("deposit");
-                } else {
-                  startIntent("deposit", payMethod);
-                }
-              }}
-            >
-              <span className="cp-pay-cta__check"><CheckSvg /></span>
-              <span className="cp-pay-cta__label">{tt("Pagar depósito")}</span>
-              <span className="cp-pay-cta__amount">{formatActionAmount("deposit", depositAmount)}</span>
-              {isUsdMethod ? (
-                <span className="cp-pay-cta__desc">{formatBaseHint(depositAmount)}</span>
-              ) : Number.isFinite(totalAmount) && totalAmount > 0 ? (
-                <span className="cp-pay-cta__desc">
-                  {Math.round((depositAmount / totalAmount) * 100)}% {tt("del total como reserva")}
-                </span>
-              ) : null}
-            </button>
-          ) : null}
-
-          {balanceAllowed ? (
-            <button
-              type="button"
-              className={`cp-pay-cta ${payType === "balance" || (!hasMultipleActionChoices) ? "primary" : ""}`.trim()}
-              disabled={state.loading !== null}
-              onClick={() => {
-                if (hasMultipleActionChoices) {
-                  setPayType("balance");
-                } else {
-                  startIntent("balance", payMethod);
-                }
-              }}
-            >
-              {hasMultipleActionChoices ? (
-                <span className="cp-pay-cta__rec">{tt("Saldar deuda completa")}</span>
-              ) : null}
-              <span className="cp-pay-cta__check"><CheckSvg /></span>
-              <span className="cp-pay-cta__label">{tt("Pagar pendiente")}</span>
-              <span className="cp-pay-cta__amount">{formatActionAmount("balance", balanceAmount)}</span>
-              <span className="cp-pay-cta__desc">
-                {isUsdMethod ? formatBaseHint(balanceAmount) : tt("Liquida el importe total pendiente")}
-              </span>
-            </button>
-          ) : null}
-
-          {!hasActions && !isPaidLocal ? (
-            <div className="cp-meta cp-self-center">
-              {tt("Aún no hay pagos disponibles para este viaje.")}
+        {payMethod === "card" ? (
+          <div className="cp-pay-brand">
+            <p className="cp-pay-brand__label" id="cp-pay-brand-title">{tt("¿Con qué tarjeta vas a pagar?")}</p>
+            <div className="cp-segmented cp-pay-brand__choices" role="radiogroup" aria-labelledby="cp-pay-brand-title">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={cardBrand === "other" ? "true" : "false"}
+                className={cardBrand === "other" ? "is-active" : ""}
+                onClick={() => setCardBrand("other")}
+              >
+                {tt("Visa, Mastercard y otras")}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={cardBrand === "amex" ? "true" : "false"}
+                className={cardBrand === "amex" ? "is-active" : ""}
+                onClick={() => setCardBrand("amex")}
+              >
+                {tt("American Express")}
+              </button>
             </div>
-          ) : null}
-        </div>
-      </div>
+            <p className="cp-pay-brand__help">{tt("American Express se procesa en una pasarela segura aparte.")}</p>
+          </div>
+        ) : null}
 
-      {/* ─── Submit CTA ─── */}
+        {methodNote ? <Notice variant="info">{methodNote}</Notice> : null}
+      </section>
+
+      <section className="cp-pay-step">
+        <h2 className="cp-pay-step__title" id="cp-pay-amount-title">{tt("Selecciona cuánto pagar ahora")}</h2>
+        {amountOptions.length > 1 ? (
+          <div className="cp-pay-amounts" role="radiogroup" aria-labelledby="cp-pay-amount-title">
+            {amountOptions.map((option) => {
+              const selected = resolvedType === option.type;
+              return (
+                <button
+                  key={option.type}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected ? "true" : "false"}
+                  className={`cp-pay-option cp-pay-amount ${selected ? "is-active" : ""}`.trim()}
+                  disabled={state.loading !== null}
+                  onClick={() => setPayType(option.type)}
+                >
+                  <span className="cp-pay-option__body">
+                    <span className="cp-pay-amount__label">
+                      {option.label}
+                      {option.tag ? <span className="cp-badge cp-badge--info">{option.tag}</span> : null}
+                    </span>
+                    <span className="cp-pay-amount__value">{formatActionAmount(option.type, option.amount)}</span>
+                    {option.desc ? <span className="cp-pay-option__desc">{option.desc}</span> : null}
+                  </span>
+                  <span className="cp-pay-option__check" aria-hidden="true"><Icon name="check" size={14} /></span>
+                </button>
+              );
+            })}
+          </div>
+        ) : amountOptions.length === 1 ? (
+          // Con una sola opción no hay nada que elegir: se muestra el importe y el cobro
+          // se inicia solo desde el botón «Pagar» (antes también al tocar la tarjeta).
+          <div className="cp-pay-amount is-single">
+            <span className="cp-pay-amount__label">{amountOptions[0].label}</span>
+            <span className="cp-pay-amount__value">{formatActionAmount(amountOptions[0].type, amountOptions[0].amount)}</span>
+            {amountOptions[0].desc ? <span className="cp-pay-option__desc">{amountOptions[0].desc}</span> : null}
+          </div>
+        ) : !isPaidLocal ? (
+          <p className="cp-meta">{tt("Aún no hay pagos disponibles para este viaje.")}</p>
+        ) : null}
+      </section>
+
       {hasActions ? (
         <button
           type="button"
-          className="cp-pay-submit"
+          className="cp-btn cp-btn--primary cp-pay-submit"
           disabled={state.loading !== null}
+          aria-busy={state.loading ? "true" : "false"}
           onClick={() => startIntent(resolvedType, payMethod)}
         >
           {state.loading ? (
-            tt("Redirigiendo…")
+            <>
+              <Icon name="refresh" size={20} className="is-spinning" />
+              {tt("Redirigiendo…")}
+            </>
           ) : (
             <>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+              <Icon name="lock" size={20} />
               {tt("Pagar")} {euro(resolvedDisplay.amount, resolvedDisplay.currency)} {tt("con")} {activeMethodLabel}
             </>
           )}

@@ -54,6 +54,13 @@ class Casanova_Messages_Controller {
       return false;
     }
 
+    // Modo prueba (solo administradores): responde con includes/mock/messages.json,
+    // no con datos de un expediente real, así que no aplica la comprobación de propiedad.
+    // Solo lectura: enviar mensajes sigue exigiendo acceso al expediente.
+    if ($request->get_method() === 'GET' && (int) $request->get_param('mock') === 1 && current_user_can('manage_options')) {
+      return true;
+    }
+
     $expediente = (int) $request->get_param('expediente');
     if ($expediente > 0 && function_exists('casanova_user_can_access_expediente')) {
       $user_id = get_current_user_id();

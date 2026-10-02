@@ -1,69 +1,118 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 
 import { getLanguages, t, tt } from "../i18n/t.js";
-import { setParam } from "../lib/params.js";
+import Icon from "./Icon.jsx";
 
-const ICON_PROPS = {
-  viewBox: "0 0 24 24",
-  width: 18,
-  height: 18,
-  fill: "none",
-};
+/* ===== Navegación ===== */
 
-function IconGlobe() {
+function viewHref(view) {
+  const current = new URLSearchParams(window.location.search);
+  const next = new URLSearchParams();
+  next.set("view", view);
+  if (current.get("mock") === "1") next.set("mock", "1");
+  return `${window.location.pathname}?${next.toString()}`;
+}
+
+function isModifiedClick(event) {
+  return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
+}
+
+// Enlaces reales (se pueden abrir en otra pestaña) que navegan dentro de la SPA.
+function navigate(event, href) {
+  if (isModifiedClick(event)) return;
+  event.preventDefault();
+  if (`${window.location.pathname}${window.location.search}` !== href) {
+    window.history.pushState({}, "", href);
+    window.dispatchEvent(new Event("popstate"));
+  }
+  window.scrollTo({ top: 0 });
+}
+
+function navLabel(item) {
+  return item.labelKey ? t(item.labelKey, item.label || item.fallback || "") : (item.label || item.fallback || "");
+}
+
+function brandInfo() {
+  const agency = window.CasanovaPortal?.agency || {};
+  const branding = window.CasanovaPortal?.branding || {};
+  return {
+    name: String(agency.nombre || "Casanova Golf").trim(),
+    logoUrl: String(branding.logoBrandUrl || branding.logoLightUrl || branding.logoDarkUrl || "").trim(),
+    tel: String(agency.tel || "").trim(),
+    email: String(agency.email || "").trim(),
+    web: String(agency.web || "").trim(),
+    address: String(agency.direccion || "").trim(),
+  };
+}
+
+function BrandLink({ className }) {
+  const brand = brandInfo();
+  const href = viewHref("dashboard");
   return (
-    <svg {...ICON_PROPS} aria-hidden="true">
-      <circle cx={12} cy={12} r={9} fill="none" stroke="currentColor" strokeWidth={1.5} />
-      <path d="M3 12h18" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-      <path d="M12 3c3 3 3 15 0 18" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-      <path d="M12 3c-3 3-3 15 0 18" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-    </svg>
+    <a className={className} href={href} onClick={(event) => navigate(event, href)}>
+      {brand.logoUrl ? (
+        <img src={brand.logoUrl} alt={brand.name} decoding="async" />
+      ) : (
+        <span className="cp-brand-text">{brand.name}</span>
+      )}
+    </a>
   );
 }
 
-function IconUser() {
-  return (
-    <svg {...ICON_PROPS} aria-hidden="true">
-      <circle cx={12} cy={9} r={3.2} fill="none" stroke="currentColor" strokeWidth={1.5} />
-      <path d="M6.2 20c1.6-3 4-4.5 5.8-4.5s4.2 1.5 5.8 4.5" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-    </svg>
-  );
-}
+/* ===== Menús desplegables accesibles ===== */
 
-function IconShieldCheck() {
-  return (
-    <svg {...ICON_PROPS} aria-hidden="true">
-      <path d="M12 3l6 3v6c0 4-3 7-6 8-3-1-6-4-6-8V6z" fill="none" stroke="currentColor" strokeWidth={1.5} />
-      <polyline
-        points="9.5 12 11.5 14.5 15.5 10.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+function useMenu() {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const menuId = useId();
 
-function IconLogout() {
-  return (
-    <svg {...ICON_PROPS} aria-hidden="true">
-      <path d="M10 7V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-1" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-      <path d="M3 12h9" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-      <path d="M7 8l-4 4 4 4" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+  useEffect(() => {
+    if (!open) return undefined;
 
-function initials(name) {
-  const value = String(name || "").trim();
-  if (!value) return "U";
+    const items = () => Array.from(menuRef.current?.querySelectorAll('[role^="menuitem"]') || []);
+    const first = items().find((el) => el.getAttribute("aria-checked") === "true") || items()[0];
+    first?.focus();
 
-  const parts = value.split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] || "U";
-  const last = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
-  return (first + last).toUpperCase();
+    function onPointer(event) {
+      if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false);
+    }
+    function onKey(event) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (!menuRef.current?.contains(document.activeElement)) return;
+      const list = items();
+      const index = list.indexOf(document.activeElement);
+      let next = null;
+      if (event.key === "ArrowDown") next = list[(index + 1) % list.length];
+      if (event.key === "ArrowUp") next = list[(index - 1 + list.length) % list.length];
+      if (event.key === "Home") next = list[0];
+      if (event.key === "End") next = list[list.length - 1];
+      if (event.key === "Tab") setOpen(false);
+      if (next) {
+        event.preventDefault();
+        next.focus();
+      }
+    }
+
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const close = (restoreFocus = false) => {
+    setOpen(false);
+    if (restoreFocus) triggerRef.current?.focus();
+  };
+
+  return { open, setOpen, close, rootRef, triggerRef, menuRef, menuId };
 }
 
 function fallbackLanguages() {
@@ -87,56 +136,54 @@ function normalizeLanguageSelection(item) {
 function currentLocaleValue(locale, items) {
   const current = String(locale || "");
   if (current) return current;
-
-  if (typeof window !== "undefined") {
-    const runtimeLocale = String(window.CASANOVA_I18N_META?.localeRaw || "");
-    if (runtimeLocale) return runtimeLocale;
-  }
-
+  const runtimeLocale = String(window.CASANOVA_I18N_META?.localeRaw || "");
+  if (runtimeLocale) return runtimeLocale;
   return items[0]?.value || "es_ES";
 }
 
 function LanguageMenu({ locale, onLocale, disabled = false }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const menu = useMenu();
   const items = availableLanguages();
   const current = currentLocaleValue(locale, items);
-  const active = items.find((item) => item.value === current || item.locale === current) || items[0];
+  const isCurrent = (item) => item.value === current || item.locale === current;
+  const active = items.find(isCurrent) || items[0];
 
   useEffect(() => {
-    if (disabled && open) setOpen(false);
-  }, [disabled, open]);
-
-  useEffect(() => {
-    function onDocClick(event) {
-      if (!open) return;
-      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open]);
+    if (disabled && menu.open) menu.setOpen(false);
+  }, [disabled, menu.open]);
 
   return (
-    <div className="cp-lang" ref={ref}>
-      <button type="button" className="cp-lang-btn" onClick={() => { if (!disabled) setOpen((value) => !value); }} aria-haspopup="menu" aria-expanded={open ? "true" : "false"} title={active?.name || ""} disabled={disabled}>
-        <span className="cp-lang-ico" aria-hidden="true"><IconGlobe /></span>
-        <span className="cp-lang-label">{active?.label || "ES"}</span>
+    <div className="cp-menu" ref={menu.rootRef}>
+      <button
+        ref={menu.triggerRef}
+        type="button"
+        className="cp-iconbtn cp-iconbtn--text"
+        onClick={() => { if (!disabled) menu.setOpen((value) => !value); }}
+        aria-haspopup="menu"
+        aria-expanded={menu.open ? "true" : "false"}
+        aria-controls={menu.menuId}
+        aria-label={`${tt("Idioma")}: ${active?.name || ""}`}
+        disabled={disabled}
+      >
+        <Icon name="globe" size={18} />
+        <span>{active?.label || "ES"}</span>
       </button>
-      {open && !disabled ? (
-        <div className="cp-lang-menu" role="menu">
+      {menu.open && !disabled ? (
+        <div className="cp-menu__panel cp-menu__panel--narrow" role="menu" id={menu.menuId} ref={menu.menuRef}>
           {items.map((item) => (
             <button
               key={item.value || item.locale}
               type="button"
-              className={`cp-lang-item ${item.value === current || item.locale === current ? "is-active" : ""}`}
+              className="cp-menu__item"
+              role="menuitemradio"
+              aria-checked={isCurrent(item) ? "true" : "false"}
               onClick={() => {
-                setOpen(false);
+                menu.close(true);
                 if (typeof onLocale === "function") onLocale(normalizeLanguageSelection(item));
               }}
-              role="menuitem"
             >
-              <span className="cp-lang-item-label">{item.name}</span>
-              {item.value === current || item.locale === current ? <span className="cp-lang-check" aria-hidden="true">✓</span> : null}
+              <span className="cp-menu__label">{item.name}</span>
+              {isCurrent(item) ? <Icon name="check" size={18} className="cp-menu__check" /> : null}
             </button>
           ))}
         </div>
@@ -145,60 +192,70 @@ function LanguageMenu({ locale, onLocale, disabled = false }) {
   );
 }
 
+function initials(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "U";
+  const first = parts[0][0] || "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase();
+}
+
+// Las iniciales quedan debajo de la foto: si el cliente no tiene foto, el avatar
+// llega transparente (default "blank") y se ven las iniciales.
+function Avatar({ url, name }) {
+  return (
+    <span className="cp-avatar" aria-hidden="true">
+      <span className="cp-avatar__initials">{initials(name)}</span>
+      {url ? <img className="cp-avatar__img" src={url} alt="" /> : null}
+    </span>
+  );
+}
+
 function UserMenu({ profile, onGo, onLogout }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    function onDocClick(event) {
-      if (!open) return;
-      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open]);
-
+  const menu = useMenu();
   const name = profile?.user?.displayName || profile?.giav?.nombre || "";
   const email = profile?.user?.email || profile?.giav?.email || "";
   const avatarUrl = profile?.user?.avatarUrl || "";
+  const accountLabel = t("account_label", "Tu cuenta");
 
   return (
-    <div className="cp-user" ref={ref}>
-      <button type="button" className="cp-user-btn" onClick={() => setOpen((value) => !value)} aria-haspopup="menu" aria-expanded={open ? "true" : "false"}>
-        {avatarUrl ? (
-          <img className="cp-user-avatar" src={avatarUrl} alt="" />
-        ) : (
-          <div className="cp-user-avatar is-fallback" aria-hidden="true">{initials(name)}</div>
-        )}
+    <div className="cp-menu" ref={menu.rootRef}>
+      <button
+        ref={menu.triggerRef}
+        type="button"
+        className="cp-avatarbtn"
+        onClick={() => menu.setOpen((value) => !value)}
+        aria-haspopup="menu"
+        aria-expanded={menu.open ? "true" : "false"}
+        aria-controls={menu.menuId}
+        aria-label={accountLabel}
+      >
+        <Avatar url={avatarUrl} name={name} />
       </button>
 
-      {open ? (
-        <div className="cp-user-menu" role="menu">
-          <div className="cp-user-head">
-            {avatarUrl ? (
-              <img className="cp-user-avatar" src={avatarUrl} alt="" />
-            ) : (
-              <div className="cp-user-avatar is-fallback" aria-hidden="true">{initials(name)}</div>
-            )}
-            <div>
-              <div className="cp-user-name">{name || t("account_label", "Tu cuenta")}</div>
-              {email ? <div className="cp-user-email">{email}</div> : null}
+      {menu.open ? (
+        <div className="cp-menu__panel" role="menu" id={menu.menuId} ref={menu.menuRef} aria-label={accountLabel}>
+          <div className="cp-menu__head">
+            <Avatar url={avatarUrl} name={name} />
+            <div className="cp-menu__who">
+              <div className="cp-menu__name">{name || accountLabel}</div>
+              {email ? <div className="cp-menu__email">{email}</div> : null}
             </div>
           </div>
 
-          <button type="button" className="cp-user-item" onClick={() => { setOpen(false); onGo("profile"); }} role="menuitem">
-            <span className="cp-user-item-ico" aria-hidden="true"><IconUser /></span>
-            {t("menu_profile", "Mi perfil")}
+          <button type="button" className="cp-menu__item" role="menuitem" onClick={() => { menu.close(); onGo("profile"); }}>
+            <Icon name="user" size={18} />
+            <span className="cp-menu__label">{t("menu_profile", "Mi perfil")}</span>
           </button>
-          <button type="button" className="cp-user-item" onClick={() => { setOpen(false); onGo("security"); }} role="menuitem">
-            <span className="cp-user-item-ico" aria-hidden="true"><IconShieldCheck /></span>
-            {t("menu_security", "Seguridad")}
+          <button type="button" className="cp-menu__item" role="menuitem" onClick={() => { menu.close(); onGo("security"); }}>
+            <Icon name="shield" size={18} />
+            <span className="cp-menu__label">{t("menu_security", "Seguridad")}</span>
           </button>
 
-          <div className="cp-user-sep" />
-          <button type="button" className="cp-user-item is-danger" onClick={() => { setOpen(false); onLogout(); }} role="menuitem">
-            <span className="cp-user-item-ico" aria-hidden="true"><IconLogout /></span>
-            {t("menu_logout", "Cerrar sesión")}
+          <div className="cp-menu__sep" role="separator" />
+          <button type="button" className="cp-menu__item is-danger" role="menuitem" onClick={() => { menu.close(); onLogout(); }}>
+            <Icon name="logout" size={18} />
+            <span className="cp-menu__label">{t("menu_logout", "Cerrar sesión")}</span>
           </button>
         </div>
       ) : null}
@@ -206,122 +263,159 @@ function UserMenu({ profile, onGo, onLogout }) {
   );
 }
 
+/* ===== Estructura ===== */
+
 export function Sidebar({ view, unread = 0, items = [] }) {
-  const agency = window.CasanovaPortal?.agency || {};
-  const branding = window.CasanovaPortal?.branding || {};
-  const agencyName = String(agency.nombre || "Casanova Golf").trim();
-  const logoUrl = String(branding.logoLightUrl || branding.logoDarkUrl || "").trim();
+  const brand = brandInfo();
 
   return (
     <aside className="cp-sidebar">
-      <div className="cp-brand cp-brand--spaced">
-        {logoUrl ? (
-          <img
-            className="cp-logo cp-logo--image"
-            src={logoUrl}
-            alt={agencyName}
-            loading="eager"
-            decoding="async"
-          />
-        ) : (
-          <div className="cp-logo cp-logo--placeholder" aria-hidden="true" />
-        )}
-        <div className="cp-brand-copy">
-          <div className="cp-brand-title">{tt("Casanova Portal")}</div>
-          <div className="cp-brand-sub">{tt("Gestión de Reservas")}</div>
-        </div>
-      </div>
+      <BrandLink className="cp-sidebar__brand" />
 
-      <nav className="cp-nav">
+      <nav className="cp-nav" aria-label={tt("Menú principal")}>
         {items.map((item) => {
           const IconComponent = item.icon;
           const active = item.isActive(view);
-          const label = item.labelKey ? t(item.labelKey, item.label || item.fallback || "") : (item.label || item.fallback || "");
+          const href = viewHref(item.view);
+          const showCount = item.key === "inbox" && view !== "inbox" && unread > 0;
 
           return (
-            <button
+            <a
               key={item.key}
-              type="button"
-              className={`cp-nav-btn ${active ? "is-active" : ""}`}
-              onClick={() => setParam("view", item.view)}
+              href={href}
+              className={`cp-nav__item ${active ? "is-active" : ""}`}
+              aria-current={active ? "page" : undefined}
+              onClick={(event) => navigate(event, href)}
             >
-              <span className="cp-nav-label">
-                <span className="cp-nav-icon">
-                  <IconComponent />
-                </span>
-                <span>{label}</span>
-              </span>
-              {item.key === "inbox" && view !== "inbox" && unread > 0 ? (
-                <span className="cp-badge">{unread}</span>
-              ) : null}
-            </button>
+              <span className="cp-nav__icon"><IconComponent /></span>
+              <span className="cp-nav__label">{navLabel(item)}</span>
+              {showCount ? <span className="cp-count">{unread}</span> : null}
+            </a>
           );
         })}
       </nav>
 
-      <div className="cp-sidebar-spacer" />
+      {brand.tel || brand.email ? (
+        <div className="cp-sidebar__help">
+          <p className="cp-sidebar__help-title">{tt("Tu equipo Casanova")}</p>
+          {brand.tel ? (
+            <a className="cp-sidebar__help-link" href={`tel:${brand.tel.replace(/\s+/g, "")}`}>
+              <Icon name="phone" size={18} />
+              <span>{brand.tel}</span>
+            </a>
+          ) : null}
+          {brand.email ? (
+            <a className="cp-sidebar__help-link" href={`mailto:${brand.email}`}>
+              <Icon name="mail" size={18} />
+              <span>{brand.email}</span>
+            </a>
+          ) : null}
+        </div>
+      ) : null}
     </aside>
   );
 }
 
-export function Topbar({ title, subtitle, chip, onRefresh, isRefreshing, profile, onGo, onLogout, onLocale, readOnly = false }) {
+export function MobileTabBar({ view, unread = 0, items = [] }) {
   return (
-    <div className="cp-topbar">
-      <div className="cp-topbar-inner">
-        {title ? (
-          <div className="cp-topbar__left">
-            <div className="cp-topbar__title">{title}</div>
-            {subtitle ? <div className="cp-topbar__subtitle">{subtitle}</div> : null}
+    <nav className="cp-tabbar" aria-label={tt("Menú principal")}>
+      {items.map((item) => {
+        const IconComponent = item.icon;
+        const active = item.isActive(view);
+        const href = viewHref(item.view);
+        const showCount = item.key === "inbox" && view !== "inbox" && unread > 0;
+
+        return (
+          <a
+            key={item.key}
+            href={href}
+            className={`cp-tabbar__item ${active ? "is-active" : ""}`}
+            aria-current={active ? "page" : undefined}
+            onClick={(event) => navigate(event, href)}
+          >
+            <span className="cp-tabbar__icon">
+              <IconComponent />
+              {showCount ? <span className="cp-tabbar__count">{unread > 9 ? "9+" : unread}</span> : null}
+            </span>
+            <span className="cp-tabbar__label">{navLabel(item)}</span>
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function Topbar({ title, subtitle, chip, onRefresh, isRefreshing, profile, onGo, onLogout, onLocale, readOnly = false }) {
+  const refreshLabel = tt("Actualizar");
+
+  return (
+    <>
+      <header className="cp-topbar">
+        <div className="cp-topbar__inner">
+          <BrandLink className="cp-topbar__brand" />
+
+          <div className="cp-topbar__heading">
+            {title ? <h1 className="cp-topbar__title">{title}</h1> : null}
+            {subtitle ? <p className="cp-topbar__subtitle">{subtitle}</p> : null}
           </div>
-        ) : <div />}
-        <div className="cp-actions">
-          {chip ? <div className="cp-chip">{chip}</div> : null}
-          {isRefreshing ? <div className="cp-chip">{tt("Actualizando…")}</div> : null}
-          <LanguageMenu locale={profile?.locale} onLocale={onLocale} disabled={readOnly} />
-          <button className="cp-btn" onClick={onRefresh}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:4}}><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            {tt("Actualizar")}
-          </button>
-          <UserMenu profile={profile} onGo={onGo} onLogout={onLogout} />
+
+          <div className="cp-topbar__actions">
+            {chip ? <span className="cp-topbar__chip">{chip}</span> : null}
+            <button
+              type="button"
+              className="cp-iconbtn"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              aria-label={refreshLabel}
+              title={refreshLabel}
+            >
+              <Icon name="refresh" size={18} className={isRefreshing ? "is-spinning" : ""} />
+            </button>
+            <span className="cp-sr-only" aria-live="polite">{isRefreshing ? tt("Actualizando…") : ""}</span>
+            <LanguageMenu locale={profile?.locale} onLocale={onLocale} disabled={readOnly} />
+            <UserMenu profile={profile} onGo={onGo} onLogout={onLogout} />
+          </div>
         </div>
-      </div>
-    </div>
+      </header>
+
+      {title ? (
+        <div className="cp-pagehead">
+          <h1 className="cp-pagehead__title">{title}</h1>
+          {subtitle ? <p className="cp-pagehead__subtitle">{subtitle}</p> : null}
+        </div>
+      ) : null}
+    </>
   );
 }
 
 export function PortalFooter() {
-  const agency = window.CasanovaPortal?.agency || {};
-  const tel = String(agency.tel || "").trim();
-  const email = String(agency.email || "").trim();
-  const nombre = String(agency.nombre || "Casanova Golf").trim();
-  const direccion = String(agency.direccion || "").trim();
-  const web = String(agency.web || "").trim();
+  const brand = brandInfo();
 
   return (
     <footer className="cp-footer">
-      <div className="cp-footer-inner">
-        <div className="cp-footer-left">
-          <div className="cp-footer-brand">{nombre}</div>
-          {direccion ? <div className="cp-footer-muted">{direccion}</div> : null}
+      <div className="cp-footer__inner">
+        <div className="cp-footer__brand">
+          <div className="cp-footer__name">{brand.name}</div>
+          {brand.address ? <div className="cp-footer__muted">{brand.address}</div> : null}
         </div>
-        <div className="cp-footer-right">
-          {tel ? (
-            <div className="cp-footer-item">
-              <span className="cp-footer-label">{tt("Tel.")}</span>
-              <a href={`tel:${tel.replace(/\s+/g, "")}`} className="cp-footer-link">{tel}</a>
-            </div>
+        <div className="cp-footer__links">
+          {brand.tel ? (
+            <a className="cp-footer__link is-contact" href={`tel:${brand.tel.replace(/\s+/g, "")}`}>
+              <Icon name="phone" size={16} />
+              {brand.tel}
+            </a>
           ) : null}
-          {email ? (
-            <div className="cp-footer-item">
-              <span className="cp-footer-label">{tt("Email")}</span>
-              <a href={`mailto:${email}`} className="cp-footer-link">{email}</a>
-            </div>
+          {brand.email ? (
+            <a className="cp-footer__link is-contact" href={`mailto:${brand.email}`}>
+              <Icon name="mail" size={16} />
+              {brand.email}
+            </a>
           ) : null}
-          {web ? (
-            <div className="cp-footer-item">
-              <span className="cp-footer-label">{tt("Web")}</span>
-              <a href={web} className="cp-footer-link" target="_blank" rel="noreferrer">{web.replace(/^https?:\/\//, "")}</a>
-            </div>
+          {brand.web ? (
+            <a className="cp-footer__link" href={brand.web} target="_blank" rel="noreferrer">
+              {brand.web.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+              <Icon name="external" size={16} />
+            </a>
           ) : null}
         </div>
       </div>

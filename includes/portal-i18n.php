@@ -435,7 +435,7 @@ function casanova_portal_get_js_i18n(): array {
     'portal_language' => __('Idioma del portal', 'casanova-portal'),
     'language_updated' => __('Idioma actualizado.', 'casanova-portal'),
     'language_update_failed' => __('No se pudo actualizar el idioma.', 'casanova-portal'),
-    'nav_dashboard' => __('Dashboard', 'casanova-portal'),
+    'nav_dashboard' => __('Inicio', 'casanova-portal'),
     'nav_trips' => __('Viajes', 'casanova-portal'),
     'nav_trip_detail' => __('Detalle del viaje', 'casanova-portal'),
     'nav_messages' => __('Mensajes', 'casanova-portal'),

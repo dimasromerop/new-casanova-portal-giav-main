@@ -1,124 +1,128 @@
-import React from "react";
+import React, { useState } from "react";
 
-import { tt, ttf } from "../../i18n/t.js";
+import { tt } from "../../i18n/t.js";
 import { formatDateES, formatWeekdayShort, normalizeTripDates } from "../../lib/formatters.js";
-import { setParam } from "../../lib/params.js";
+import Icon from "../Icon.jsx";
 
-function weatherIconFor(code) {
+// Códigos WMO de Open-Meteo → icono Tabler.
+function weatherIconName(code) {
   const c = Number(code);
-  if (!Number.isFinite(c)) return "";
-  if (c === 0) return "☀️";
-  if (c >= 1 && c <= 3) return "⛅";
-  if (c === 45 || c === 48) return "🌫️";
-  if (c >= 51 && c <= 57) return "🌦️";
-  if (c >= 61 && c <= 67) return "🌧️";
-  if (c >= 71 && c <= 77) return "🌨️";
-  if (c >= 80 && c <= 82) return "🌧️";
-  if (c >= 95) return "⛈️";
-  return "🌤️";
+  if (!Number.isFinite(c)) return "cloud";
+  if (c === 0) return "sun";
+  if (c === 45 || c === 48) return "fog";
+  if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82)) return "rain";
+  if (c >= 71 && c <= 77) return "snow";
+  if (c >= 95) return "storm";
+  return "cloud";
 }
 
 function TripWeather({ weather }) {
-  const days = Array.isArray(weather?.daily) ? weather.daily : [];
-  const slice = days.slice(0, 5);
+  const days = Array.isArray(weather?.daily) ? weather.daily.slice(0, 5) : [];
   const provider = String(weather?.provider || "");
-  if (!slice.length) return null;
-
-  function iconNode(day) {
-    const base = day?.icon_base_uri || day?.iconBaseUri || "";
-    if (base && provider === "google-weather") {
-      const src = String(base).endsWith(".svg") ? String(base) : `${String(base)}.svg`;
-      return <img className="cp-weather__icon-img" src={src} alt="" loading="lazy" />;
-    }
-    return <span aria-hidden="true">{weatherIconFor(day?.code)}</span>;
-  }
+  if (!days.length) return null;
 
   return (
-    <div className="cp-weather" title={tt("Previsión en destino")}>
-      <div className="cp-weather__title">{tt("Tiempo")}</div>
-      <div className="cp-weather__row">
-        {slice.map((day, idx) => {
-          const tmin = Number(day?.t_min);
-          const tmax = Number(day?.t_max);
-          return (
-            <div key={idx} className="cp-weather__day">
-              <div className="cp-weather__dow">{formatWeekdayShort(day?.date)}</div>
-              <div className="cp-weather__icon">{iconNode(day)}</div>
-              <div className="cp-weather__temp">
-                {Number.isFinite(tmax) ? Math.round(tmax) : "–"}° /{" "}
-                {Number.isFinite(tmin) ? Math.round(tmin) : "–"}°
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <div className="cp-trip-weather" aria-label={tt("Previsión en destino")}>
+      {days.map((day, idx) => {
+        const tmin = Number(day?.t_min);
+        const tmax = Number(day?.t_max);
+        const base = day?.icon_base_uri || day?.iconBaseUri || "";
+        return (
+          <div key={idx} className="cp-trip-weather__day">
+            <span className="cp-trip-weather__dow">{formatWeekdayShort(day?.date)}</span>
+            {base && provider === "google-weather" ? (
+              <img className="cp-trip-weather__img" src={String(base).endsWith(".svg") ? String(base) : `${base}.svg`} alt="" loading="lazy" />
+            ) : (
+              <Icon name={weatherIconName(day?.code)} size={20} />
+            )}
+            <span className="cp-trip-weather__temp">
+              {Number.isFinite(tmax) ? Math.round(tmax) : "–"}°
+              <span>{Number.isFinite(tmin) ? Math.round(tmin) : "–"}°</span>
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-export default function TripHeader({ trip, map, weather, itineraryUrl }) {
+export default function TripHeader({ trip, map, weather, itineraryUrl, imageUrl = "", onBack, onPayments, showPayments = true }) {
   const range = normalizeTripDates(trip);
+  const dates = [formatDateES(range.start), formatDateES(range.end)].filter((value) => value && value !== "—").join(" — ");
+  // Igual que en el Inicio: se guarda la URL cargada para no perder fotos servidas desde caché.
+  const [loadedUrl, setLoadedUrl] = useState("");
+  const [failedUrl, setFailedUrl] = useState("");
+  const showImage = Boolean(imageUrl) && failedUrl !== imageUrl;
+  const ready = loadedUrl === imageUrl;
+  const mapUrl = map?.url ? String(map.url) : "";
+  const hasWeather = Array.isArray(weather?.daily) && weather.daily.length > 0;
+  const hasBar = hasWeather || Boolean(mapUrl) || Boolean(itineraryUrl) || showPayments;
 
   return (
-    <div className="cp-card cp-trip-header cp-mt-14">
-      <div className="cp-card-header cp-trip-header__card-header">
-        <div className="cp-trip-header__summary">
-          <div className="cp-card-title cp-trip-header__title">
-            {trip?.title || tt("Viaje")}
+    <section className="cp-trip-hero" aria-labelledby="cp-trip-title">
+      <div className={`cp-trip-hero__media ${showImage ? "has-image" : ""}`.trim()}>
+        {showImage ? (
+          <img
+            className={`cp-trip-hero__img ${ready ? "is-ready" : ""}`.trim()}
+            src={imageUrl}
+            alt=""
+            decoding="async"
+            ref={(img) => { if (img?.complete && img.naturalWidth > 0) setLoadedUrl(imageUrl); }}
+            onLoad={() => setLoadedUrl(imageUrl)}
+            onError={() => setFailedUrl(imageUrl)}
+          />
+        ) : null}
+        <div className="cp-trip-hero__shade" aria-hidden="true" />
+
+        <a className="cp-trip-hero__back" href="?view=trips" onClick={onBack}>
+          <Icon name="arrow-left" size={18} />
+          {tt("Tus viajes")}
+        </a>
+
+        <div className="cp-trip-hero__body">
+          <div className="cp-trip-hero__badges">
+            {trip?.status ? <span className="cp-trip-hero__badge">{trip.status}</span> : null}
+            {trip?.code ? <span className="cp-trip-hero__badge is-quiet">{trip.code}</span> : null}
           </div>
-          <div className="cp-card-sub cp-trip-header__sub">
-            <span className="cp-strong">{trip?.code || trip?.id || "—"}</span>
-            {trip?.status ? (
-              <span className="cp-trip-header__status">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="12" height="12"><path d="M20 6L9 17l-5-5"/></svg>
-                {trip.status}
-              </span>
-            ) : null}
-            <span>{formatDateES(range.start)} — {formatDateES(range.end)}</span>
-          </div>
-          <div className="cp-trip-head__cta-group">
-            {map?.url ? (
+          <h1 className="cp-trip-hero__title" id="cp-trip-title">{trip?.title || tt("Viaje")}</h1>
+          <p className="cp-trip-hero__meta">
+            <Icon name="calendar" size={18} />
+            {dates || tt("Fechas por confirmar")}
+          </p>
+        </div>
+      </div>
+
+      {hasBar ? (
+        <div className="cp-trip-hero__bar">
+          <TripWeather weather={weather} />
+          <div className="cp-trip-hero__actions">
+            {mapUrl ? (
               <a
-                className="cp-btn"
-                href={String(map.url)}
+                className="cp-btn cp-btn--ghost"
+                href={mapUrl}
                 target="_blank"
                 rel="noreferrer"
                 title={map?.type === "route" ? tt("Ver ruta en Google Maps") : tt("Ver mapa en Google Maps")}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                <Icon name="map-pin" size={18} />
                 {map?.type === "route" ? tt("Ver ruta") : tt("Ver mapa")}
               </a>
             ) : null}
-
-            <button
-              type="button"
-              className="cp-btn"
-              onClick={() => {
-                setParam("tab", "payments");
-              }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
-              {tt("Ver pagos")}
-            </button>
-
             {itineraryUrl ? (
-              <a
-                className="cp-btn cp-btn--ghost"
-                href={itineraryUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+              <a className="cp-btn cp-btn--ghost" href={itineraryUrl} target="_blank" rel="noreferrer noopener">
+                <Icon name="file" size={18} />
                 {tt("Programa PDF")}
               </a>
             ) : null}
+            {showPayments ? (
+              <button type="button" className="cp-btn cp-btn--primary" onClick={onPayments}>
+                <Icon name="credit-card" size={18} />
+                {tt("Ver pagos")}
+              </button>
+            ) : null}
           </div>
         </div>
-
-        <div className="cp-trip-head__actions">
-          <TripWeather weather={weather} />
-        </div>
-      </div>
-    </div>
+      ) : null}
+    </section>
   );
 }

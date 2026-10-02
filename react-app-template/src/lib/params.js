@@ -12,6 +12,19 @@ export function readParams() {
   };
 }
 
+// Cambia varios parámetros en una sola entrada del historial (el botón «atrás» vuelve
+// a la vista anterior, no a un estado intermedio). `null` o "" borran el parámetro.
+export function setParams(updates, { scrollTop = true } = {}) {
+  const params = new URLSearchParams(window.location.search);
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === "") params.delete(key);
+    else params.set(key, String(value));
+  });
+  window.history.pushState({}, "", `${window.location.pathname}?${params.toString()}`);
+  window.dispatchEvent(new Event("popstate"));
+  if (scrollTop) window.scrollTo({ top: 0 });
+}
+
 export function setParam(key, value) {
   const params = new URLSearchParams(window.location.search);
   if (value === null || value === undefined || value === "") {

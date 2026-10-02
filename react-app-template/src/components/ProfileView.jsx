@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import Field from "./Field.jsx";
+import Icon from "./Icon.jsx";
 import { Notice } from "./ui.jsx";
 import { getLanguages, t, tt } from "../i18n/t.js";
 
@@ -58,109 +59,70 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
   const fullName = `${giav.nombre || ""} ${giav.apellidos || ""}`.trim() || "—";
   const email = giav.email || profile?.user?.email || "—";
 
-  return (
-    <div className="cp-content">
-      <div className="cp-card">
-        <div className="cp-card-title">{tt("Información personal")}</div>
-        {readOnly ? (
-          <div className="cp-mt-14">
-            <Notice variant="warn" title={tt("Edición desactivada")}>
-              {lockedMessage} {tt("Puedes consultar los datos del cliente, pero no modificarlos desde esta vista.")}
-            </Notice>
-          </div>
-        ) : null}
+  const field = (key) => ({
+    className: "cp-input",
+    value: form[key],
+    onChange: (event) => setForm((state) => ({ ...state, [key]: event.target.value })),
+    readOnly,
+    "aria-readonly": readOnly ? "true" : undefined,
+  });
 
+  return (
+    <div className="cp-content cp-settings">
+      {readOnly ? (
+        <Notice variant="warn" title={tt("Edición desactivada")}>
+          {lockedMessage} {tt("Puedes consultar los datos del cliente, pero no modificarlos desde esta vista.")}
+        </Notice>
+      ) : null}
+
+      <form
+        className="cp-settings__form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!readOnly) onSave(form);
+        }}
+      >
         <section className="cp-form-section">
-          <div className="cp-form-section__head">
-            <div className="cp-form-section__eyebrow">{tt("Datos personales")}</div>
-            <div className="cp-form-section__title">{tt("Contacto y acceso")}</div>
-          </div>
+          <h2 className="cp-form-section__title">{tt("Contacto y acceso")}</h2>
 
           <div className="cp-grid2">
             <Field label={tt("Nombre")} htmlFor="profile-name" readOnly>
-              <input id="profile-name" className="cp-input" value={fullName} readOnly aria-readonly="true" />
+              <input id="profile-name" className="cp-input" value={fullName} readOnly aria-readonly="true" autoComplete="name" />
             </Field>
             <Field label={tt("Email")} htmlFor="profile-email" readOnly>
-              <input id="profile-email" className="cp-input" value={email} readOnly aria-readonly="true" />
+              <input id="profile-email" className="cp-input" value={email} readOnly aria-readonly="true" autoComplete="email" />
             </Field>
           </div>
 
           <div className="cp-grid2">
             <Field label={tt("Teléfono")} htmlFor="profile-phone" readOnly={readOnly}>
-              <input
-                id="profile-phone"
-                className="cp-input"
-                value={form.telefono}
-                onChange={(event) => setForm((state) => ({ ...state, telefono: event.target.value }))}
-                readOnly={readOnly}
-                aria-readonly={readOnly ? "true" : undefined}
-              />
+              <input id="profile-phone" type="tel" autoComplete="tel" {...field("telefono")} />
             </Field>
             <Field label={tt("Móvil")} htmlFor="profile-mobile" readOnly={readOnly}>
-              <input
-                id="profile-mobile"
-                className="cp-input"
-                value={form.movil}
-                onChange={(event) => setForm((state) => ({ ...state, movil: event.target.value }))}
-                readOnly={readOnly}
-                aria-readonly={readOnly ? "true" : undefined}
-              />
+              <input id="profile-mobile" type="tel" autoComplete="tel" {...field("movil")} />
             </Field>
           </div>
         </section>
 
-        <div className="cp-divider cp-divider--section" />
-
         <section className="cp-form-section">
-          <div className="cp-form-section__head">
-            <div className="cp-form-section__eyebrow">{tt("Dirección")}</div>
-            <div className="cp-form-section__title">{tt("Datos de ubicación")}</div>
-          </div>
+          <h2 className="cp-form-section__title">{tt("Datos de ubicación")}</h2>
 
           <Field label={tt("Dirección")} htmlFor="profile-address" readOnly={readOnly}>
-            <input
-              id="profile-address"
-              className="cp-input"
-              value={form.direccion}
-              onChange={(event) => setForm((state) => ({ ...state, direccion: event.target.value }))}
-              readOnly={readOnly}
-              aria-readonly={readOnly ? "true" : undefined}
-            />
+            <input id="profile-address" autoComplete="street-address" {...field("direccion")} />
           </Field>
 
           <div className="cp-grid2">
             <Field label={tt("Código postal")} htmlFor="profile-postal-code" readOnly={readOnly}>
-              <input
-                id="profile-postal-code"
-                className="cp-input"
-                value={form.codPostal}
-                onChange={(event) => setForm((state) => ({ ...state, codPostal: event.target.value }))}
-                readOnly={readOnly}
-                aria-readonly={readOnly ? "true" : undefined}
-              />
+              <input id="profile-postal-code" autoComplete="postal-code" inputMode="numeric" {...field("codPostal")} />
             </Field>
             <Field label={tt("Población")} htmlFor="profile-city" readOnly={readOnly}>
-              <input
-                id="profile-city"
-                className="cp-input"
-                value={form.poblacion}
-                onChange={(event) => setForm((state) => ({ ...state, poblacion: event.target.value }))}
-                readOnly={readOnly}
-                aria-readonly={readOnly ? "true" : undefined}
-              />
+              <input id="profile-city" autoComplete="address-level2" {...field("poblacion")} />
             </Field>
           </div>
 
           <div className="cp-grid2">
             <Field label={tt("Provincia")} htmlFor="profile-region" readOnly={readOnly}>
-              <input
-                id="profile-region"
-                className="cp-input"
-                value={form.provincia}
-                onChange={(event) => setForm((state) => ({ ...state, provincia: event.target.value }))}
-                readOnly={readOnly}
-                aria-readonly={readOnly ? "true" : undefined}
-              />
+              <input id="profile-region" autoComplete="address-level1" {...field("provincia")} />
             </Field>
             <Field
               label={tt("País")}
@@ -168,32 +130,24 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
               help={tt("(Opcional, según datos de facturación)")}
               readOnly={readOnly}
             >
-              <input
-                id="profile-country"
-                className="cp-input"
-                value={form.pais}
-                onChange={(event) => setForm((state) => ({ ...state, pais: event.target.value }))}
-                readOnly={readOnly}
-                aria-readonly={readOnly ? "true" : undefined}
-              />
+              <input id="profile-country" autoComplete="country-name" {...field("pais")} />
             </Field>
           </div>
         </section>
 
-        <div className="cp-actions-row">
-          <button className="cp-btn-primary" type="button" onClick={() => onSave(form)} disabled={readOnly}>
+        <div className="cp-settings__actions">
+          <button className="cp-btn cp-btn--primary" type="submit" disabled={readOnly}>
             {readOnly ? tt("Edición desactivada") : tt("Guardar")}
           </button>
         </div>
-      </div>
+      </form>
 
-      <div className="cp-card">
-        <div className="cp-card-title">{t("portal_language", "Idioma del portal")}</div>
-        <section className="cp-form-section cp-form-section--compact">
-          <Field label={tt("Idioma")} htmlFor="profile-locale" help={tt("Esto solo afecta al portal.")} readOnly={readOnly}>
+      <section className="cp-form-section">
+        <h2 className="cp-form-section__title">{t("portal_language", "Idioma del portal")}</h2>
+        <Field label={tt("Idioma")} htmlFor="profile-locale" help={tt("Esto solo afecta al portal.")} readOnly={readOnly}>
+          <span className="cp-select cp-select--field">
             <select
               id="profile-locale"
-              className="cp-input cp-input--narrow"
               value={locale}
               onChange={(event) => {
                 const selected = languageItems.find((item) => (item.value || item.locale) === event.target.value);
@@ -215,9 +169,10 @@ export default function ProfileView({ profile, onSave, onLocale, readOnly = fals
                 </option>
               ))}
             </select>
-          </Field>
-        </section>
-      </div>
+            <Icon name="chevron" size={16} />
+          </span>
+        </Field>
+      </section>
     </div>
   );
 }

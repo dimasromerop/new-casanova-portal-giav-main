@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: casanova-portal\n"
-"POT-Creation-Date: 2026-03-20 16:34+0000\n"
-"PO-Revision-Date: 2026-03-20 16:34+0000\n"
+"POT-Creation-Date: 2026-10-02 08:15+0000\n"
+"PO-Revision-Date: 2026-10-02 08:15+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: \n"
@@ -48,7 +48,16 @@ msgstr ""
 msgid "(Opcional, según datos de facturación)"
 msgstr ""
 
+msgid "3 cuotas"
+msgstr ""
+
+msgid "6 cuotas"
+msgstr ""
+
 msgid "6 dígitos"
+msgstr ""
+
+msgid "12 cuotas"
 msgstr ""
 
 msgid "Abre el portal usando el contexto real de este cliente, en modo solo lectura."
@@ -75,6 +84,18 @@ msgstr ""
 msgid "Acceder al portal"
 msgstr ""
 
+msgid "Acceso a canjes básicos"
+msgstr ""
+
+msgid "Acceso a canjes premium: cenas privadas, logística, noches adicionales."
+msgstr ""
+
+msgid "Acceso al portal privado"
+msgstr ""
+
+msgid "Acceso anticipado a ofertas"
+msgstr ""
+
 msgid "Acceso denegado"
 msgstr ""
 
@@ -90,6 +111,9 @@ msgstr ""
 msgid "Activado"
 msgstr ""
 
+msgid "Actual"
+msgstr ""
+
 msgid "Actualización desactivada"
 msgstr ""
 
@@ -100,6 +124,9 @@ msgid "Actualizando…"
 msgstr ""
 
 msgid "Actualizar"
+msgstr ""
+
+msgid "Adjuntar archivo"
 msgstr ""
 
 msgid "Adjunto"
@@ -117,7 +144,16 @@ msgstr ""
 msgid "Alojamiento en: %s"
 msgstr ""
 
+msgid "American Express"
+msgstr ""
+
 msgid "American Express se procesa en una pasarela segura aparte."
+msgstr ""
+
+msgid "AMEX"
+msgstr ""
+
+msgid "Anterior"
 msgstr ""
 
 msgid "Apellidos"
@@ -126,7 +162,7 @@ msgstr ""
 msgid "Aplazame"
 msgstr ""
 
-msgid "Aplazame no esta configurado correctamente."
+msgid "Aplazame no está configurado correctamente."
 msgstr ""
 
 msgid "Aplazame no está disponible en este momento."
@@ -138,7 +174,10 @@ msgstr ""
 msgid "Aplazame requiere un email valido. Revísalo en tu perfil antes de continuar."
 msgstr ""
 
-msgid "Aplazame te permite fraccionar el pago del viaje. Al continuar se abrira su checkout seguro para completar la financiacion en cuotas."
+msgid "Aplazame te permite fraccionar el pago del viaje. Al continuar se abrirá su checkout seguro para completar la financiación en cuotas."
+msgstr ""
+
+msgid "Aportaciones del grupo"
 msgstr ""
 
 msgid "Aquí tienes tu avance y un acceso rápido a los movimientos, sin recargar la portada."
@@ -151,6 +190,9 @@ msgid "Aquí verás los últimos mensajes sobre tu viaje: horarios de salida, pa
 msgstr ""
 
 msgid "asistencia Casanova Golf"
+msgstr ""
+
+msgid "Atención preferente"
 msgstr ""
 
 msgid "Atrás"
@@ -189,6 +231,15 @@ msgstr ""
 msgid "Balance"
 msgstr ""
 
+msgid "Bandeja"
+msgstr ""
+
+msgid "Base EUR"
+msgstr ""
+
+msgid "Beneficios de tu nivel"
+msgstr ""
+
 msgid "Bienvenido de nuevo"
 msgstr ""
 
@@ -222,10 +273,19 @@ msgstr ""
 msgid "Bonus"
 msgstr ""
 
+msgid "Bonus de bienvenida"
+msgstr ""
+
 msgid "Busca por nombre, email, usuario, ID de WordPress o GIAV ID. Para clientes sin acceso web, usa el GIAV ID o el DNI exacto."
 msgstr ""
 
 msgid "Buscar cliente"
+msgstr ""
+
+msgid "Buscar conversación..."
+msgstr ""
+
+msgid "Buscar viaje..."
 msgstr ""
 
 msgid "Cada archivo puede ocupar como máximo %s."
@@ -247,6 +307,21 @@ msgid "Campos por confirmar"
 msgstr ""
 
 msgid "Canje"
+msgstr ""
+
+msgid "Canjeados"
+msgstr ""
+
+msgid "Canjea tu saldo Mulligans por mejoras preferentes y experiencias sencillas."
+msgstr ""
+
+msgid "Canje experiencia premium"
+msgstr ""
+
+msgid "canjes"
+msgstr ""
+
+msgid "Canjes de experiencias gastronómicas, culturales y mejoras avanzadas."
 msgstr ""
 
 msgid "Cargando"
@@ -315,7 +390,16 @@ msgstr ""
 msgid "Cobro"
 msgstr ""
 
+msgid "cobros"
+msgstr ""
+
+msgid "completado"
+msgstr ""
+
 msgid "Completarás el pago en la página segura de nuestro proveedor de pagos."
+msgstr ""
+
+msgid "con"
 msgstr ""
 
 msgid "Concepto"
@@ -342,10 +426,22 @@ msgstr ""
 msgid "Confirmación de pago recibido – Expediente %s"
 msgstr ""
 
+msgid "Confirmado"
+msgstr ""
+
+msgid "Confirmados"
+msgstr ""
+
 msgid "Confirmar nueva contraseña"
 msgstr ""
 
+msgid "Conoce antes que nadie las ofertas y destinos exclusivos."
+msgstr ""
+
 msgid "Consulta fechas, pagos y estado de cada expediente sin perder legibilidad en móvil."
+msgstr ""
+
+msgid "Consulta tus viajes, pagos y puntos Mulligans desde tu portal personal."
 msgstr ""
 
 msgid "Contacto agencia:"
@@ -379,6 +475,9 @@ msgid "Conversación sobre este viaje"
 msgstr ""
 
 msgid "Coordinación y asistencia de Casanova Golf durante tu viaje"
+msgstr ""
+
+msgid "Cortesía anual: elige tu regalo Mulligans con cada reserva."
 msgstr ""
 
 msgid "CP"
@@ -426,9 +525,6 @@ msgstr ""
 msgid "Cómo funciona"
 msgstr ""
 
-msgid "Dashboard"
-msgstr ""
-
 msgid "Dashboard no disponible."
 msgstr ""
 
@@ -440,6 +536,9 @@ msgid "Nombre"
 msgstr ""
 
 msgid "Datos de ubicación"
+msgstr ""
+
+msgid "Datos encriptados"
 msgstr ""
 
 msgid "Datos personales"
@@ -467,6 +566,9 @@ msgid "Debes iniciar sesión."
 msgstr ""
 
 msgid "Debes seleccionar al menos 1 persona."
+msgstr ""
+
+msgid "del total como reserva"
 msgstr ""
 
 msgid "Demasiados intentos. Espera unos minutos."
@@ -499,6 +601,9 @@ msgstr ""
 msgid "Descargas asociadas a este viaje"
 msgstr ""
 
+msgid "Descripción"
+msgstr ""
+
 msgid "Descripción:"
 msgstr ""
 
@@ -514,6 +619,9 @@ msgstr ""
 msgid "Detalle de reserva"
 msgstr ""
 
+msgid "Detalle Mulligans anual"
+msgstr ""
+
 msgid "Detalles del servicio"
 msgstr ""
 
@@ -524,6 +632,12 @@ msgid "Dirección actualizada."
 msgstr ""
 
 msgid "Dirección de facturación"
+msgstr ""
+
+msgid "Diseña tu viaje"
+msgstr ""
+
+msgid "disponibles"
 msgstr ""
 
 msgid "Distribución"
@@ -563,6 +677,9 @@ msgid "Edición desactivada"
 msgstr ""
 
 msgid "Edición desactivada en vista cliente"
+msgstr ""
+
+msgid "Ej.: 12345"
 msgstr ""
 
 msgid "Ej.: 12345678Z"
@@ -679,7 +796,13 @@ msgstr ""
 msgid "En USD solo se puede pagar con tarjeta."
 msgstr ""
 
+msgid "Enviando..."
+msgstr ""
+
 msgid "Enviando…"
+msgstr ""
+
+msgid "Enviar"
 msgstr ""
 
 msgid "Enviar código"
@@ -697,13 +820,28 @@ msgstr ""
 msgid "Enviar mensaje"
 msgstr ""
 
+msgid "en {year}"
+msgstr ""
+
+msgid "Equipo de soporte · Responde en menos de 24h"
+msgstr ""
+
 msgid "Error al cargar los viajes"
 msgstr ""
 
 msgid "Escribe aquí la respuesta para el cliente…"
 msgstr ""
 
+msgid "Escribe aquí tu mensaje sobre este viaje..."
+msgstr ""
+
 msgid "Escribe aquí tu mensaje sobre este viaje…"
+msgstr ""
+
+msgid "Escribe el primer mensaje..."
+msgstr ""
+
+msgid "Escribe un mensaje..."
 msgstr ""
 
 msgid "Escribe un mensaje o adjunta un archivo antes de enviarlo."
@@ -713,6 +851,9 @@ msgid "Español"
 msgstr ""
 
 msgid "Estado"
+msgstr ""
+
+msgid "Estado: Todos"
 msgstr ""
 
 msgid "Estado de pagos"
@@ -799,6 +940,12 @@ msgstr ""
 msgid "Expedientes"
 msgstr ""
 
+msgid "Experiencia Mulligans especial"
+msgstr ""
+
+msgid "Experiencia Mulligans incluida"
+msgstr ""
+
 msgid "Extras"
 msgstr ""
 
@@ -833,6 +980,9 @@ msgid "Fecha limite: %s"
 msgstr ""
 
 msgid "Fecha límite: %s"
+msgstr ""
+
+msgid "Fechas"
 msgstr ""
 
 msgid "Fechas:"
@@ -886,6 +1036,9 @@ msgstr ""
 msgid "Gracias. Hemos recibido tu pago."
 msgstr ""
 
+msgid "Grupo"
+msgstr ""
+
 msgid "Guardando…"
 msgstr ""
 
@@ -919,6 +1072,9 @@ msgstr ""
 msgid "Has superado el número de intentos. Solicita un código nuevo."
 msgstr ""
 
+msgid "Hasta 4.999 €"
+msgstr ""
+
 msgid "Hemos recibido el pago. Gracias, procesamos el cobro y actualizamos tus datos."
 msgstr ""
 
@@ -931,6 +1087,12 @@ msgstr ""
 msgid "Hilos recientes del portal"
 msgstr ""
 
+msgid "Historial de pagos"
+msgstr ""
+
+msgid "Historial de viajes"
+msgstr ""
+
 msgid "Histórico"
 msgstr ""
 
@@ -938,6 +1100,9 @@ msgid "Histórico de cobros"
 msgstr ""
 
 msgid "Histórico de cobros (%s)"
+msgstr ""
+
+msgid "Histórico de movimientos"
 msgstr ""
 
 msgid "Hola"
@@ -964,6 +1129,9 @@ msgstr ""
 msgid "ID de cliente inválido."
 msgstr ""
 
+msgid "ID de Usuario"
+msgstr ""
+
 msgid "Idioma"
 msgstr ""
 
@@ -980,6 +1148,10 @@ msgid "IDs"
 msgstr ""
 
 msgid "Importe"
+msgstr ""
+
+#: includes/portal-payment-links.php
+msgid "Importe a pagar"
 msgstr ""
 
 msgid "Importe inferior al minimo permitido."
@@ -1022,6 +1194,9 @@ msgid "Información personal"
 msgstr ""
 
 msgid "Inicia sesión para vincular tu cuenta."
+msgstr ""
+
+msgid "Inicia una conversación con el equipo de Casanova Golf."
 msgstr ""
 
 msgid "Inicio"
@@ -1084,10 +1259,19 @@ msgstr ""
 msgid "La transferencia no se completó. Si el banco la confirma más tarde, lo verás reflejado aquí."
 msgstr ""
 
-msgid "La transferencia ya se ha iniciado. Actualizaremos tus pagos cuando recibamos la confimación del banco."
+msgid "La transferencia ya se ha iniciado. Actualizaremos tus pagos cuando recibamos la confirmación del banco."
 msgstr ""
 
 msgid "Limpiar"
+msgstr ""
+
+msgid "Liquida el importe total pendiente"
+msgstr ""
+
+msgid "listo para viajar"
+msgstr ""
+
+msgid "Llamar"
 msgstr ""
 
 msgid "Localizador"
@@ -1123,6 +1307,9 @@ msgstr ""
 msgid "Los vuelos y traslados aparecerán aquí cuando estén definidos"
 msgstr ""
 
+msgid "Línea directa de atención prioritaria para tu viaje."
+msgstr ""
+
 msgid "Mensaje enviado."
 msgstr ""
 
@@ -1130,6 +1317,9 @@ msgid "Mensajes"
 msgstr ""
 
 msgid "Mensajes nuevos"
+msgstr ""
+
+msgid "Menú principal"
 msgstr ""
 
 msgid "Metodo de pago"
@@ -1168,13 +1358,34 @@ msgstr ""
 msgid "Movimientos"
 msgstr ""
 
+msgid "movimientos"
+msgstr ""
+
 msgid "Movimientos recientes (ganados, bonus y canjes)."
+msgstr ""
+
+msgid "Mulligan Operativo"
 msgstr ""
 
 msgid "Mulligans"
 msgstr ""
 
+msgid "Mulligans iniciales al crear tu cuenta en el programa."
+msgstr ""
+
 msgid "Mulligans usados"
+msgstr ""
+
+msgid "Multiplicador"
+msgstr ""
+
+msgid "Más de 30.000 €"
+msgstr ""
+
+msgid "Máx. 3 archivos · 5 MB · PDF, JPG, PNG o WEBP"
+msgstr ""
+
+msgid "Máxima prioridad"
 msgstr ""
 
 msgid "Método de pago"
@@ -1207,6 +1418,9 @@ msgstr ""
 msgid "Nivel actual"
 msgstr ""
 
+msgid "Nivel de atención y seguimiento más alto del programa."
+msgstr ""
+
 msgid "Nivel máximo"
 msgstr ""
 
@@ -1217,6 +1431,9 @@ msgid "No autorizado."
 msgstr ""
 
 msgid "No autorizado para este expediente."
+msgstr ""
+
+msgid "noches"
 msgstr ""
 
 msgid "No disponible."
@@ -1241,6 +1458,9 @@ msgid "No hay"
 msgstr ""
 
 msgid "No hay bonos disponibles para este viaje."
+msgstr ""
+
+msgid "No hay cobros registrados todavía."
 msgstr ""
 
 msgid "No hay expediente seleccionado."
@@ -1411,7 +1631,7 @@ msgstr ""
 msgid "No se pudieron cargar reservas"
 msgstr ""
 
-msgid "No se pudo abrir Aplazame. Intentalo de nuevo."
+msgid "No se pudo abrir Aplazame. Inténtalo de nuevo."
 msgstr ""
 
 msgid "No se pudo actualizar el idioma."
@@ -1618,6 +1838,9 @@ msgstr ""
 msgid "Otro viaje"
 msgstr ""
 
+msgid "Pack de bienvenida digital al unirte al programa Mulligans."
+msgstr ""
+
 msgid "Pagada"
 msgstr ""
 
@@ -1637,6 +1860,9 @@ msgid "Pagado: {amount}"
 msgstr ""
 
 msgid "Pagador"
+msgstr ""
+
+msgid "pagadores"
 msgstr ""
 
 msgid "Pagado {amount}"
@@ -1702,10 +1928,16 @@ msgstr ""
 msgid "Pago a plazos"
 msgstr ""
 
+msgid "Pago a plazos. Divide el importe en cuotas mensuales cómodas."
+msgstr ""
+
 msgid "Pago completado"
 msgstr ""
 
 msgid "Pago completado – Documentación disponible – Expediente %s"
+msgstr ""
+
+msgid "Pago con tarjeta en dólares mediante Stripe."
 msgstr ""
 
 msgid "Pago de expediente"
@@ -1724,6 +1956,9 @@ msgid "Pago inmediato y seguro"
 msgstr ""
 
 msgid "Pago inmediato y seguro."
+msgstr ""
+
+msgid "Pago inmediato y seguro con tarjeta de crédito o débito."
 msgstr ""
 
 msgid "Pago no completado."
@@ -1759,6 +1994,9 @@ msgstr ""
 msgid "Pago seguro"
 msgstr ""
 
+msgid "Pago seguro SSL"
+msgstr ""
+
 msgid "Pago total"
 msgstr ""
 
@@ -1766,6 +2004,9 @@ msgid "Pago viaje %s"
 msgstr ""
 
 msgid "Paquete"
+msgstr ""
+
+msgid "Paquetes"
 msgstr ""
 
 msgid "Para:"
@@ -1798,10 +2039,16 @@ msgstr ""
 msgid "País"
 msgstr ""
 
+msgid "PCI DSS certificado"
+msgstr ""
+
 msgid "PDF"
 msgstr ""
 
 msgid "Pendiente"
+msgstr ""
+
+msgid "pendiente"
 msgstr ""
 
 msgid "Pendiente %s"
@@ -1832,6 +2079,9 @@ msgid "Pendiente tras este pago"
 msgstr ""
 
 msgid "Pendiente {amount}"
+msgstr ""
+
+msgid "Perdón de 1 penalización al año en cambios o ajustes de reserva."
 msgstr ""
 
 msgid "Perfil actualizado."
@@ -1886,6 +2136,9 @@ msgid "Programa del viaje no disponible."
 msgstr ""
 
 msgid "Programa del viaje por expediente"
+msgstr ""
+
+msgid "Programa PDF"
 msgstr ""
 
 msgid "Progreso de Mulligans"
@@ -1948,10 +2201,16 @@ msgstr ""
 msgid "Puntos"
 msgstr ""
 
+msgid "puntos Mulligans acumulados"
+msgstr ""
+
 msgid "Puntos y nivel se actualizan automáticamente con tus reservas."
 msgstr ""
 
 msgid "PVP:"
+msgstr ""
+
+msgid "Página {current} de {total}"
 msgstr ""
 
 msgid "Quedan %1$s de %2$s personas por incluir."
@@ -2014,6 +2273,9 @@ msgstr ""
 msgid "Referencia {code}"
 msgstr ""
 
+msgid "Registro completo de todos tus viajes organizados por Casanova Golf."
+msgstr ""
+
 msgid "Reservas"
 msgstr ""
 
@@ -2038,6 +2300,9 @@ msgstr ""
 msgid "Resumen de pago"
 msgstr ""
 
+msgid "Revisión activa de reservas"
+msgstr ""
+
 msgid "Rondas de golf por confirmar"
 msgstr ""
 
@@ -2048,6 +2313,9 @@ msgid "Régimen"
 msgstr ""
 
 msgid "Régimen:"
+msgstr ""
+
+msgid "Saldar deuda completa"
 msgstr ""
 
 msgid "Saldo del viaje"
@@ -2068,6 +2336,9 @@ msgstr ""
 msgid "Salir de vista cliente"
 msgstr ""
 
+msgid "Saltar al contenido"
+msgstr ""
+
 msgid "Secciones del viaje"
 msgstr ""
 
@@ -2078,6 +2349,9 @@ msgid "Se completará cuando quede confirmado"
 msgstr ""
 
 msgid "Segmentos:"
+msgstr ""
+
+msgid "Seguimiento proactivo de tu reserva para optimizar tu experiencia."
 msgstr ""
 
 msgid "Seguridad"
@@ -2122,6 +2396,9 @@ msgstr ""
 msgid "Si encontramos un pago pendiente con esos datos, te hemos enviado por email tu enlace personal para completarlo."
 msgstr ""
 
+msgid "Siguiente"
+msgstr ""
+
 msgid "Sin datos"
 msgstr ""
 
@@ -2152,10 +2429,16 @@ msgstr ""
 msgid "Sin leer"
 msgstr ""
 
+msgid "Sin mensajes"
+msgstr ""
+
 msgid "Si no has solicitado este enlace, puedes ignorar este email."
 msgstr ""
 
 msgid "Sin portal"
+msgstr ""
+
+msgid "Sin recargo"
 msgstr ""
 
 msgid "Sin referencia externa"
@@ -2225,6 +2508,15 @@ msgid "También tienes otro viaje a la vista: <a href=\"%s\">%s</a>.%s"
 msgstr ""
 
 msgid "Tarjeta"
+msgstr ""
+
+msgid "tarjeta"
+msgstr ""
+
+msgid "tarjeta en USD"
+msgstr ""
+
+msgid "Tarjeta en USD"
 msgstr ""
 
 msgid "Tarjetas"
@@ -2344,6 +2636,9 @@ msgstr ""
 msgid "Todo pagado"
 msgstr ""
 
+msgid "Todos"
+msgstr ""
+
 msgid "Total"
 msgstr ""
 
@@ -2356,10 +2651,25 @@ msgstr ""
 msgid "Total expediente"
 msgstr ""
 
+msgid "Total facturado"
+msgstr ""
+
+msgid "Total neto"
+msgstr ""
+
 msgid "Total pagado"
 msgstr ""
 
 msgid "Total viaje"
+msgstr ""
+
+msgid "Total viajes"
+msgstr ""
+
+msgid "transferencia"
+msgstr ""
+
+msgid "Transferencia"
 msgstr ""
 
 msgid "Transferencia bancaria"
@@ -2368,10 +2678,19 @@ msgstr ""
 msgid "Transferencia bancaria online"
 msgstr ""
 
+msgid "Transferencia bancaria online PSD2. Sin recargo adicional."
+msgstr ""
+
 msgid "Transferencia iniciada. En cuanto el banco la confirme actualizaremos tus pagos."
 msgstr ""
 
 msgid "Transferencia no disponible."
+msgstr ""
+
+msgid "Transfer privado de salida incluido una vez al año."
+msgstr ""
+
+msgid "Traslado privado aeropuerto"
 msgstr ""
 
 msgid "traslados incluidos"
@@ -2381,9 +2700,6 @@ msgid "traslados previstos"
 msgstr ""
 
 msgid "Trayecto"
-msgstr ""
-
-msgid "Tu contraseña es tu llave digital. No la compartas, aunque a los humanos les encante hacerlo."
 msgstr ""
 
 msgid "Tu cuenta"
@@ -2419,10 +2735,16 @@ msgstr ""
 msgid "Tu nivel actual y los puntos que ya has acumulado."
 msgstr ""
 
+msgid "Tu nivel se determina por tu gasto histórico acumulado y es vitalicio. Las cortesías anuales se activan al confirmar una reserva. Tu saldo Mulligans no caduca y se puede canjear en futuros viajes según tu nivel."
+msgstr ""
+
 msgid "Tu parte pendiente"
 msgstr ""
 
 msgid "Tu parte pendiente tras este pago"
+msgstr ""
+
+msgid "Tu primer pago aparecerá aquí."
 msgstr ""
 
 msgid "Tu programa Mulligans"
@@ -2467,6 +2789,9 @@ msgstr ""
 msgid "Tú"
 msgstr ""
 
+msgid "Una experiencia al año definida por Casanova Golf, sin coste de saldo."
+msgstr ""
+
 msgid "Una vista rápida de lo esencial de tu viaje."
 msgstr ""
 
@@ -2474,6 +2799,9 @@ msgid "Uno de los archivos adjuntos está vacío."
 msgstr ""
 
 msgid "Uno de los archivos no se ha podido subir."
+msgstr ""
+
+msgid "Usa al menos 8 caracteres y una contraseña que no utilices en otros sitios. No la compartas con nadie."
 msgstr ""
 
 msgid "Usados"
@@ -2632,6 +2960,9 @@ msgstr ""
 msgid "Web"
 msgstr ""
 
+msgid "Welcome Pack Digital"
+msgstr ""
+
 msgid "WP #%d"
 msgstr ""
 
@@ -2722,11 +3053,11 @@ msgstr ""
 msgid "Último mensaje"
 msgstr ""
 
+msgid "Último movimiento"
+msgstr ""
+
 msgid "← Viajes"
 msgstr ""
 
 msgid "← Volver a mis expedientes"
-msgstr ""
-#: includes/portal-payment-links.php
-msgid "Importe a pagar"
 msgstr ""

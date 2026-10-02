@@ -26,6 +26,16 @@ for (const [name, dst] of files) {
   if (copyFile(src, dst)) copied++;
 }
 
+// Trozos que portal-app.js carga bajo demanda (import("./chunks/…")).
+const chunksSrc = path.join(dist, 'chunks');
+const chunksDst = path.join(assets, 'chunks');
+if (fs.existsSync(chunksSrc)) {
+  fs.rmSync(chunksDst, { recursive: true, force: true });
+  for (const name of fs.readdirSync(chunksSrc)) {
+    if (copyFile(path.join(chunksSrc, name), path.join(chunksDst, name))) copied++;
+  }
+}
+
 if (copied === 0) {
   console.error('[copy-to-assets] No files copied. Did you run `vite build`?');
   process.exit(1);

@@ -1,27 +1,6 @@
-function LockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M8 10V8a4 4 0 1 1 8 0v2"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <rect
-        x="5"
-        y="10"
-        width="14"
-        height="10"
-        rx="2.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-    </svg>
-  );
-}
+import React from "react";
+
+import Icon from "./Icon.jsx";
 
 export default function Field({ label, children, help, htmlFor = "", readOnly = false, className = "" }) {
   return (
@@ -31,7 +10,7 @@ export default function Field({ label, children, help, htmlFor = "", readOnly = 
         {children}
         {readOnly ? (
           <span className="cp-field__lock" aria-hidden="true">
-            <LockIcon />
+            <Icon name="lock" size={16} />
           </span>
         ) : null}
       </div>
