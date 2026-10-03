@@ -261,6 +261,13 @@
   gap: 8px;
   max-width: 78%;
 }
+/* Mensaje recién enviado: entra con una subida corta (ChatThread.jsx marca solo los nuevos). */
+.cp-msg.is-new {
+  transition: opacity 180ms var(--ease), transform 180ms var(--ease);
+}
+@starting-style {
+  .cp-msg.is-new { opacity: 0; transform: translateY(6px); }
+}
 .cp-msg.is-me {
   align-self: flex-end;
 }
@@ -449,7 +456,7 @@
   min-height: 44px;
   padding: 0 18px;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-btn);
   background: var(--accent);
   color: var(--surface);
   font-family: inherit;

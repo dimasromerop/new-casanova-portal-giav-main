@@ -136,8 +136,25 @@ export default function RequestDialog({ proposalId = 0, mock = false, profile = 
     setValues((v) => ({ ...v, [key]: value }));
   };
 
+  // Cierre con salida animada (.is-closing en proposals.css): se espera a que termine y luego
+  // se cierra de verdad. El temporizador cubre navegadores sin transición o movimiento reducido.
+  const closingRef = useRef(false);
   function close() {
-    dialogRef.current?.close();
+    const dialog = dialogRef.current;
+    if (!dialog || !dialog.open || closingRef.current) return;
+    closingRef.current = true;
+    let timer = 0;
+    const finish = () => {
+      dialog.removeEventListener("transitionend", onEnd);
+      window.clearTimeout(timer);
+      dialog.close();
+    };
+    const onEnd = (event) => {
+      if (event.target === dialog && event.propertyName === "transform") finish();
+    };
+    dialog.addEventListener("transitionend", onEnd);
+    timer = window.setTimeout(finish, 300);
+    dialog.classList.add("is-closing");
   }
 
   async function submit(event) {
@@ -178,6 +195,7 @@ export default function RequestDialog({ proposalId = 0, mock = false, profile = 
       className="cp-dialog"
       aria-labelledby={`${formId}-title`}
       onClose={() => onClose?.()}
+      onCancel={(event) => { event.preventDefault(); close(); }}
       onClick={(event) => { if (event.target === dialogRef.current) close(); }}
     >
       <form className="cp-dialog__panel" onSubmit={submit}>

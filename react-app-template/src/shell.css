@@ -39,7 +39,7 @@
   left: 8px;
   z-index: 100;
   padding: 10px 16px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-btn);
   background: var(--accent);
   color: var(--surface);
   font-weight: 500;

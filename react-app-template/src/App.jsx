@@ -172,6 +172,7 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [profileErr, setProfileErr] = useState(null);
   const [toast, setToast] = useState(null);
+  const toastTimersRef = useRef([]);
   const impersonation = window.CasanovaPortal?.impersonation || {};
   const isReadOnly = Boolean(impersonation.readOnly);
   const readOnlyMessage = String(impersonation.message || tt("Modo de vista cliente activo. Solo lectura."));
@@ -275,9 +276,15 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView]);
 
+  // Aviso flotante: a los 4 s sale por donde entró (.is-leaving, 160 ms) y luego se quita.
+  // Un aviso nuevo cancela los temporizadores del anterior para que no lo cierren antes de tiempo.
   function notify(message, variant = 'info') {
-    setToast({ message, variant });
-    window.setTimeout(() => setToast(null), 4_000);
+    toastTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    setToast({ id: Date.now(), message, variant, leaving: false });
+    toastTimersRef.current = [
+      window.setTimeout(() => setToast((current) => (current ? { ...current, leaving: true } : current)), 4_000),
+      window.setTimeout(() => setToast(null), 4_160),
+    ];
   }
 
   function clearDashboardPresentation() {
@@ -730,7 +737,7 @@ function App() {
         />
         <main className="cp-view" id="cp-main-content" tabIndex={-1}>
           {toast ? (
-            <div className={`cp-toast is-${toast.variant || 'info'}`}>{toast.message}</div>
+            <div key={toast.id} className={`cp-toast is-${toast.variant || 'info'}${toast.leaving ? ' is-leaving' : ''}`}>{toast.message}</div>
           ) : null}
           {paymentBanner ? (
             <div className="cp-content">

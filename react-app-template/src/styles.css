@@ -60,6 +60,8 @@
   --radius: var(--cg-radius-m, 14px);
   --radius-sm: var(--cg-radius-s, 10px);
   --radius-pill: var(--cg-radius-pill, 999px);
+  /* Botones con texto: mismo radio que cg-btn en la web (--cg-radius-s). Iconos redondos, chips y pestañas siguen en píldora. */
+  --radius-btn: var(--cg-radius-s, 10px);
   --shadow: 0 1px 2px color-mix(in srgb, var(--text) 5%, transparent);
   --shadow-soft: var(--shadow);
   --shadow-m: var(--cg-shadow-m, 0 12px 32px color-mix(in srgb, var(--text) 8%, transparent));
@@ -234,7 +236,7 @@ a { color: inherit; text-decoration: none; }
   min-height:36px;
   padding:6px 14px;
   border:1px solid currentColor;
-  border-radius:var(--radius-pill);
+  border-radius:var(--radius-btn);
   color:inherit;
   font-weight:500;
   text-decoration:none;
@@ -274,14 +276,3 @@ a { color: inherit; text-decoration: none; }
   .cp-grid2{ grid-template-columns: 1fr; }
 }
 
-/* Animaciones compartidas */
-@keyframes cp-toast-in{
-  from{
-    opacity: 0;
-    transform: translate3d(0, 14px, 0) scale(0.98);
-  }
-  to{
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}

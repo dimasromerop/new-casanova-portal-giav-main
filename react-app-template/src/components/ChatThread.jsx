@@ -50,6 +50,9 @@ export default function ChatThread({
   const fileInputRef = useRef(null);
   const listRef = useRef(null);
   const textareaRef = useRef(null);
+  // Mensajes que ya estaban al cargar la conversación: solo los que llegan después (el que se
+  // acaba de enviar) entran con animación (.cp-msg.is-new); al abrir el hilo no se mueve nada.
+  const knownIdsRef = useRef(null);
   const hintId = useId();
 
   useEffect(() => {
@@ -70,6 +73,7 @@ export default function ChatThread({
     setFiles([]);
     setSendError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    knownIdsRef.current = null;
     setState({ loading: true, error: null, data: null });
 
     fetchMessages()
@@ -90,6 +94,11 @@ export default function ChatThread({
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [state.data]);
+
+  useEffect(() => {
+    if (state.loading || !state.data) return;
+    knownIdsRef.current = new Set((state.data.items || []).map((msg) => msg.id));
+  }, [state.loading, state.data]);
 
   function handleTextareaInput(event) {
     setDraft(event.target.value);
@@ -200,7 +209,7 @@ export default function ChatThread({
             const isMe = msg.direction === "client";
             const attachments = Array.isArray(msg.attachments) ? msg.attachments : [];
             return (
-              <li key={msg.id} className={`cp-msg ${isMe ? "is-me" : "is-team"}`}>
+              <li key={msg.id} className={`cp-msg ${isMe ? "is-me" : "is-team"}${knownIdsRef.current && !knownIdsRef.current.has(msg.id) ? " is-new" : ""}`}>
                 {!isMe ? <span className="cp-msg__avatar" aria-hidden="true">CG</span> : null}
                 <div className="cp-msg__bubble">
                   {!isMe ? <span className="cp-msg__author">{msg.author || "Casanova Golf"}</span> : null}

@@ -18,7 +18,7 @@
   min-height: 44px;
   padding: 10px 20px;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-btn);
   background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--accent);
   color: var(--accent);
@@ -30,10 +30,14 @@
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform 120ms var(--ease);
 }
 .cp-btn:hover {
   background: var(--accent-light);
+}
+/* Respuesta al pulsar: casi imperceptible, se pulsa muchas veces al día. */
+.cp-btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 .cp-btn svg {
   flex: 0 0 auto;
@@ -205,6 +209,14 @@
   border-radius: var(--radius);
   background: var(--accent-light);
   color: var(--text);
+  /* Las confirmaciones aparecen como respuesta a algo que el cliente acaba de hacer. */
+  transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+}
+@starting-style {
+  .cp-notice2 {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 .cp-notice2__icon {
   margin-top: 1px;
@@ -447,7 +459,16 @@
   font-weight: 500;
   line-height: 1.4;
   box-shadow: var(--cg-shadow-l, 0 16px 40px color-mix(in srgb, var(--text) 24%, transparent));
-  animation: cp-toast-in var(--dur-base) var(--ease);
+  /* Sube desde abajo y sale por el mismo sitio, más rápido (App.jsx, notify). */
+  transition: opacity var(--dur-base) var(--ease), transform var(--dur-base) var(--ease);
+}
+@starting-style {
+  .cp-toast { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.98); }
+}
+.cp-toast.is-leaving {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  transition-duration: 160ms;
 }
 .cp-toast.is-success { background: var(--accent); }
 .cp-toast.is-warn { background: var(--gold-dark); }
