@@ -31,9 +31,13 @@ function casanova_mail_lang(string $lang = ''): string {
 
 /** Contacto de la agencia para el bloque «¿Alguna pregunta?». */
 function casanova_mail_contact(): array {
-  $agency = function_exists('casanova_portal_agency_profile') ? (array) casanova_portal_agency_profile() : [];
+  // Contacto fijo del sitio (mu-plugin cg-2026-solicitud) si existe; solo si falta se consulta el
+  // perfil de agencia (GIAV, cacheado): así los emails no dependen de que GIAV responda.
+  $agency = (!defined('CG2026_SOLICITUD_EMAIL') || !defined('CG2026_SOLICITUD_PHONE')) && function_exists('casanova_portal_agency_profile')
+    ? (array) casanova_portal_agency_profile()
+    : [];
   $email  = defined('CG2026_SOLICITUD_EMAIL') ? CG2026_SOLICITUD_EMAIL : sanitize_email((string) ($agency['email'] ?? get_option('admin_email')));
-  $phone  = defined('CG2026_SOLICITUD_PHONE') ? CG2026_SOLICITUD_PHONE : trim((string) ($agency['telefono'] ?? get_option('wp_travel_giav_itinerary_footer_phone', '')));
+  $phone  = defined('CG2026_SOLICITUD_PHONE') ? CG2026_SOLICITUD_PHONE : trim((string) ($agency['tel'] ?? get_option('wp_travel_giav_itinerary_footer_phone', '')));
   return ['email' => is_email($email) ? $email : '', 'phone' => $phone];
 }
 
@@ -66,6 +70,7 @@ function casanova_mail_layout_t(string $lang): array {
  *   'headline'  => titular,
  *   'body_html' => HTML de cuerpo YA escapado (párrafos),
  *   'summary'   => ['title' => '', 'rows' => [etiqueta => valor texto], 'total' => [etiqueta, valor]],
+ *   'notes'     => ['title' => '', 'lines' => [texto, …]] (p. ej. condiciones de pago y cancelación),
  *   'steps'     => ['title' => '', 'items' => [[done(bool), título, texto]]],
  *   'buttons'   => [[url, etiqueta, 'primary'|'secondary']],
  *   'contact'   => true|false,
@@ -85,6 +90,7 @@ function casanova_mail_layout(array $a): string {
   $rows    = array_filter((array) ($summary['rows'] ?? []), static fn($v) => (string) $v !== '');
   $total   = (array) ($summary['total'] ?? []);
   $steps   = (array) ($a['steps'] ?? []);
+  $notes   = (array) ($a['notes'] ?? []);
   $buttons = (array) ($a['buttons'] ?? []);
 
   ob_start();
@@ -140,6 +146,16 @@ function casanova_mail_layout(array $a): string {
             <tr><td class="lbl" style="padding:10px 12px 0 0;color:<?php echo $k['muted']; ?>;vertical-align:top;border-top:1px solid <?php echo $k['line']; ?>;"><?php echo esc_html((string) $total[0]); ?></td><td style="padding:10px 0 0;font-family:<?php echo esc_attr($k['serif']); ?>;font-size:22px;font-weight:500;border-top:1px solid <?php echo $k['line']; ?>;"><?php echo esc_html((string) $total[1]); ?></td></tr>
           <?php endif; ?>
         </table>
+      </td></tr>
+    </table>
+  </td></tr>
+  <?php endif; ?>
+  <?php if (!empty($notes['lines'])) : ?>
+  <tr><td class="px" style="padding:16px 32px 4px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid <?php echo $k['line']; ?>;border-radius:12px;">
+      <tr><td style="padding:16px 18px;font-size:13px;line-height:1.55;color:<?php echo $k['muted']; ?>;">
+        <?php if (!empty($notes['title'])) : ?><strong style="display:block;margin:0 0 6px;color:<?php echo $k['ink']; ?>;font-size:14px;"><?php echo esc_html((string) $notes['title']); ?></strong><?php endif; ?>
+        <?php foreach ((array) $notes['lines'] as $i => $line) : ?><?php echo $i > 0 ? '<br>' : ''; ?>&#8226;&nbsp; <?php echo esc_html((string) $line); ?><?php endforeach; ?>
       </td></tr>
     </table>
   </td></tr>

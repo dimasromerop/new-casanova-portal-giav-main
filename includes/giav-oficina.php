@@ -45,7 +45,16 @@ function casanova_portal_agency_profile(): array {
     return $fallback;
   }
 
-  $resp = casanova_giav_call('Oficina_GET', ['id' => $idOficina]);
+  // GIAV puede LANZAR excepciones (SoapFault al no poder cargar el WSDL, red caída…), no solo
+  // devolver WP_Error: sin este try/catch, cualquier email o página que pida el perfil de agencia
+  // se caía con un error fatal cuando GIAV no respondía. Fallback cacheado poco tiempo para reintentar.
+  try {
+    $resp = casanova_giav_call('Oficina_GET', ['id' => $idOficina]);
+  } catch (\Throwable $e) {
+    error_log('[CASANOVA] Oficina_GET falló: ' . $e->getMessage());
+    set_transient($cache_key, $fallback, 10 * MINUTE_IN_SECONDS);
+    return $fallback;
+  }
   if (is_wp_error($resp)) {
     set_transient($cache_key, $fallback, 6 * HOUR_IN_SECONDS);
     return $fallback;
