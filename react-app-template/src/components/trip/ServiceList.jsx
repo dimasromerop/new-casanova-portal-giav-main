@@ -62,6 +62,14 @@ function getGolfObservationText(service, detail, detailPayload) {
   return "";
 }
 
+// En GIAV la hora de salida del green fee se escribe tal cual en las observaciones ("11:10").
+// Si la nota empieza por una hora y no menciona ya el tee time, la etiquetamos.
+function formatGolfTeeTime(text) {
+  if (!text || /tee/i.test(text)) return text;
+  if (!/^\d{1,2}[:.h]\d{2}\b/i.test(text)) return text;
+  return `${tt("Tee-time")} ${text}`;
+}
+
 export function ServiceItem({ service, indent = false }) {
   const [open, setOpen] = useState(false);
   const detail = service.detail || {};
@@ -79,7 +87,7 @@ export function ServiceItem({ service, indent = false }) {
   const segments = Array.isArray(detailPayload.segments) ? detailPayload.segments : [];
   const serviceDatesLabel = cleanServiceText(service.date_range) || tt("Fechas por confirmar");
   const golfObservationText = semanticType === "golf"
-    ? getGolfObservationText(service, detail, detailPayload)
+    ? formatGolfTeeTime(getGolfObservationText(service, detail, detailPayload))
     : "";
 
   const shouldShowRow = (...expectedTypes) => !semanticType || expectedTypes.includes(semanticType);

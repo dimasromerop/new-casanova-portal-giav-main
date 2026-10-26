@@ -407,6 +407,7 @@ return [
   'Te avisaremos por email en cuanto tu propuesta esté lista.' => __('Te avisaremos por email en cuanto tu propuesta esté lista.', 'casanova-portal'),
   'Te faltan {amount} para {tier}.' => __('Te faltan {amount} para {tier}.', 'casanova-portal'),
   'Te hemos enviado un código de 6 cifras a {email}. Caduca en 15 minutos.' => __('Te hemos enviado un código de 6 cifras a {email}. Caduca en 15 minutos.', 'casanova-portal'),
+  'Tee-time' => __('Tee-time', 'casanova-portal'),
   'Teléfono' => __('Teléfono', 'casanova-portal'),
   'Teléfono de contacto' => __('Teléfono de contacto', 'casanova-portal'),
   'Texto adicional (bono):' => __('Texto adicional (bono):', 'casanova-portal'),
