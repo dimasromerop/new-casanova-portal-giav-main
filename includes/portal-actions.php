@@ -404,6 +404,15 @@ function casanova_handle_itinerary_pdf(): void {
   $options = new \Dompdf\Options();
   $options->set('isRemoteEnabled', true);
   $options->set('defaultFont', 'DejaVu Sans');
+  // Las fuentes CG 2026 (assets/pdf/fonts) se leen de disco: el plugin tiene que estar dentro del chroot.
+  $options->setChroot([CASANOVA_GIAV_PLUGIN_PATH]);
+  // Dompdf guarda las métricas de las fuentes cargadas; mejor en uploads que en vendor (puede no ser escribible).
+  $uploads = wp_upload_dir();
+  $font_cache = trailingslashit($uploads['basedir']) . 'casanova-pdf-fonts';
+  if (wp_mkdir_p($font_cache) && is_writable($font_cache)) {
+    $options->setFontDir($font_cache);
+    $options->setFontCache($font_cache);
+  }
   $dompdf = new \Dompdf\Dompdf($options);
 
   $dompdf->loadHtml($html, 'UTF-8');

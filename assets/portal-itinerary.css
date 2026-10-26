@@ -1,324 +1,333 @@
 /* ═══════════════════════════════════════════════════════
-   Casanova Golf — Itinerary PDF v3
-   Design aligned with client portal (DM Sans / Playfair)
-   Rendered by Dompdf — limited CSS support
+   Casanova Golf — Programa del viaje (PDF) · Casanova 2026
+   Renderizado por Dompdf: sin var(), flex ni grid; maquetación con tablas.
+   Los colores son los tokens --cg-* escritos en claro (ver comentario de cada uno).
+   Fuentes (@font-face) en casanova_itinerary_font_faces().
    ═══════════════════════════════════════════════════════ */
 
+/* Tokens de referencia
+   --cg-brand       #134640   --cg-brand-soft  #e3eeea
+   --cg-accent      #e7d6ae   (arena, único acento: solo el filete de sección)
+   --cg-bg          #f5f4f0   --cg-surface     #ffffff
+   --cg-border      #e4e1d8   --cg-border-strong #d6d2c6
+   --cg-ink         #1c1f1a   --cg-ink-soft    #44483f   --cg-muted #5b5f55
+   --cg-radius-s    10px      --cg-radius-m    14px */
+
 @page {
-  margin: 16mm 14mm 18mm;
+  margin: 14mm 14mm 20mm;
 }
 
 /* ── Base ── */
 body.casanova-itinerary-body {
-  font-family: "DejaVu Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 12px;
+  font-family: "Satoshi", "DejaVu Sans", sans-serif;
+  font-size: 11px;
   line-height: 1.5;
-  color: #1a1a18;
-  background: #fff;
+  color: #1c1f1a;
+  background: #ffffff;
+  margin: 0;
 }
 
 .page {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 6px;
-}
-
-/* ── Header ── */
-.it-header {
-  padding-bottom: 16px;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #334842;
-}
-
-.it-header-top {
-  display: block;
-  margin-bottom: 10px;
-}
-
-.it-logo {
-  height: 60px;
-  display: block;
-  margin-bottom: 12px;
-}
-
-.it-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a18;
-  margin: 0 0 2px;
-  letter-spacing: -0.02em;
-}
-
-.it-subtitle {
-  font-size: 12px;
-  color: #6b6a65;
-  margin: 0 0 12px;
-}
-
-.it-meta-row {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.it-meta-row td {
-  padding: 6px 12px;
-  font-size: 11px;
-  color: #1a1a18;
-  border: 1px solid #e5e7eb;
-  background: #faf9f6;
-}
-
-.it-meta-label {
-  font-weight: 700;
-  color: #6b6a65;
-  text-transform: uppercase;
-  font-size: 9px;
-  letter-spacing: 0.6px;
-  display: block;
-  margin-bottom: 1px;
-}
-
-.it-meta-value {
-  font-weight: 500;
-  font-size: 11.5px;
-}
-
-/* ── Section Titles ── */
-.it-section {
-  font-size: 14px;
-  font-weight: 700;
-  color: #334842;
-  margin: 22px 0 10px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid rgba(42,92,40,0.15);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* ── Flights ── */
-.it-flight {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  background: #fff;
-  page-break-inside: avoid;
-}
-
-.it-flight-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #1a1a18;
-  margin-bottom: 4px;
-}
-
-.it-flight-badge {
-  display: inline-block;
-  background: #e0f2fe;
-  color: #0369a1;
-  border-radius: 4px;
-  padding: 1px 7px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  margin-left: 6px;
-  vertical-align: middle;
-}
-
-.it-flight-meta {
-  font-size: 11px;
-  color: #6b6a65;
-  margin-top: 4px;
-  line-height: 1.55;
-}
-
-.it-flight-meta span {
-  margin-right: 10px;
-}
-
-.it-segments {
-  margin-top: 6px;
-  font-size: 11px;
-  color: #1a1a18;
-}
-
-.it-segments strong {
-  display: block;
-  margin-bottom: 3px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: #6b6a65;
-}
-
-.it-segments ul {
-  margin: 0 0 0 16px;
+  margin: 0;
   padding: 0;
 }
 
-.it-segments li {
-  margin: 2px 0;
+table {
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
-/* ── Day Block ── */
+/* ── Cabecera ── */
+.it-brand {
+  width: 100%;
+}
+
+.it-brand td {
+  vertical-align: middle;
+}
+
+.it-logo {
+  height: 58px;
+  width: auto;
+}
+
+.it-brand-doc {
+  text-align: right;
+}
+
+.it-eyebrow {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #5b5f55;
+}
+
+.it-doc-code {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #44483f;
+}
+
+.it-title {
+  font-family: "Playfair Display", "DejaVu Serif", serif;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.18;
+  letter-spacing: -0.2px;
+  color: #1c1f1a;
+  margin: 22px 0 16px;
+}
+
+/* Datos clave: panel piedra con divisores finos */
+.it-meta {
+  width: 100%;
+  background: #f5f4f0;
+  border-radius: 14px;
+}
+
+.it-meta td {
+  padding: 11px 16px;
+  vertical-align: top;
+  border-left: 1px solid #e4e1d8;
+}
+
+.it-meta td.is-first {
+  border-left: 0;
+}
+
+.it-meta-label {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #5b5f55;
+  margin-bottom: 2px;
+}
+
+.it-meta-value {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #1c1f1a;
+}
+
+/* ── Títulos de sección ── */
+.it-section {
+  font-family: "Playfair Display", "DejaVu Serif", serif;
+  font-size: 19px;
+  font-weight: 400;
+  color: #1c1f1a;
+  margin: 26px 0 6px;
+}
+
+.it-rule {
+  width: 32px;
+  height: 2px;
+  background: #e7d6ae;
+  margin-bottom: 6px;
+}
+
+/* ── Día ── */
 .it-day {
-  margin-top: 18px;
+  width: 100%;
+  border-top: 1px solid #e4e1d8;
   page-break-inside: avoid;
 }
 
-.it-day-header {
+.it-day.is-first {
+  border-top: 0;
+}
+
+.it-day-rail {
+  width: 52px;
+  padding: 14px 0 12px;
+  vertical-align: top;
+}
+
+.it-day-label {
   display: block;
-  margin-bottom: 8px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #5b5f55;
 }
 
 .it-day-num {
-  display: inline-block;
-  background: #334842;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 4px;
-  margin-right: 8px;
-  vertical-align: middle;
-  letter-spacing: 0.3px;
+  display: block;
+  font-family: "Playfair Display", "DejaVu Serif", serif;
+  font-size: 26px;
+  line-height: 1.05;
+  color: #134640;
+}
+
+.it-day-body {
+  padding: 14px 0 12px;
+  vertical-align: top;
 }
 
 .it-day-date {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a18;
-  vertical-align: middle;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1c1f1a;
+  margin: 2px 0 8px;
 }
 
-/* ── Event Card ── */
+/* ── Tarjeta de servicio ── */
 .it-event {
-  border: 1px solid #e5e7eb;
-  border-left: 3px solid #b8860b;
-  border-radius: 6px;
-  padding: 8px 12px;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e4e1d8;
+  border-radius: 10px;
   margin-bottom: 6px;
-  background: #fff;
   page-break-inside: avoid;
 }
 
-.it-event.is-hotel {
-  border-left-color: #2a5c28;
+.it-event-icon {
+  width: 30px;
+  padding: 10px 0 10px 12px;
+  vertical-align: top;
 }
 
-.it-event.is-golf {
-  border-left-color: #b8860b;
+.it-event-icon img {
+  width: 15px;
+  height: 15px;
+  padding: 6px;
+  background: #e3eeea;
+  border-radius: 999px;
 }
 
-.it-event.is-other {
-  border-left-color: #6b6a65;
-}
-
-.it-event-row {
-  display: block;
+.it-event-body {
+  padding: 10px 6px 10px 10px;
+  vertical-align: top;
+  line-height: 1.35;
 }
 
 .it-event-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a18;
-  display: inline;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1c1f1a;
+  padding-top: 4px;
 }
 
 .it-event-tag {
+  width: 80px;
+  padding: 12px 12px 0 0;
+  text-align: right;
+  vertical-align: top;
+}
+
+.it-tag {
   display: inline-block;
-  font-size: 9px;
+  padding: 1px 8px;
+  font-size: 7.5px;
   font-weight: 700;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 1px 7px;
-  border-radius: 4px;
-  margin-left: 6px;
-  vertical-align: middle;
+  color: #44483f;
+  background: #f5f4f0;
+  border: 1px solid #e4e1d8;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
-.it-event-tag.tag-hotel {
-  background: #e8f0e6;
-  color: #2a5c28;
+.it-tag.is-brand {
+  color: #134640;
+  background: #e3eeea;
+  border-color: #e3eeea;
 }
 
-.it-event-tag.tag-golf {
-  background: #faf3e0;
-  color: #8a6b08;
-}
-
-.it-event-tag.tag-other {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.it-event-tag.tag-checkin {
-  background: #e8f0e6;
-  color: #2a5c28;
-}
-
-.it-event-tag.tag-checkout {
-  background: #fdecea;
-  color: #c0392b;
+.it-tee {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #134640;
 }
 
 .it-event-detail {
-  font-size: 11px;
-  color: #6b6a65;
-  margin-top: 4px;
-  line-height: 1.5;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: #5b5f55;
 }
 
-.it-event-detail span {
-  margin-right: 8px;
+.it-event-detail strong {
+  font-weight: 700;
+  color: #1c1f1a;
 }
 
 .it-event-note {
-  margin-top: 5px;
-  font-size: 11px;
-  color: #475569;
-  line-height: 1.45;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #e4e1d8;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #44483f;
   white-space: pre-wrap;
 }
 
-/* ── Hotel Lodging Footer (stays) ── */
-.it-lodging-footer {
-  margin-top: 6px;
-  padding: 5px 10px;
-  background: #f7f6f3;
-  border: 1px solid rgba(0,0,0,0.05);
-  border-radius: 5px;
+.it-segments {
+  margin: 6px 0 0 14px;
+  padding: 0;
   font-size: 10.5px;
-  color: #6b6a65;
-  page-break-inside: avoid;
+  color: #44483f;
 }
 
-.it-lodging-footer .it-lodging-icon {
-  display: inline;
+.it-segments li {
+  margin: 1px 0;
+}
+
+/* ── Noche en el hotel (días intermedios) ── */
+.it-lodging {
+  width: 100%;
+  margin-top: 2px;
   font-size: 10px;
-  margin-right: 4px;
+  color: #5b5f55;
+  background: #f5f4f0;
+  border-radius: 10px;
 }
 
-/* ── Empty ── */
+.it-lodging td {
+  padding: 6px 12px 6px 0;
+  vertical-align: middle;
+}
+
+.it-lodging td.it-lodging-icon {
+  width: 13px;
+  padding-left: 12px;
+  padding-right: 6px;
+}
+
+.it-lodging img {
+  width: 13px;
+  height: 13px;
+}
+
+/* ── Vacío ── */
 .it-empty {
-  font-size: 11px;
-  font-style: italic;
-  color: #a3a19b;
-  padding: 6px 0;
+  font-size: 10.5px;
+  color: #5b5f55;
+  padding: 2px 0;
 }
 
-/* ── Footer ── */
+/* ── Pie fijo en cada página ── */
 .it-footer {
-  margin-top: 28px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-  font-size: 10px;
-  color: #a3a19b;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: -11mm;
+  padding-top: 7px;
+  border-top: 1px solid #e4e1d8;
+  font-size: 8.5px;
+  color: #5b5f55;
   text-align: center;
-  line-height: 1.5;
 }
 
 .it-footer strong {
-  color: #6b6a65;
+  font-weight: 700;
+  color: #134640;
 }
