@@ -17,11 +17,14 @@ function casanova_portal_i18n_runtime_handle(): string {
 }
 
 function casanova_portal_i18n_hash_key(string $literal): string {
-  $hash = 5381;
-  $length = strlen($literal);
+  // Debe dar el mismo resultado que hashKey() de assets/casanova-i18n.js y src/i18n/t.js,
+  // que recorren unidades UTF-16 (charCodeAt). Con bytes UTF-8 no coincidían los textos con tildes.
+  $utf16 = function_exists('mb_convert_encoding') ? mb_convert_encoding($literal, 'UTF-16LE', 'UTF-8') : '';
+  $units = $utf16 !== '' ? array_values(unpack('v*', $utf16)) : array_map('ord', str_split($literal));
 
-  for ($index = 0; $index < $length; $index++) {
-    $hash = (($hash << 5) + $hash) + ord($literal[$index]);
+  $hash = 5381;
+  foreach ($units as $unit) {
+    $hash = (($hash << 5) + $hash) + $unit;
     $hash = $hash & 0xFFFFFFFF;
   }
 
