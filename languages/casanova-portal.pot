@@ -18,6 +18,9 @@ msgstr ""
 msgid "%d adultos"
 msgstr ""
 
+msgid "%d días / %d noches"
+msgstr ""
+
 msgid "%d niños"
 msgstr ""
 
@@ -168,10 +171,19 @@ msgstr ""
 msgid "Ajuste"
 msgstr ""
 
+msgid "Al día"
+msgstr ""
+
+msgid "Alojamiento: %s"
+msgstr ""
+
 msgid "Alojamiento en: %s"
 msgstr ""
 
 msgid "American Express"
+msgstr ""
+
+msgid "American Express (AMEX)"
 msgstr ""
 
 msgid "American Express se procesa en una pasarela segura aparte."
@@ -207,6 +219,9 @@ msgstr ""
 msgid "Aportaciones del grupo"
 msgstr ""
 
+msgid "Aportación"
+msgstr ""
+
 msgid "Aquí tienes tu avance y un acceso rápido a los movimientos, sin recargar la portada."
 msgstr ""
 
@@ -223,6 +238,9 @@ msgid "Atención preferente"
 msgstr ""
 
 msgid "Atrás"
+msgstr ""
+
+msgid "Aviso interno de pago"
 msgstr ""
 
 msgid "Añadir a calendario"
@@ -280,6 +298,9 @@ msgid "Bono"
 msgstr ""
 
 msgid "Bono / Voucher"
+msgstr ""
+
+msgid "Bono/Voucher"
 msgstr ""
 
 msgid "Bono no disponible: el viaje tiene pagos pendientes"
@@ -402,6 +423,9 @@ msgstr ""
 msgid "Cliente"
 msgstr ""
 
+msgid "Cliente / Guest"
+msgstr ""
+
 msgid "Cliente:"
 msgstr ""
 
@@ -468,6 +492,9 @@ msgstr ""
 msgid "Config Redsys no disponible."
 msgstr ""
 
+msgid "Configuracion de comisiones Stripe invalida."
+msgstr ""
+
 msgid "Confirmación de pago recibido – Expediente %s"
 msgstr ""
 
@@ -499,6 +526,9 @@ msgid "Consulta tus viajes, pagos y puntos Mulligans desde tu portal personal."
 msgstr ""
 
 msgid "Contacto agencia:"
+msgstr ""
+
+msgid "Contacto proveedor"
 msgstr ""
 
 msgid "Contacto proveedor:"
@@ -622,6 +652,9 @@ msgstr ""
 msgid "Debes indicar Nombre y Apellidos."
 msgstr ""
 
+msgid "Debes indicar un documento de identidad o pasaporte."
+msgstr ""
+
 msgid "Debes indicar un email valido."
 msgstr ""
 
@@ -650,6 +683,9 @@ msgid "Deposito viaje %s"
 msgstr ""
 
 msgid "Depósito"
+msgstr ""
+
+msgid "Depósito (portal %s)"
 msgstr ""
 
 msgid "Depósito (Redsys %s)"
@@ -700,6 +736,9 @@ msgstr ""
 msgid "Detalles del servicio"
 msgstr ""
 
+msgid "Detalles del servicio / Service details"
+msgstr ""
+
 msgid "Dirección"
 msgstr ""
 
@@ -716,6 +755,9 @@ msgid "disponibles"
 msgstr ""
 
 msgid "Distribución"
+msgstr ""
+
+msgid "Distribución / Room Distribution"
 msgstr ""
 
 msgid "Distribución de habitaciones"
@@ -746,6 +788,12 @@ msgid "Documento"
 msgstr ""
 
 msgid "Documento de identidad o pasaporte"
+msgstr ""
+
+msgid "Duración"
+msgstr ""
+
+msgid "Día"
 msgstr ""
 
 msgid "Día %d - %s, %s"
@@ -805,7 +853,13 @@ msgstr ""
 msgid "Elige"
 msgstr ""
 
+msgid "Elige con que tarjeta quieres realizar el pago."
+msgstr ""
+
 msgid "Elige método de pago"
+msgstr ""
+
+msgid "El importe supera el pendiente del expediente en GIAV."
 msgstr ""
 
 msgid "El mensaje incluye %d adjunto."
@@ -824,6 +878,12 @@ msgid "El pago por transferencia no está disponible en este momento. Prueba con
 msgstr ""
 
 msgid "El pendiente del grupo incluye lo que les queda por pagar al resto de viajeros. Tú solo pagas tu parte."
+msgstr ""
+
+msgid "El precio en USD debe ser de al menos 0,50."
+msgstr ""
+
+msgid "El sistema de pago no está disponible en este momento. Contacta con la agencia."
 msgstr ""
 
 msgid "El sistema de pago no está disponible en este momento. Inténtalo más tarde o contacta con la agencia."
@@ -979,6 +1039,12 @@ msgstr ""
 msgid "Estamos preparando la información de este viaje. En cuanto esté lista, la verás aquí."
 msgstr ""
 
+msgid "Estamos preparando tu pago. No cierres ni recargues esta pagina; te redirigiremos en unos segundos."
+msgstr ""
+
+msgid "Estamos preparando tu pago seguro. Seras redirigido automaticamente en unos segundos."
+msgstr ""
+
 msgid "Estancia"
 msgstr ""
 
@@ -1096,10 +1162,16 @@ msgstr ""
 msgid "Fecha de regreso"
 msgstr ""
 
+msgid "Fecha emisión / Issue date"
+msgstr ""
+
 msgid "Fecha emisión:"
 msgstr ""
 
 msgid "Fecha limite: %s"
+msgstr ""
+
+msgid "Fecha limite deposito: %s"
 msgstr ""
 
 msgid "Fecha límite: %s"
@@ -1121,6 +1193,9 @@ msgid "Firma Redsys invalida."
 msgstr ""
 
 msgid "Firma Redsys inválida"
+msgstr ""
+
+msgid "Firma Redsys inválida."
 msgstr ""
 
 msgid "Función no disponible. Contacta con la agencia."
@@ -1243,6 +1318,9 @@ msgstr ""
 msgid "Hola,"
 msgstr ""
 
+msgid "Hola, %s"
+msgstr ""
+
 msgid "Horario"
 msgstr ""
 
@@ -1279,8 +1357,14 @@ msgstr ""
 msgid "Importe"
 msgstr ""
 
+msgid "Importe / Amount"
+msgstr ""
+
 #: includes/portal-payment-links.php
 msgid "Importe a pagar"
+msgstr ""
+
+msgid "Importe EUR invalido."
 msgstr ""
 
 msgid "Importe inferior al minimo permitido."
@@ -1307,7 +1391,16 @@ msgstr ""
 msgid "Importe total"
 msgstr ""
 
+msgid "Importe USD invalido."
+msgstr ""
+
 msgid "Indica cuántas personas pagas de cada opción"
+msgstr ""
+
+msgid "Indica el importe en EUR a imputar en GIAV."
+msgstr ""
+
+msgid "Indica el importe por unidad."
 msgstr ""
 
 msgid "Indica un teléfono de contacto."
@@ -1332,6 +1425,9 @@ msgid "Inicia una conversación con el equipo de Casanova Golf."
 msgstr ""
 
 msgid "Inicio"
+msgstr ""
+
+msgid "Intent de Redsys inválido."
 msgstr ""
 
 msgid "Intent invalido."
@@ -1364,6 +1460,9 @@ msgstr ""
 msgid "Ir al portal"
 msgstr ""
 
+msgid "Itinerario"
+msgstr ""
+
 msgid "Jugador"
 msgstr ""
 
@@ -1371,6 +1470,12 @@ msgid "Jugador ({room})"
 msgstr ""
 
 msgid "Jugadores"
+msgstr ""
+
+msgid "Jugadores/Players"
+msgstr ""
+
+msgid "j \\d\\e F \\d\\e Y"
 msgstr ""
 
 msgid "La contraseña actual no es correcta."
@@ -1404,6 +1509,9 @@ msgid "La transferencia ya se ha iniciado. Actualizaremos tus pagos cuando recib
 msgstr ""
 
 msgid "Limpiar"
+msgstr ""
+
+msgid "Link individual"
 msgstr ""
 
 msgid "Liquida el importe total pendiente"
@@ -1467,6 +1575,9 @@ msgid "Mensajes nuevos"
 msgstr ""
 
 msgid "Menú principal"
+msgstr ""
+
+msgid "Metodo"
 msgstr ""
 
 msgid "Metodo de pago"
@@ -1562,6 +1673,9 @@ msgstr ""
 msgid "Nivel"
 msgstr ""
 
+msgid "Nivel %s"
+msgstr ""
+
 msgid "Nivel: %s"
 msgstr ""
 
@@ -1635,6 +1749,9 @@ msgid "No hay movimientos todavía."
 msgstr ""
 
 msgid "No hay pagos pendientes."
+msgstr ""
+
+msgid "No hay pagos restantes pendientes para este enlace de grupo."
 msgstr ""
 
 msgid "No hay pasajeros registrados en este expediente."
@@ -1817,6 +1934,9 @@ msgstr ""
 msgid "No se pudo calcular el pendiente del expediente."
 msgstr ""
 
+msgid "No se pudo calcular la cotizacion EUR/USD."
+msgstr ""
+
 msgid "No se pudo cargar Aplazame."
 msgstr ""
 
@@ -1835,7 +1955,13 @@ msgstr ""
 msgid "No se pudo consultar GIAV para calcular el pendiente."
 msgstr ""
 
+msgid "No se pudo crear el enlace."
+msgstr ""
+
 msgid "No se pudo crear el intento de pago."
+msgstr ""
+
+msgid "No se pudo crear el token."
 msgstr ""
 
 msgid "No se pudo crear la carpeta del adjunto."
@@ -1883,7 +2009,13 @@ msgstr ""
 msgid "No se pudo iniciar el pago. Inténtalo de nuevo o contacta con la agencia."
 msgstr ""
 
+msgid "No se pudo iniciar el pago con Stripe."
+msgstr ""
+
 msgid "No se pudo iniciar el pago por transferencia."
+msgstr ""
+
+msgid "No se pudo iniciar el pago por transferencia. Inténtalo de nuevo o prueba con tarjeta."
 msgstr ""
 
 msgid "No se pudo iniciar la conversación."
@@ -1917,6 +2049,9 @@ msgid "No se pudo resolver el cliente del expediente."
 msgstr ""
 
 msgid "No se pudo resolver el cliente del portal."
+msgstr ""
+
+msgid "No se pudo resolver el expediente."
 msgstr ""
 
 msgid "No se pudo validar la factura."
@@ -1991,6 +2126,9 @@ msgstr ""
 msgid "Nuevo mensaje sobre tu viaje · %s"
 msgstr ""
 
+msgid "Nuevo pago registrado – Expediente %s"
+msgstr ""
+
 msgid "Observaciones"
 msgstr ""
 
@@ -2006,6 +2144,9 @@ msgstr ""
 msgid "Opciones para tu viaje"
 msgstr ""
 
+msgid "Opción %d"
+msgstr ""
+
 msgid "Opción individual (informativa)"
 msgstr ""
 
@@ -2015,10 +2156,16 @@ msgstr ""
 msgid "Opción {n}"
 msgstr ""
 
+msgid "Origen"
+msgstr ""
+
 msgid "o solo el depósito: %s"
 msgstr ""
 
 msgid "Otras propuestas"
+msgstr ""
+
+msgid "Otra tarjeta"
 msgstr ""
 
 msgid "Otro hotel, más rondas, un día más…"
@@ -2114,6 +2261,9 @@ msgstr ""
 msgid "Pago"
 msgstr ""
 
+msgid "Pago (portal %s)"
+msgstr ""
+
 msgid "Pago (Redsys %s)"
 msgstr ""
 
@@ -2135,6 +2285,9 @@ msgstr ""
 msgid "Pago de expediente"
 msgstr ""
 
+msgid "Pago de grupo"
+msgstr ""
+
 msgid "Pago del viaje"
 msgstr ""
 
@@ -2142,6 +2295,9 @@ msgid "Pago desactivado en vista cliente"
 msgstr ""
 
 msgid "Pago en USD no disponible."
+msgstr ""
+
+msgid "Pago en USD no disponible para este cliente."
 msgstr ""
 
 msgid "Pago inmediato y seguro"
@@ -2160,6 +2316,9 @@ msgid "Pago pendiente"
 msgstr ""
 
 msgid "Pago pendiente de confirmación"
+msgstr ""
+
+msgid "Pago por pasajero"
 msgstr ""
 
 msgid "Pago recibido"
@@ -2187,6 +2346,12 @@ msgid "Pago seguro"
 msgstr ""
 
 msgid "Pago seguro SSL"
+msgstr ""
+
+msgid "Pagos en USD"
+msgstr ""
+
+msgid "Pago sin identificar"
 msgstr ""
 
 msgid "Pago total"
@@ -2228,10 +2393,16 @@ msgstr ""
 msgid "Pasajeros"
 msgstr ""
 
+msgid "Pasajeros/Passengers"
+msgstr ""
+
 msgid "Paso %1$s de %2$s"
 msgstr ""
 
 msgid "Pax:"
+msgstr ""
+
+msgid "Payment links no disponible."
 msgstr ""
 
 msgid "País"
@@ -2288,6 +2459,9 @@ msgstr ""
 msgid "Perfil actualizado."
 msgstr ""
 
+msgid "Permitir pago en dolares desde el portal"
+msgstr ""
+
 msgid "Persona"
 msgstr ""
 
@@ -2301,6 +2475,9 @@ msgid "Pide tu propuesta"
 msgstr ""
 
 msgid "Pide un código nuevo."
+msgstr ""
+
+msgid "Plaza de grupo"
 msgstr ""
 
 msgid "Población"
@@ -2334,6 +2511,9 @@ msgid "Portal"
 msgstr ""
 
 msgid "Portal cliente"
+msgstr ""
+
+msgid "Portal del cliente"
 msgstr ""
 
 msgid "Precio por persona"
@@ -2375,6 +2555,9 @@ msgstr ""
 msgid "Programa PDF"
 msgstr ""
 
+msgid "Programa sujeto a posibles cambios. Confirma siempre con tu asesor."
+msgstr ""
+
 msgid "Progreso de Mulligans"
 msgstr ""
 
@@ -2399,10 +2582,16 @@ msgstr ""
 msgid "Proveedor"
 msgstr ""
 
+msgid "Proveedor / Supplier"
+msgstr ""
+
 msgid "Provincia"
 msgstr ""
 
 msgid "Próximo nivel"
+msgstr ""
+
+msgid "Próximo nivel: %s"
 msgstr ""
 
 msgid "Próximo paso"
@@ -2486,6 +2675,9 @@ msgstr ""
 msgid "Ratio actual"
 msgstr ""
 
+msgid "Recargar e intentar de nuevo"
+msgstr ""
+
 msgid "Recibida"
 msgstr ""
 
@@ -2498,6 +2690,12 @@ msgstr ""
 msgid "Recibirás además un email con el enlace para completar el resto del pago."
 msgstr ""
 
+msgid "Redirigiendo a la pasarela de pago segura"
+msgstr ""
+
+msgid "Redirigiendo al pago"
+msgstr ""
+
 msgid "Redirigiendo…"
 msgstr ""
 
@@ -2505,6 +2703,9 @@ msgid "Redsys no disponible"
 msgstr ""
 
 msgid "Redsys no disponible."
+msgstr ""
+
+msgid "Redsys no está disponible."
 msgstr ""
 
 msgid "Reembolso"
@@ -2520,6 +2721,12 @@ msgid "Reenviar enlace"
 msgstr ""
 
 msgid "Ref. %s"
+msgstr ""
+
+msgid "Reference"
+msgstr ""
+
+msgid "Referencia"
 msgstr ""
 
 msgid "Referencia interna #{id}"
@@ -2573,6 +2780,9 @@ msgstr ""
 msgid "Régimen"
 msgstr ""
 
+msgid "Régimen / Board Basis"
+msgstr ""
+
 msgid "Régimen:"
 msgstr ""
 
@@ -2618,6 +2828,9 @@ msgstr ""
 msgid "Seguridad"
 msgstr ""
 
+msgid "Se ha registrado un nuevo pago en el expediente <strong>%s</strong>."
+msgstr ""
+
 msgid "Selecciona al menos 1 persona."
 msgstr ""
 
@@ -2625,6 +2838,9 @@ msgid "Selecciona cuántas personas quedan incluidas en este pago y completa los
 msgstr ""
 
 msgid "Selecciona cuánto pagar ahora"
+msgstr ""
+
+msgid "Selecciona esta opcion si vas a pagar con AMEX."
 msgstr ""
 
 msgid "Selecciona un expediente para ver su detalle."
@@ -2637,6 +2853,9 @@ msgid "Selecciona un expediente para ver sus mensajes."
 msgstr ""
 
 msgid "Servicio"
+msgstr ""
+
+msgid "Servicio / Service"
 msgstr ""
 
 msgid "Servicio degradado."
@@ -2652,6 +2871,9 @@ msgid "Servicios incluidos"
 msgstr ""
 
 msgid "Servicios y planificación del viaje"
+msgstr ""
+
+msgid "Sesion Stripe invalida."
 msgstr ""
 
 msgid "Si encontramos un pago pendiente con esos datos, te hemos enviado por email tu enlace personal para completarlo."
@@ -2729,6 +2951,9 @@ msgstr ""
 msgid "Sistema de reservas no disponible"
 msgstr ""
 
+msgid "Si Stripe USD esta configurado, este cliente vera la opcion de pagar pendientes en USD. GIAV seguira recibiendo el importe base original en EUR."
+msgstr ""
+
 msgid "Si te escribimos, lo verás aquí al momento."
 msgstr ""
 
@@ -2760,6 +2985,15 @@ msgid "Solo se admiten PDF, JPG, PNG o WEBP."
 msgstr ""
 
 msgid "Solo tarjeta disponible."
+msgstr ""
+
+msgid "Stripe no devolvio un enlace de pago."
+msgstr ""
+
+msgid "Stripe no esta configurado."
+msgstr ""
+
+msgid "Stripe no esta disponible para cobrar en USD."
 msgstr ""
 
 msgid "Suplemento individual"
@@ -2796,6 +3030,9 @@ msgid "Te acompañaremos desde aquí"
 msgstr ""
 
 msgid "Te avisaremos por email en cuanto tu propuesta esté lista."
+msgstr ""
+
+msgid "Tee-time"
 msgstr ""
 
 msgid "Te enviaremos por email tu enlace personal con tu importe pendiente actualizado. Indica el email y el documento que usaste al pagar el depósito."
@@ -2888,6 +3125,9 @@ msgstr ""
 msgid "Tipo de pago inválido."
 msgstr ""
 
+msgid "Tipo de tarjeta"
+msgstr ""
+
 msgid "Todavia no hay clientes con portal listados."
 msgstr ""
 
@@ -2930,6 +3170,9 @@ msgstr ""
 msgid "Todos"
 msgstr ""
 
+msgid "Tokens de grupo no disponibles."
+msgstr ""
+
 msgid "Total"
 msgstr ""
 
@@ -2949,6 +3192,9 @@ msgid "Total neto"
 msgstr ""
 
 msgid "Total pagado"
+msgstr ""
+
+msgid "Total registrado por pasajero"
 msgstr ""
 
 msgid "Total viaje"
@@ -3014,6 +3260,14 @@ msgstr ""
 msgid "Tu código de verificación"
 msgstr ""
 
+msgid ""
+"Tu código de verificación para vincular tu cuenta es: %s\n"
+"\n"
+"Caduca en 10 minutos.\n"
+"\n"
+"Si no has solicitado este código, puedes ignorar este email."
+msgstr ""
+
 msgid "Tu código de verificación para vincular tu cuenta es: %s\\n\\nCaduca en 10 minutos.\\n\\nSi no has solicitado este código, puedes ignorar este email."
 msgstr ""
 
@@ -3071,6 +3325,9 @@ msgstr ""
 msgid "Tus datos"
 msgstr ""
 
+msgid "Tu sesion de pago ha caducado o la pagina estaba desactualizada. Recarga la pagina e intentalo de nuevo."
+msgstr ""
+
 msgid "Tus Mulligans"
 msgstr ""
 
@@ -3090,6 +3347,9 @@ msgid "Tu viaje"
 msgstr ""
 
 msgid "Tu viaje de un vistazo"
+msgstr ""
+
+msgid "Tu viaje empieza en %d días"
 msgstr ""
 
 msgid "Tu viaje empieza en {days} días"
@@ -3230,6 +3490,9 @@ msgstr ""
 msgid "Viajero %s"
 msgstr ""
 
+msgid "Viajeros"
+msgstr ""
+
 msgid "Viajes"
 msgstr ""
 
@@ -3239,10 +3502,16 @@ msgstr ""
 msgid "Vincula tu cuenta"
 msgstr ""
 
+msgid "Vincula tu cuenta para acceder a tu área de cliente."
+msgstr ""
+
 msgid "Visa, Mastercard o American Express"
 msgstr ""
 
 msgid "Visa, Mastercard y otras"
+msgstr ""
+
+msgid "Visa, Mastercard y similares."
 msgstr ""
 
 msgid "Vista cliente"
@@ -3318,6 +3587,9 @@ msgid "Ya hemos registrado tu depósito. Cuando quieras, puedes completar el res
 msgstr ""
 
 msgid "Ya la tienes en tus viajes"
+msgstr ""
+
+msgid "Ya no quedan personas pendientes para este enlace de grupo."
 msgstr ""
 
 msgid "Ya nos has pedido actualizarla: te escribiremos con la propuesta nueva."

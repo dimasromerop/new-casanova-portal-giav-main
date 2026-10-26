@@ -196,7 +196,8 @@ function casanova_render_itinerary_html(array $payload): string {
     $days[$date_key] = [
       'number' => $day_index,
       'day_name' => $day_name,
-      'formatted' => date_i18n('j \d\e F \d\e Y', $ts),
+      /* translators: formato de fecha PHP del día en el programa (ES «31 de enero de 2027»). */
+      'formatted' => date_i18n(__('j \d\e F \d\e Y', 'casanova-portal'), $ts),
       'timestamp' => $ts,
     ];
     $day_index++;
