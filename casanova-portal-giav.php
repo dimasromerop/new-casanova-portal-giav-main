@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Casanova Portal Clientes
  * Description: Área privada Casanova Golf conectada a GIAV por SOAP (Cliente, Expedientes, Reservas).
- * Version: 0.30.24
+ * Version: 0.30.25
  * Author: Casanova Golf
  * Text Domain: casanova-portal
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
 // DB / plugin upgrade (runs on normal updates too, not only on activation)
 // -----------------------------------------------------------------------------
 function casanova_portal_giav_current_version(): string {
-  return '0.30.24';
+  return '0.30.25';
 }
 
 // -----------------------------------------------------------------------------
@@ -431,6 +431,9 @@ require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/api/v1/inbox-controller.php';
 
   // Account linking (2-step DNI + OTP) shortcode
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-link-account.php';
+
+  // Acceso con Google (antes plugin «Casanova Google Login»)
+  require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-google-login.php';
 
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-format.php';
   require_once CASANOVA_GIAV_PLUGIN_PATH . 'includes/portal-dashboard.php';
