@@ -13,9 +13,10 @@
 if (!defined('ABSPATH')) exit;
 
 // Si el plugin antiguo sigue activo, él se encarga (carga antes que el portal).
+// La clase se llama distinto: PHP declara las clases antes de ejecutar el archivo.
 if (class_exists('Casanova_Google_Login')) return;
 
-class Casanova_Google_Login {
+class Casanova_Portal_Google_Login {
   const QV_START    = 'casanova_google_start';
   const QV_CALLBACK = 'casanova_google_callback';
 
@@ -368,4 +369,8 @@ class Casanova_Google_Login {
   }
 }
 
-Casanova_Google_Login::init();
+// En producción, /google-login/index.php y /google-callback/index.php (en la raíz de la web,
+// fuera de WordPress) llaman a Casanova_Google_Login::process_*_request() por su nombre antiguo.
+class_alias('Casanova_Portal_Google_Login', 'Casanova_Google_Login');
+
+Casanova_Portal_Google_Login::init();
